@@ -1,0 +1,121 @@
+import type { FastifyPluginAsync } from 'fastify';
+import { authenticate, authorize } from '../../middlewares/auth.middleware.js';
+import { IniciarProducaoSchema, FinalizarProducaoSchema } from './producao.schema.js';
+import * as service from './producao.service.js';
+
+interface UserJwtPayload {
+  sub: string;
+  nome: string;
+  email: string;
+  perfil: 'ADMIN' | 'TECNICO' | 'QUALIDADE';
+}
+
+export const producaoRoutes: FastifyPluginAsync = async (fastify) => {
+  // ─── GET /producao/minha-fila ─────────────────────────────────────────────
+  // Retorna as OSs disponíveis para o técnico logado iniciar produção
+  fastify.get(
+    '/producao/minha-fila',
+    { preHandler: [authenticate, authorize(['TECNICO', 'ADMIN'])] },
+    async (request, reply) => {
+      const user = request.user as UserJwtPayload;
+      const fila = await service.getMinhaFila(user.sub);
+      return reply.send({ success: true, data: fila });
+    }
+  );
+
+  // ─── GET /producao/ativa ──────────────────────────────────────────────────
+  // Retorna a produção EM_ANDAMENTO do técnico logado (ou null)
+  fastify.get(
+    '/producao/ativa',
+    { preHandler: [authenticate, authorize(['TECNICO', 'ADMIN'])] },
+    async (request, reply) => {
+      const user = request.user as UserJwtPayload;
+      const producaoAtiva = await service.getProducaoAtiva(user.sub);
+      return reply.send({ success: true, data: producaoAtiva });
+    }
+  );
+
+  // ─── POST /producao/iniciar ───────────────────────────────────────────────
+  // Inicia um apontamento de produção — timestamp gerado no servidor
+  fastify.post(
+    '/producao/iniciar',
+    { preHandler: [authenticate, authorize(['TECNICO'])] },
+    async (request, reply) => {
+      const body = IniciarProducaoSchema.parse(request.body);
+      const user = request.user as UserJwtPayload;
+
+      try {
+        const producao = await service.iniciarProducao(body.itemOrdemServicoId, user.sub);
+        return reply.status(201).send({
+          success: true,
+          message: 'Produção iniciada com sucesso.',
+          data: producao,
+        });
+      } catch (err: unknown) {
+        const e = err as { statusCode?: number; message?: string; producaoAtiva?: unknown };
+        if (e.statusCode === 409) {
+          return reply.status(409).send({
+            success: false,
+            message: e.message,
+            data: e.producaoAtiva ?? null,
+          });
+        }
+        throw err;
+      }
+    }
+  );
+
+  // ─── POST /producao/:id/finalizar ─────────────────────────────────────────
+  // Finaliza o apontamento e transiciona item para AGUARDANDO_TESTE
+  fastify.post(
+    '/producao/:id/finalizar',
+    { preHandler: [authenticate, authorize(['TECNICO'])] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const body = FinalizarProducaoSchema.parse(request.body);
+      const user = request.user as UserJwtPayload;
+
+      try {
+        const producao = await service.finalizarProducao(id, user.sub, body);
+        return reply.send({
+          success: true,
+          message: 'Produção finalizada! Lote encaminhado para Controle de Qualidade.',
+          data: producao,
+        });
+      } catch (err: unknown) {
+        const e = err as { statusCode?: number; message?: string };
+        if (e.statusCode === 403) {
+          return reply.status(403).send({ success: false, message: e.message });
+        }
+        throw err;
+      }
+    }
+  );
+
+  // ─── GET /producao/historico ──────────────────────────────────────────────
+  // Histórico de produções do técnico logado
+  fastify.get(
+    '/producao/historico',
+    { preHandler: [authenticate, authorize(['TECNICO', 'ADMIN'])] },
+    async (request, reply) => {
+      const user = request.user as UserJwtPayload;
+      const { page = '1', limit = '20' } = request.query as { page?: string; limit?: string };
+
+      const resultado = await service.getHistoricoProducao(
+        user.sub,
+        parseInt(page),
+        parseInt(limit)
+      );
+
+      return reply.send({
+        success: true,
+        data: resultado.producoes,
+        meta: {
+          total: resultado.total,
+          page: parseInt(page),
+          totalPages: resultado.totalPages,
+        },
+      });
+    }
+  );
+};

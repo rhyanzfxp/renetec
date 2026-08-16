@@ -1,0 +1,59 @@
+import * as repo from './teste.repository.js';
+import type { RealizarTesteInput } from './teste.schema.js';
+import { realtimeService } from '../realtime/realtime.service.js';
+import { log } from '../auditoria/auditoria.service.js';
+
+export async function getMotivosReprovacao() {
+  return repo.getMotivosReprovacao();
+}
+
+export async function getFilaTestes() {
+  return repo.getFilaTestes();
+}
+
+export async function realizarTeste(inspetorId: string, dados: RealizarTesteInput) {
+  // Validação estrita da equação invariável de negócio
+  if (dados.quantidadeAprovada + dados.quantidadeReprovada !== dados.quantidadeTestada) {
+    throw {
+      statusCode: 400,
+      message: 'Inconsistência quantitativa: Aprovados + Reprovados deve ser igual a Testados.',
+    };
+  }
+
+  if (dados.quantidadeReprovada > 0 && !dados.motivoReprovacaoId) {
+    throw {
+      statusCode: 400,
+      message: 'É obrigatório selecionar um motivo de reprovação para os itens não-conformes.',
+    };
+  }
+
+  const teste = await repo.realizarTeste(inspetorId, dados);
+
+  if (dados.quantidadeReprovada > 0) {
+    realtimeService.broadcast('qualidade:reprovado', { teste });
+    log({
+      acao: 'TESTE_REPROVADO',
+      usuarioId: inspetorId,
+      entidade: 'Teste',
+      entidadeId: teste.id,
+      descricao: `Laudo de CQ: ${dados.quantidadeAprovada} aprovadas, ${dados.quantidadeReprovada} reprovadas.`,
+      detalhes: { quantidadeAprovada: dados.quantidadeAprovada, quantidadeReprovada: dados.quantidadeReprovada },
+    }).catch(() => {});
+  } else {
+    realtimeService.broadcast('qualidade:aprovado', { teste });
+    log({
+      acao: 'TESTE_APROVADO',
+      usuarioId: inspetorId,
+      entidade: 'Teste',
+      entidadeId: teste.id,
+      descricao: `Lote 100% aprovado no CQ: ${dados.quantidadeAprovada} unidades.`,
+      detalhes: { quantidadeAprovada: dados.quantidadeAprovada },
+    }).catch(() => {});
+  }
+
+  return teste;
+}
+
+export async function getHistoricoTestes(page: number, limit: number) {
+  return repo.getHistoricoTestes(page, limit);
+}

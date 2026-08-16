@@ -1,0 +1,363 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// -----------------------------------------------------------------------------
+// ENUMS DE SISTEMA
+// -----------------------------------------------------------------------------
+
+enum PerfilUsuario {
+  ADMIN
+  TECNICO
+  QUALIDADE
+}
+
+enum PrioridadeOS {
+  BAIXA
+  MEDIA
+  ALTA
+  URGENTE
+}
+
+enum StatusOS {
+  RECEBIDO
+  AGUARDANDO_PRODUCAO
+  EM_PRODUCAO
+  AGUARDANDO_TESTE
+  APROVADO
+  REPROVADO
+  RETRABALHO
+  AGUARDANDO_NOVO_TESTE
+  CONCLUIDO
+  AGUARDANDO_PECA
+  AGUARDANDO_CLIENTE
+  SEM_REPARO
+  CANCELADO
+}
+
+enum StatusProducao {
+  EM_ANDAMENTO
+  FINALIZADO
+  CANCELADO
+}
+
+enum StatusRetrabalho {
+  PENDENTE
+  EM_EXECUCAO
+  CONCLUIDO
+}
+
+enum CategoriaReprovacao {
+  SOLDA
+  COMPONENTE_QUEIMADO
+  FALHA_LOGICA
+  MECANICO
+  CALIBRACAO
+  OUTRO
+}
+
+// -----------------------------------------------------------------------------
+// 1. USUÁRIOS
+// -----------------------------------------------------------------------------
+
+model Usuario {
+  id           String        @id @default(uuid())
+  nome         String
+  email        String        @unique
+  senhaHash    String        @map("senha_hash")
+  perfil       PerfilUsuario @default(TECNICO)
+  ativo        Boolean       @default(true)
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  producoes             Producao[]
+  testes                Teste[]
+  retrabalhos           Retrabalho[]
+  itensAlocados         ItemOrdemServico[] @relation("TecnicoAlocado")
+  historicosAlterados   HistoricoStatus[]
+  auditorias            AuditoriaLog[]
+
+  @@map("usuarios")
+}
+
+// -----------------------------------------------------------------------------
+// 2. CLIENTES
+// -----------------------------------------------------------------------------
+
+model Cliente {
+  id                String         @id @default(uuid())
+  nomeRazaoSocial   String         @map("nome_razao_social")
+  documento         String?        @unique
+  contatoTelefone   String?        @map("contato_telefone")
+  email             String?
+  endereco          String?
+  ativo             Boolean        @default(true)
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  ordensServico     OrdemServico[]
+
+  @@map("clientes")
+}
+
+// -----------------------------------------------------------------------------
+// 3. TIPOS DE EQUIPAMENTO
+// -----------------------------------------------------------------------------
+
+model TipoEquipamento {
+  id                   String             @id @default(uuid())
+  nome                 String             // Ex: Inversor Solar, Placa de Controle, Módulo I/O
+  marca                String?            // Ex: Weg, Siemens, Schneider
+  modelo               String?
+  tempoEstimadoMinutos Int                @default(60) @map("tempo_estimado_minutos")
+  ativo                Boolean            @default(true)
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  itensOS              ItemOrdemServico[]
+
+  @@map("tipos_equipamento")
+}
+
+// -----------------------------------------------------------------------------
+// 4. ORDENS DE SERVIÇO (OS)
+// -----------------------------------------------------------------------------
+
+model OrdemServico {
+  id             String         @id @default(uuid())
+  numeroOS       Int            @unique @default(autoincrement()) @map("numero_os")
+  clienteId      String         @map("cliente_id")
+  dataEntrada    DateTime       @default(now()) @map("data_entrada")
+  prioridade     PrioridadeOS   @default(MEDIA)
+  status         StatusOS       @default(RECEBIDO)
+  valorOrcamento Decimal?       @map("valor_orcamento") @db.Decimal(10, 2)
+  observacoes    String?        @db.Text
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  cliente        Cliente        @relation(fields: [clienteId], references: [id], onDelete: Restrict)
+  itens          ItemOrdemServico[]
+  historicos     HistoricoStatus[]
+
+  @@index([status])
+  @@index([clienteId])
+  @@index([dataEntrada])
+  @@map("ordens_servico")
+}
+
+// -----------------------------------------------------------------------------
+// 5. ITENS DA ORDEM DE SERVIÇO
+// -----------------------------------------------------------------------------
+
+model ItemOrdemServico {
+  id                String          @id @default(uuid())
+  ordemServicoId    String          @map("ordem_servico_id")
+  tipoEquipamentoId String          @map("tipo_equipamento_id")
+  numeroSerie       String?         @map("numero_serie")
+  quantidade        Int             @default(1)
+  defeitoRelatado   String?         @map("defeito_relatado") @db.Text
+  statusItem        StatusOS        @default(RECEBIDO) @map("status_item")
+  tecnicoAlocadoId  String?         @map("tecnico_alocado_id")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  ordemServico      OrdemServico    @relation(fields: [ordemServicoId], references: [id], onDelete: Cascade)
+  tipoEquipamento   TipoEquipamento @relation(fields: [tipoEquipamentoId], references: [id], onDelete: Restrict)
+  tecnicoAlocado    Usuario?        @relation("TecnicoAlocado", fields: [tecnicoAlocadoId], references: [id], onDelete: SetNull)
+  
+  producoes         Producao[]
+  retrabalhos       Retrabalho[]
+  historicos        HistoricoStatus[]
+
+  @@index([ordemServicoId])
+  @@index([statusItem])
+  @@index([tecnicoAlocadoId])
+  @@map("itens_os")
+}
+
+// -----------------------------------------------------------------------------
+// 6. APONTAMENTO DE PRODUÇÃO
+// -----------------------------------------------------------------------------
+
+model Producao {
+  id                  String         @id @default(uuid())
+  itemOrdemServicoId  String         @map("item_os_id")
+  tecnicoId           String         @map("tecnico_id")
+  dataInicio          DateTime       @default(now()) @map("data_inicio")
+  dataFim             DateTime?      @map("data_fim")
+  quantidadeProduzida Int            @default(1) @map("quantidade_produzida")
+  servicoRealizado    String?        @map("servico_realizado") @db.Text
+  observacao          String?        @db.Text
+  status              StatusProducao @default(EM_ANDAMENTO)
+  createdAt           DateTime       @default(now()) @map("created_at")
+  updatedAt           DateTime       @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  itemOrdemServico    ItemOrdemServico @relation(fields: [itemOrdemServicoId], references: [id], onDelete: Cascade)
+  tecnico             Usuario          @relation(fields: [tecnicoId], references: [id], onDelete: Restrict)
+  testes              Teste[]
+
+  @@index([itemOrdemServicoId])
+  @@index([tecnicoId])
+  @@index([status])
+  @@index([dataInicio])
+  @@map("producoes")
+}
+
+// -----------------------------------------------------------------------------
+// 7. CONTROLE DE QUALIDADE (TESTES)
+// -----------------------------------------------------------------------------
+
+model Teste {
+  id                  String       @id @default(uuid())
+  producaoId          String       @map("producao_id")
+  inspetorId          String       @map("inspetor_id")
+  quantidadeTestada   Int          @map("quantidade_testada")
+  quantidadeAprovada  Int          @map("quantidade_aprovada")
+  quantidadeReprovada Int          @map("quantidade_reprovada")
+  dataTeste           DateTime     @default(now()) @map("data_teste")
+  observacao          String?      @db.Text
+  createdAt           DateTime     @default(now()) @map("created_at")
+  updatedAt           DateTime     @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  producao            Producao     @relation(fields: [producaoId], references: [id], onDelete: Cascade)
+  inspetor            Usuario      @relation(fields: [inspetorId], references: [id], onDelete: Restrict)
+  retrabalhos         Retrabalho[]
+
+  @@index([producaoId])
+  @@index([inspetorId])
+  @@index([dataTeste])
+  @@map("testes")
+}
+
+// -----------------------------------------------------------------------------
+// 8. MOTIVOS DE REPROVAÇÃO
+// -----------------------------------------------------------------------------
+
+model MotivoReprovacao {
+  id          String              @id @default(uuid())
+  codigo      String              @unique // Ex: MOT-01, MOT-02
+  descricao   String
+  categoria   CategoriaReprovacao @default(OUTRO)
+  ativo       Boolean             @default(true)
+  createdAt   DateTime            @default(now()) @map("created_at")
+
+  // Relacionamentos
+  retrabalhos Retrabalho[]
+
+  @@map("motivos_reprovacao")
+}
+
+// -----------------------------------------------------------------------------
+// 9. RETRABALHO
+// -----------------------------------------------------------------------------
+
+model Retrabalho {
+  id                   String           @id @default(uuid())
+  testeId              String           @map("teste_id")
+  itemOrdemServicoId   String           @map("item_os_id")
+  motivoReprovacaoId   String?          @map("motivo_reprovacao_id")
+  tecnicoResponsavelId String?          @map("tecnico_responsavel_id")
+  quantidadeRetrabalho Int              @default(1) @map("quantidade_retrabalho")
+  detalhesDefeito      String?          @map("detalhes_defeito") @db.Text
+  solucaoAplicada      String?          @map("solucao_aplicada") @db.Text
+  dataInicio           DateTime         @default(now()) @map("data_inicio")
+  dataFim              DateTime?        @map("data_fim")
+  status               StatusRetrabalho @default(PENDENTE)
+  createdAt            DateTime         @default(now()) @map("created_at")
+  updatedAt            DateTime         @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  teste                Teste            @relation(fields: [testeId], references: [id], onDelete: Cascade)
+  itemOrdemServico     ItemOrdemServico @relation(fields: [itemOrdemServicoId], references: [id], onDelete: Cascade)
+  motivoReprovacao     MotivoReprovacao? @relation(fields: [motivoReprovacaoId], references: [id], onDelete: SetNull)
+  tecnicoResponsavel   Usuario?         @relation(fields: [tecnicoResponsavelId], references: [id], onDelete: SetNull)
+
+  @@index([testeId])
+  @@index([itemOrdemServicoId])
+  @@index([status])
+  @@map("retrabalhos")
+}
+
+// -----------------------------------------------------------------------------
+// 10. CONFIGURAÇÃO DE METAS
+// -----------------------------------------------------------------------------
+
+model MetaConfig {
+  id             String   @id @default(uuid())
+  mesReferencia  Int      @map("mes_referencia") // 1 a 12
+  anoReferencia  Int      @map("ano_referencia") // ex: 2026
+  metaBronze     Int      @default(180) @map("meta_bronze")
+  metaPrata      Int      @default(200) @map("meta_prata")
+  metaOuro       Int      @default(230) @map("meta_ouro")
+  ativo          Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([mesReferencia, anoReferencia])
+  @@map("metas_config")
+}
+
+// -----------------------------------------------------------------------------
+// 11. HISTÓRICO DE STATUS (LINHAGEM DA OS)
+// -----------------------------------------------------------------------------
+
+model HistoricoStatus {
+  id                 BigInt            @id @default(autoincrement())
+  ordemServicoId     String            @map("ordem_servico_id")
+  itemOrdemServicoId String?           @map("item_os_id")
+  statusAnterior     StatusOS?         @map("status_anterior")
+  statusNovo         StatusOS          @map("status_novo")
+  usuarioId          String?           @map("usuario_id")
+  observacao         String?
+  dataHora           DateTime          @default(now()) @map("data_hora")
+
+  // Relacionamentos
+  ordemServico       OrdemServico      @relation(fields: [ordemServicoId], references: [id], onDelete: Cascade)
+  itemOrdemServico   ItemOrdemServico? @relation(fields: [itemOrdemServicoId], references: [id], onDelete: SetNull)
+  usuario            Usuario?          @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([ordemServicoId])
+  @@index([itemOrdemServicoId])
+  @@index([dataHora])
+  @@map("historico_status")
+}
+
+// -----------------------------------------------------------------------------
+// 12. LOG DE AUDITORIA IMUTÁVEL
+// -----------------------------------------------------------------------------
+
+model AuditoriaLog {
+  id               BigInt   @id @default(autoincrement())
+  usuarioId        String?  @map("usuario_id")
+  entidade         String   // Ex: 'ordens_servico', 'producoes', 'testes', 'metas_config'
+  registroId       String   @map("registro_id")
+  acao             String   // 'INSERT', 'UPDATE', 'DELETE'
+  dadosAnteriores  Json?    @map("dados_anteriores")
+  dadosNovos       Json?    @map("dados_novos")
+  ipAddress        String?  @map("ip_address")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  // Relacionamentos
+  usuario          Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([entidade, registroId])
+  @@index([usuarioId])
+  @@index([createdAt])
+  @@map("auditoria_logs")
+}
