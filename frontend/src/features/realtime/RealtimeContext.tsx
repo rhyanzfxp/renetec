@@ -108,7 +108,8 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.hostname || 'localhost';
     const defaultWsUrl = `${protocol}//${host}:3333/api/v1/realtime`;
-    const wsUrl = import.meta.env.VITE_WS_URL || defaultWsUrl;
+    const wsBase = import.meta.env.VITE_WS_URL;
+    const wsUrl = wsBase ? `${wsBase}/api/v1/realtime` : defaultWsUrl;
 
     let ws: WebSocket;
     try {
