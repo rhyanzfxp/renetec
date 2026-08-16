@@ -25,11 +25,9 @@
 5. Quando o projeto abrir, vá em:
    - ⚙️ **Project Settings** (ícone de engrenagem no canto inferior esquerdo) → **Database**.
    - Na seção **Connection string**, selecione a aba **URI**.
-   - Copie a string. Ela terá o formato:
-     ```
-     postgresql://postgres.xxxx:[YOUR-PASSWORD]@aws-0-sa-east-1.pooler.supabase.com:6543/postgres
-     ```
-   - Substitua `[YOUR-PASSWORD]` pela sua senha do banco.
+   - Copie a string de conexão (URI do Transaction Pooler).
+   - O formato será parecido com:
+     `postgres://[usuario]:[senha]@[host]:6543/[banco]`
 
 ---
 
@@ -40,14 +38,11 @@ No seu terminal local (no VS Code / terminal do projeto):
 ```bash
 cd backend
 
-# Crie ou edite o arquivo .env do backend com a URL do Supabase:
-# DATABASE_URL="postgresql://postgres.xxxx:SUA_SENHA@aws-0-sa-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
-# DIRECT_URL="postgresql://postgres.xxxx:SUA_SENHA@aws-0-sa-east-1.pooler.supabase.com:5432/postgres"
-
-# 1. Cria todas as tabelas no Supabase:
+# No arquivo .env do backend, configure sua DATABASE_URL do Supabase.
+# Em seguida, execute:
 npx prisma db push
 
-# 2. Cadastra os usuários oficiais (Samuel, João, Joás, Rhyan, Luana, Admin) e os 8 equipamentos com pontos:
+# E popule com os usuários oficiais e os 8 equipamentos:
 npm run db:seed
 ```
 

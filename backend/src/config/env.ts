@@ -5,8 +5,8 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(3333),
   HOST: z.string().default('0.0.0.0'),
-  DATABASE_URL: z.string().default('postgresql://postgres:postgres@localhost:5432/renetec_db?schema=public'),
-  DIRECT_URL: z.string().optional(),
+  DATABASE_URL: z.string().default(''),
+  DIRECT_URL: z.string().default(''),
   // Em produção, JWT_SECRET deve ter pelo menos 32 caracteres para segurança criptográfica
   JWT_SECRET: z.string().min(32, {
     message: '[RENETEC SECURITY] JWT_SECRET deve ter pelo menos 32 caracteres em produção!',
