@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Lock, Mail, Shield, UserCheck, Wrench, AlertCircle, ArrowRight } from 'lucide-react';
+import { Lock, Mail, AlertCircle, ArrowRight } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 
 export const LoginPage: React.FC = () => {
-  const { login, quickLogin } = useAuth();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -29,17 +29,7 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleQuickLogin = async (type: 'admin' | 'joao' | 'samuel' | 'qualidade') => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      await quickLogin(type);
-    } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'Erro ao realizar login rápido.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+
 
   return (
     <div className="min-h-screen bg-surface-base flex flex-col justify-center items-center px-4 py-12">
@@ -109,69 +99,7 @@ export const LoginPage: React.FC = () => {
             </Button>
           </form>
 
-          {/* Divisor */}
-          <div className="relative flex py-1 items-center">
-            <div className="flex-grow border-t border-surface-border"></div>
-            <span className="flex-shrink mx-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
-              Acesso Rápido de Teste
-            </span>
-            <div className="flex-grow border-t border-surface-border"></div>
-          </div>
 
-          {/* Quick Login Profiles */}
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('admin')}
-              disabled={isLoading}
-              className="p-2.5 rounded-lg bg-surface-elevated/70 hover:bg-surface-border border border-surface-border/80 text-left transition-colors flex flex-col gap-1 disabled:opacity-50"
-            >
-              <div className="flex items-center gap-1.5 text-purple-400 text-xs font-semibold">
-                <Shield className="w-3.5 h-3.5" />
-                <span>Admin</span>
-              </div>
-              <span className="text-[11px] text-gray-400 truncate">Acesso Geral</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('joao')}
-              disabled={isLoading}
-              className="p-2.5 rounded-lg bg-surface-elevated/70 hover:bg-surface-border border border-surface-border/80 text-left transition-colors flex flex-col gap-1 disabled:opacity-50"
-            >
-              <div className="flex items-center gap-1.5 text-sky-400 text-xs font-semibold">
-                <Wrench className="w-3.5 h-3.5" />
-                <span>João (Técnico)</span>
-              </div>
-              <span className="text-[11px] text-gray-400 truncate">Chão de Fábrica</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('samuel')}
-              disabled={isLoading}
-              className="p-2.5 rounded-lg bg-surface-elevated/70 hover:bg-surface-border border border-surface-border/80 text-left transition-colors flex flex-col gap-1 disabled:opacity-50"
-            >
-              <div className="flex items-center gap-1.5 text-sky-400 text-xs font-semibold">
-                <Wrench className="w-3.5 h-3.5" />
-                <span>Samuel (Técnico)</span>
-              </div>
-              <span className="text-[11px] text-gray-400 truncate">Chão de Fábrica</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('qualidade')}
-              disabled={isLoading}
-              className="p-2.5 rounded-lg bg-surface-elevated/70 hover:bg-surface-border border border-surface-border/80 text-left transition-colors flex flex-col gap-1 disabled:opacity-50"
-            >
-              <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-semibold">
-                <UserCheck className="w-3.5 h-3.5" />
-                <span>Qualidade (CQ)</span>
-              </div>
-              <span className="text-[11px] text-gray-400 truncate">Mesa de Testes</span>
-            </button>
-          </div>
         </div>
 
         {/* Footer Info */}
