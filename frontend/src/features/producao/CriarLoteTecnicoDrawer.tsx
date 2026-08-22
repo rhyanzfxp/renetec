@@ -44,11 +44,16 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
   const [clienteId, setClienteId] = useState<string>('cli-01');
   const [dataRegistro, setDataRegistro] = useState<string>(() => {
     const hoje = new Date();
-    return hoje.toISOString().split('T')[0];
+    const ano = hoje.getFullYear();
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+    const dia = String(hoje.getDate()).padStart(2, '0');
+    return `${ano}-${mes}-${dia}`;
   });
   const [horaRegistro, setHoraRegistro] = useState<string>(() => {
     const hoje = new Date();
-    return hoje.toTimeString().slice(0, 5);
+    const horas = String(hoje.getHours()).padStart(2, '0');
+    const minutos = String(hoje.getMinutes()).padStart(2, '0');
+    return `${horas}:${minutos}`;
   });
   const [prioridade, setPrioridade] = useState<'BAIXA' | 'MEDIA' | 'ALTA' | 'URGENTE'>('MEDIA');
   const [observacoes, setObservacoes] = useState<string>('');
@@ -144,7 +149,16 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
       setIsLoading(true);
       setError(null);
 
-      const timestampISO = `${dataRegistro}T${horaRegistro || '12:00'}:00.000Z`;
+      // Converte data e hora locais reais para ISO sem distorção de fuso UTC-3
+      let timestampISO: string;
+      if (dataRegistro && horaRegistro) {
+        const [ano, mes, dia] = dataRegistro.split('-').map(Number);
+        const [horas, minutos] = horaRegistro.split(':').map(Number);
+        const dataLocal = new Date(ano, mes - 1, dia, horas || 0, minutos || 0, 0);
+        timestampISO = isNaN(dataLocal.getTime()) ? new Date().toISOString() : dataLocal.toISOString();
+      } else {
+        timestampISO = new Date().toISOString();
+      }
 
       const payload = {
         numeroOS: parseInt(numeroOS.replace(/\D/g, '')) || 1920,
@@ -161,6 +175,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
           servicoRealizado: it.servicoRealizado.trim() || (it.tipoCategoria === 'SEM_DEFEITO' ? 'Equipamento testado e aprovado em triagem (sem defeito)' : 'Reparo realizado na bancada'),
         })),
       };
+
 
       await producaoApiService.apontarLote(payload);
       onSuccess();

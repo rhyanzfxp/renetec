@@ -459,12 +459,12 @@ export async function criarApontamentoLote(
       createdProducoes.push(prodRecord);
       mockProducoes.unshift(prodRecord);
     } else {
-      // Se optou por iniciar na bancada, criar como produção ativa EM_ANDAMENTO
+      // Se optou por iniciar na bancada, criar como produção ativa EM_ANDAMENTO com início no momento atual
       const prodAtivaRecord: ProducaoRecord = {
         id: `prod-${Date.now()}-${i + 1}`,
         itemOrdemServicoId: itemId,
         tecnicoId,
-        dataInicio: dataRegistro,
+        dataInicio: agora,
         dataFim: null,
         quantidadeProduzida: it.quantidade,
         servicoRealizado: servico,
@@ -476,6 +476,7 @@ export async function criarApontamentoLote(
       mockProducoes.unshift(prodAtivaRecord);
     }
   }
+
 
 
   // Também salvar no mock OS List
