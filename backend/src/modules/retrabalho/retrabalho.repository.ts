@@ -211,8 +211,70 @@ export async function concluirRetrabalho(
     ret.solucaoAplicada = dados.solucaoAplicada;
     ret.itemOrdemServico.statusItem = 'AGUARDANDO_NOVO_TESTE';
     ret.itemOrdemServico.ordemServico.status = 'AGUARDANDO_NOVO_TESTE';
+
+    // 1. Atualizar em mockFilaItens
+    const { mockFilaItens } = await import('../producao/producao.repository.js');
+    const fIt = mockFilaItens.find((x) => x.id === ret.itemOrdemServicoId);
+    if (fIt) {
+      fIt.statusItem = 'AGUARDANDO_NOVO_TESTE';
+      fIt.quantidade = ret.quantidadeRetrabalho;
+      fIt.tipoCategoria = 'RETRABALHO';
+      fIt.servicoRealizado = dados.solucaoAplicada || 'Retrabalho efetuado pelo técnico';
+      if (fIt.ordemServico) fIt.ordemServico.status = 'AGUARDANDO_NOVO_TESTE';
+    }
+
+    // 2. Atualizar em mockOsList
+    const { mockOsList } = await import('../os/os.repository.js');
+    for (const os of mockOsList) {
+      if (os.id === ret.itemOrdemServico.ordemServico?.id || os.numeroOS === ret.itemOrdemServico.ordemServico?.numeroOS) {
+        os.status = 'AGUARDANDO_NOVO_TESTE';
+        os.itens.forEach((it) => {
+          if (it.id === ret.itemOrdemServicoId) {
+            it.statusItem = 'AGUARDANDO_NOVO_TESTE';
+            it.tipoCategoria = 'RETRABALHO';
+            it.servicoRealizado = dados.solucaoAplicada;
+          }
+        });
+      }
+    }
+
+    // 3. Atualizar ou adicionar em mockFilaCq
+    const { mockFilaCq } = await import('../qualidade/teste.repository.js');
+    const existCq = mockFilaCq.find((x) => x.id === ret.itemOrdemServicoId);
+    if (existCq) {
+      existCq.statusItem = 'AGUARDANDO_NOVO_TESTE';
+      existCq.quantidade = ret.quantidadeRetrabalho;
+      existCq.tipoCategoria = 'RETRABALHO';
+      existCq.servicoRealizado = dados.solucaoAplicada || 'Retrabalho efetuado pelo técnico';
+      if (existCq.ordemServico) existCq.ordemServico.status = 'AGUARDANDO_NOVO_TESTE';
+    } else {
+      mockFilaCq.unshift({
+        id: ret.itemOrdemServicoId,
+        ordemServicoId: ret.itemOrdemServico.ordemServico.id,
+        tipoEquipamentoId: ret.itemOrdemServico.tipoEquipamento.id,
+        quantidade: ret.quantidadeRetrabalho,
+        tipoCategoria: 'RETRABALHO',
+        defeitoRelatado: ret.detalhesDefeito || 'Reprovado em teste anterior',
+        servicoRealizado: dados.solucaoAplicada || 'Retrabalho efetuado pelo técnico',
+        statusItem: 'AGUARDANDO_NOVO_TESTE',
+        tecnicoAlocadoId: ret.tecnicoResponsavelId,
+        tecnicoAlocado: ret.tecnicoResponsavel || { id: 'colab-joao', nome: 'João' },
+        ordemServico: ret.itemOrdemServico.ordemServico,
+        tipoEquipamento: ret.itemOrdemServico.tipoEquipamento,
+        producoes: [
+          {
+            id: `prod-ret-${ret.id}`,
+            servicoRealizado: dados.solucaoAplicada || 'Retrabalho concluído',
+            quantidadeProduzida: ret.quantidadeRetrabalho,
+            dataFim: agora,
+          },
+        ],
+      });
+    }
+
     return ret;
   }
+
   throw new Error('Ordem de retrabalho não encontrada');
 }
 

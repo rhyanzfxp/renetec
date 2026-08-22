@@ -195,9 +195,59 @@ export async function getFilaTestes() {
     }
   }
 
-  return [...daFila, ...dosFilaItens, ...dosMockOs];
+  // Buscar também retrabalhos finalizados aguardando re-teste
 
+  const { mockRetrabalhos } = await import('../retrabalho/retrabalho.repository.js');
+  const dosRetrabalhos: any[] = [];
+  for (const ret of mockRetrabalhos) {
+    if (ret.status === 'FINALIZADO' && ret.itemOrdemServico) {
+      const itemOS = ret.itemOrdemServico;
+      const itemId = ret.itemOrdemServicoId || itemOS.id;
+      const jaIncluso = daFila.some((f) => f.id === itemId) || dosFilaItens.some((f) => f.id === itemId) || dosMockOs.some((f) => f.id === itemId) || dosRetrabalhos.some((f) => f.id === itemId);
+
+      if (!jaIncluso) {
+        dosRetrabalhos.push({
+          id: itemId,
+          ordemServicoId: itemOS.ordemServicoId || itemOS.ordemServico?.id || `os-${Date.now()}`,
+          tipoEquipamentoId: itemOS.tipoEquipamentoId || itemOS.tipoEquipamento?.id || 'pt-02',
+          quantidade: ret.quantidadeRetrabalho || itemOS.quantidade || 1,
+          tipoCategoria: 'RETRABALHO',
+          defeitoRelatado: ret.detalhesDefeito || 'Retrabalho encaminhado para re-teste',
+          servicoRealizado: ret.solucaoAplicada || 'Correção aplicada na bancada',
+          statusItem: 'AGUARDANDO_NOVO_TESTE',
+          tecnicoAlocadoId: ret.tecnicoResponsavelId || ret.tecnicoResponsavel?.id || null,
+          tecnicoAlocado: ret.tecnicoResponsavel || { id: 'colab-joao', nome: 'João' },
+          ordemServico: itemOS.ordemServico || {
+            id: itemOS.ordemServicoId || `os-${Date.now()}`,
+            numeroOS: 1920,
+            prioridade: 'ALTA',
+            status: 'AGUARDANDO_NOVO_TESTE',
+            dataEntrada: new Date().toISOString(),
+            cliente: { id: 'cli-01', nomeRazaoSocial: 'MARANET Telecomunicações' },
+          },
+          tipoEquipamento: itemOS.tipoEquipamento || {
+            id: 'pt-02',
+            nome: 'Roteador GIGA/ONT/',
+            marca: 'Weg',
+            modelo: 'Padrão',
+            tempoEstimadoMinutos: 45,
+          },
+          producoes: [
+            {
+              id: `prod-ret-${ret.id}`,
+              servicoRealizado: ret.solucaoAplicada || 'Retrabalho finalizado',
+              quantidadeProduzida: ret.quantidadeRetrabalho || itemOS.quantidade,
+              dataFim: ret.dataFim || new Date(),
+            },
+          ],
+        });
+      }
+    }
+  }
+
+  return [...daFila, ...dosFilaItens, ...dosMockOs, ...dosRetrabalhos];
 }
+
 
 // ─── Realizar Teste de Qualidade com Validação Invariável ─────────────────────
 export async function realizarTeste(
