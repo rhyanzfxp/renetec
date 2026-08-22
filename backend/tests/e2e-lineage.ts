@@ -233,6 +233,7 @@ export async function runFullE2ETestSuite(): Promise<void> {
       results.push({ step: 7, name: 'Técnico conclui retrabalho e reenvia para CQ', success: false, details: 'Nenhum retrabalho na fila' });
     }
 
+
     // ─── 8. Re-inspeção no CQ das 2 peças retrabalhadas (100% Aprovadas) ────
     console.log('\n🔬 [8/10] CQ re-testa as 2 peças retrabalhadas (100% Aprovadas)...');
     const resReTeste = await fetch(`${BASE_URL}/qualidade/testar`, {
@@ -265,15 +266,58 @@ export async function runFullE2ETestSuite(): Promise<void> {
     results.push({ step: 9, name: 'Metas Coletivas integradas com CQ', success: resMetas.ok });
     console.log(`   ✅ Metas Coletivas: ${totalAprovadas} peças válidas | Ritmo Atual: ${metasData.data?.ritmoDiarioAtual || 0} un/dia`);
 
-    // ─── 10. Trilha de Auditoria e Validação de Eventos ──────────────────────
-    console.log('\n📜 [10/10] Validando registros na Trilha de Auditoria...');
+    // ─── 10. Auto-atendimento Técnico: Samuel Aponta Lote OS #1920 Diretamente ──
+    console.log('\n👨‍🔧 [10/11] Técnico Samuel apontando Lote da OS #1920 (12 ONTs + 2 CCRs) direto para Testes...');
+    const samuel = await login('samuel@renetec.com.br');
+    const resLoteSamuel = await fetch(`${BASE_URL}/producao/apontamento-lote`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${samuel.token}`,
+      },
+      body: JSON.stringify({
+        numeroOS: 1920,
+        clienteId: 'cli-01',
+        dataEntrada: '2026-08-22T16:30:00.000Z',
+        prioridade: 'ALTA',
+        observacoes: 'Apontamento do dia: 12 ONTs e 2 CCRs reparadas e testadas na bancada.',
+        enviarDiretoTeste: true,
+        itens: [
+          {
+            tipoEquipamentoId: 'pt-02', // ONT (1.5 pts)
+            quantidade: 12,
+            tipoCategoria: 'REPARADO',
+            defeitoRelatado: 'Porta PON sem sinal óptico',
+            servicoRealizado: 'Substituição de diodo e reflash de firmware',
+          },
+          {
+            tipoEquipamentoId: 'pt-06', // CCR (2.5 pts)
+            quantidade: 2,
+            tipoCategoria: 'REPARADO',
+            defeitoRelatado: 'Porta SFP travando',
+            servicoRealizado: 'Ressolda de trilhas e troca de transceptor',
+          },
+        ],
+      }),
+    });
+    const loteSamuelData = await resLoteSamuel.json();
+    const loteSamuelOk = resLoteSamuel.ok && loteSamuelData.data?.ordemServico?.numeroOS === 1920;
+    results.push({
+      step: 10,
+      name: 'Auto-Atendimento Técnico: Samuel cria OS #1920 (12 ONTs + 2 CCRs) direto p/ CQ',
+      success: loteSamuelOk,
+    });
+    console.log(`   ✅ Lote criado por Samuel: OS #${loteSamuelData.data?.ordemServico?.numeroOS} com ${loteSamuelData.data?.itens?.length} tipos de equipamentos.`);
+
+    // ─── 11. Trilha de Auditoria e Validação de Eventos ──────────────────────
+    console.log('\n📜 [11/11] Validando registros na Trilha de Auditoria...');
     const resAudit = await fetch(`${BASE_URL}/auditoria?page=1&limit=20`, {
       headers: { 'Authorization': `Bearer ${admin.token}` },
     });
     const auditData = await resAudit.json();
     const auditCount = auditData.total || auditData.data?.length || 0;
 
-    results.push({ step: 10, name: 'Trilha de Auditoria com rastreabilidade total', success: auditCount > 0 });
+    results.push({ step: 11, name: 'Trilha de Auditoria com rastreabilidade total', success: auditCount > 0 });
     console.log(`   ✅ Auditoria com ${auditCount} registros imutáveis.`);
 
     // Fechar conexão WS
@@ -281,8 +325,9 @@ export async function runFullE2ETestSuite(): Promise<void> {
 
     // ─── Relatório Final da Bateria ──────────────────────────────────────────
     console.log('\n================================================================');
-    console.log('📊 RELATÓRIO FINAL DA BATERIA DE TESTES E2E (FASE 13)');
+    console.log('📊 RELATÓRIO FINAL DA BATERIA DE TESTES E2E');
     console.log('================================================================');
+
     
     let allPassed = true;
     for (const r of results) {

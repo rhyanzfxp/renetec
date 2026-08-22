@@ -31,16 +31,23 @@ export async function realizarTeste(inspetorId: string, dados: RealizarTesteInpu
 
   if (dados.quantidadeReprovada > 0) {
     realtimeService.broadcast('qualidade:reprovado', { teste });
+    realtimeService.broadcast('retrabalho:criado', {
+      testeId: teste.id,
+      tecnicoResponsavelId: dados.tecnicoResponsavelId,
+      quantidadeReprovada: dados.quantidadeReprovada,
+      detalhesDefeito: dados.detalhesDefeito || dados.observacao,
+    });
     log({
       acao: 'TESTE_REPROVADO',
       usuarioId: inspetorId,
       entidade: 'Teste',
       entidadeId: teste.id,
-      descricao: `Laudo de CQ: ${dados.quantidadeAprovada} aprovadas, ${dados.quantidadeReprovada} reprovadas.`,
+      descricao: `Laudo de CQ: ${dados.quantidadeAprovada} aprovadas, ${dados.quantidadeReprovada} reprovadas (encaminhadas para retrabalho).`,
       detalhes: { quantidadeAprovada: dados.quantidadeAprovada, quantidadeReprovada: dados.quantidadeReprovada },
     }).catch(() => {});
   } else {
     realtimeService.broadcast('qualidade:aprovado', { teste });
+    realtimeService.broadcast('meta:atualizada', { aprovadas: dados.quantidadeAprovada });
     log({
       acao: 'TESTE_APROVADO',
       usuarioId: inspetorId,
@@ -53,6 +60,7 @@ export async function realizarTeste(inspetorId: string, dados: RealizarTesteInpu
 
   return teste;
 }
+
 
 export async function getHistoricoTestes(page: number, limit: number) {
   return repo.getHistoricoTestes(page, limit);

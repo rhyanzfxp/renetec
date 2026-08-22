@@ -183,9 +183,20 @@ export const QualidadePage: React.FC = () => {
               >
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-sky-400 tabular-nums">
-                      OS #{item.ordemServico.numeroOS}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-sky-400 tabular-nums">
+                        OS #{item.ordemServico.numeroOS}
+                      </span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                        item.tipoCategoria === 'SEM_DEFEITO'
+                          ? 'bg-sky-950/40 border-sky-500/40 text-sky-300'
+                          : item.tipoCategoria === 'RETRABALHO'
+                          ? 'bg-purple-950/40 border-purple-500/40 text-purple-300'
+                          : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+                      }`}>
+                        {item.tipoCategoria === 'SEM_DEFEITO' ? '✅ Sem Defeito' : item.tipoCategoria === 'RETRABALHO' ? '🔄 Retrabalho' : '🔧 Reparado'}
+                      </span>
+                    </div>
                     <StatusBadge prioridade={item.ordemServico.prioridade} size="sm" />
                   </div>
 
@@ -202,16 +213,17 @@ export const QualidadePage: React.FC = () => {
                     <span>Lote a Testar: <strong className="text-white tabular-nums">{item.quantidade} un</strong></span>
                     <span className="flex items-center gap-1 text-gray-400">
                       <User className="w-3 h-3 text-sky-400" />
-                      Técnico: <strong className="text-gray-200">{item.tecnicoAlocado?.nome || 'Geral'}</strong>
+                      Técnico: <strong className="text-gray-200">{item.tecnicoAlocado?.nome || 'Samuel'}</strong>
                     </span>
                   </div>
 
-                  {(item.producoes?.[0]?.servicoRealizado || item.producaoRecente?.servicoRealizado) && (
+                  {(item.producoes?.[0]?.servicoRealizado || item.producaoRecente?.servicoRealizado || item.servicoRealizado) && (
                     <p className="text-xs text-gray-400 line-clamp-2 bg-surface-base/60 p-2 rounded border border-surface-border/50">
-                      <span className="font-semibold text-gray-300">Serviço Feito:</span> {item.producoes?.[0]?.servicoRealizado || item.producaoRecente?.servicoRealizado}
+                      <span className="font-semibold text-gray-300">Serviço Feito:</span> {item.producoes?.[0]?.servicoRealizado || item.producaoRecente?.servicoRealizado || item.servicoRealizado}
                     </p>
                   )}
                 </div>
+
 
                 <div className="grid grid-cols-2 gap-2 pt-2 border-t border-surface-border/50">
                   <Button

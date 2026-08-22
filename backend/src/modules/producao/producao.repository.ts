@@ -40,8 +40,9 @@ export interface ProducaoRecord {
 }
 
 // Armazenamento em memória limpo para ambiente de produção
-let mockFilaItens: any[] = [];
-let mockProducoes: ProducaoRecord[] = [];
+export let mockFilaItens: any[] = [];
+export let mockProducoes: ProducaoRecord[] = [];
+
 
 // ─── Busca a fila de OSs disponíveis para um técnico específico ───────────────
 export async function getMinhaFila(tecnicoId: string) {
@@ -179,6 +180,7 @@ export async function iniciarProducao(itemOrdemServicoId: string, tecnicoId: str
       defeitoRelatado: 'Manutenção e calibração de lote',
       statusItem: 'AGUARDANDO_PRODUCAO',
       tecnicoAlocadoId: tecnicoId,
+      tecnicoAlocado: { id: tecnicoId, nome: 'Técnico' },
       ordemServico: {
         id: `os-${Date.now()}`,
         numeroOS: Math.floor(Math.random() * 9000) + 1000,
@@ -197,6 +199,7 @@ export async function iniciarProducao(itemOrdemServicoId: string, tecnicoId: str
     };
     mockFilaItens.push(item);
   }
+
 
   item.statusItem = 'EM_PRODUCAO';
   item.ordemServico.status = 'EM_PRODUCAO';
@@ -364,3 +367,133 @@ export async function getProducaoAtivaNoItem(itemOrdemServicoId: string, tecnico
     (p) => p.itemOrdemServicoId === itemOrdemServicoId && p.status === 'EM_ANDAMENTO'
   );
 }
+
+// ─── Criar Apontamento de Lote do Técnico (Auto-atendimento com envio ao Teste) ───
+export async function criarApontamentoLote(
+  tecnicoId: string,
+  tecnicoNome: string,
+  dados: {
+    numeroOS?: number;
+    clienteId?: string;
+    dataEntrada?: string;
+    prioridade?: 'BAIXA' | 'MEDIA' | 'ALTA' | 'URGENTE';
+    observacoes?: string;
+    enviarDiretoTeste?: boolean;
+    itens: {
+      tipoEquipamentoId: string;
+      quantidade: number;
+      tipoCategoria?: 'REPARADO' | 'SEM_DEFEITO' | 'RETRABALHO';
+      defeitoRelatado?: string;
+      servicoRealizado?: string;
+      numeroSerie?: string;
+    }[];
+  },
+  tiposEquipMap: any,
+  clienteInfo: any
+) {
+  const agora = new Date();
+  const dataRegistro = dados.dataEntrada ? new Date(dados.dataEntrada) : agora;
+  const initialStatus: StatusOS = dados.enviarDiretoTeste ? 'AGUARDANDO_TESTE' : 'AGUARDANDO_PRODUCAO';
+  const newNumero = dados.numeroOS ? Number(dados.numeroOS) : Math.floor(Math.random() * 9000) + 1000;
+
+  const osId = `os-${newNumero}-${Date.now()}`;
+  const osRecord = {
+    id: osId,
+    numeroOS: newNumero,
+    prioridade: dados.prioridade || ('MEDIA' as PrioridadeOS),
+    status: initialStatus,
+    dataEntrada: dataRegistro.toISOString(),
+    cliente: clienteInfo || { id: 'cli-01', nomeRazaoSocial: 'MARANET Telecomunicações' },
+    observacoes: dados.observacoes || null,
+  };
+
+  const createdItens: any[] = [];
+  const createdProducoes: ProducaoRecord[] = [];
+
+  for (let i = 0; i < dados.itens.length; i++) {
+    const it = dados.itens[i];
+    const equip = tiposEquipMap[it.tipoEquipamentoId] || {
+      id: it.tipoEquipamentoId,
+      nome: 'Equipamento Renetec',
+      marca: 'Geral',
+      modelo: 'Padrão',
+      tempoEstimadoMinutos: 45,
+    };
+
+    const itemId = `item-${newNumero}-${i + 1}-${Date.now()}`;
+    const categoria = it.tipoCategoria || 'REPARADO';
+    const defeito = it.defeitoRelatado || (categoria === 'SEM_DEFEITO' ? 'Sem defeito aparente (Triagem)' : 'Manutenção corretiva');
+    const servico = it.servicoRealizado || (categoria === 'SEM_DEFEITO' ? 'Equipamento testado e aprovado em triagem (sem defeito)' : 'Reparo realizado na bancada');
+
+    const itemObj = {
+      id: itemId,
+      ordemServicoId: osId,
+      tipoEquipamentoId: it.tipoEquipamentoId,
+      quantidade: it.quantidade,
+      tipoCategoria: categoria,
+      defeitoRelatado: defeito,
+      servicoRealizado: servico,
+      statusItem: initialStatus,
+      tecnicoAlocadoId: tecnicoId,
+      tecnicoAlocado: { id: tecnicoId, nome: tecnicoNome },
+      ordemServico: osRecord,
+      tipoEquipamento: equip,
+    };
+
+    createdItens.push(itemObj);
+    mockFilaItens.unshift(itemObj);
+
+    if (dados.enviarDiretoTeste) {
+      const prodRecord: ProducaoRecord = {
+        id: `prod-${Date.now()}-${i + 1}`,
+        itemOrdemServicoId: itemId,
+        tecnicoId,
+        dataInicio: dataRegistro,
+        dataFim: agora,
+        quantidadeProduzida: it.quantidade,
+        servicoRealizado: servico,
+        observacao: `Apontamento técnico direto pelo operador ${tecnicoNome}. Categoria: ${categoria}`,
+        status: 'FINALIZADO',
+        itemOrdemServico: itemObj,
+      };
+      createdProducoes.push(prodRecord);
+      mockProducoes.unshift(prodRecord);
+    }
+  }
+
+  // Também salvar no mock OS List
+  const { mockOsList } = await import('../os/os.repository.js');
+  mockOsList.unshift({
+    id: osId,
+    numeroOS: newNumero,
+    dataEntrada: dataRegistro.toISOString(),
+    prioridade: dados.prioridade || ('MEDIA' as PrioridadeOS),
+    status: initialStatus,
+    valorOrcamento: null,
+    observacoes: dados.observacoes || null,
+    cliente: {
+      id: osRecord.cliente.id,
+      nomeRazaoSocial: osRecord.cliente.nomeRazaoSocial,
+      contatoTelefone: '(98) 98765-4321',
+      email: 'operacoes@maranet.com.br',
+    },
+    itens: createdItens.map((it) => ({
+      id: it.id,
+      tipoEquipamento: it.tipoEquipamento,
+      quantidade: it.quantidade,
+      tipoCategoria: it.tipoCategoria,
+      defeitoRelatado: it.defeitoRelatado,
+      servicoRealizado: it.servicoRealizado,
+      statusItem: it.statusItem,
+      tecnicoAlocado: it.tecnicoAlocado,
+    })),
+    createdAt: agora.toISOString(),
+  });
+
+  return {
+    ordemServico: osRecord,
+    itens: createdItens,
+    producoes: createdProducoes,
+  };
+}
+

@@ -37,6 +37,15 @@ export const producaoApiService = {
     return response.data;
   },
 
+  // Apontamento de Lote pelo próprio técnico (Auto-atendimento com OS e múltiplos equipamentos)
+  async apontarLote(payload: any) {
+    const response = await api.post<{ success: boolean; data: any; message: string }>(
+      '/producao/apontamento-lote',
+      payload
+    );
+    return response.data;
+  },
+
   // Histórico de produções
   async getHistorico(page = 1, limit = 10): Promise<{ data: ProducaoHistoricoItem[]; total: number }> {
     const response = await api.get<{
@@ -47,3 +56,4 @@ export const producaoApiService = {
     return { data: response.data.data, total: response.data.meta.total };
   },
 };
+

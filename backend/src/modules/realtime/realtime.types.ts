@@ -1,8 +1,12 @@
 export type RealtimeEventType =
+  | 'os:criada'
   | 'producao:iniciada'
   | 'producao:finalizada'
+  | 'producao:lote_enviado_teste'
+  | 'qualidade:novo_lote'
   | 'qualidade:aprovado'
   | 'qualidade:reprovado'
+  | 'retrabalho:criado'
   | 'retrabalho:iniciado'
   | 'retrabalho:concluido'
   | 'meta:atualizada'
@@ -13,3 +17,4 @@ export interface RealtimeEvent<T = any> {
   timestamp: string;
   data: T;
 }
+

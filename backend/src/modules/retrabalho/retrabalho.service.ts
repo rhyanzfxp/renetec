@@ -33,15 +33,17 @@ export async function concluirRetrabalho(
 
   const ret = await repo.concluirRetrabalho(retrabalhoId, dados);
   realtimeService.broadcast('retrabalho:concluido', { retrabalho: ret });
+  realtimeService.broadcast('qualidade:novo_lote', { retrabalho: ret, reteste: true });
   log({
     acao: 'RETRABALHO_CONCLUIDO',
     entidade: 'Retrabalho',
     entidadeId: retrabalhoId,
-    descricao: `Retrabalho concluído. Solução: ${dados.solucaoAplicada.substring(0, 80)}.`,
+    descricao: `Retrabalho concluído e encaminhado para re-teste. Solução: ${dados.solucaoAplicada.substring(0, 80)}.`,
     detalhes: { solucaoAplicada: dados.solucaoAplicada },
   }).catch(() => {});
   return ret;
 }
+
 
 export async function getHistoricoRetrabalhos(page: number, limit: number) {
   return repo.getHistoricoRetrabalhos(page, limit);

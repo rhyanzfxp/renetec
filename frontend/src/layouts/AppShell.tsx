@@ -14,8 +14,8 @@ import { MetasPage } from '../features/metas/MetasPage';
 import { TvFabricaPage } from '../features/dashboard/TvFabricaPage';
 import { DashboardGerencialPage } from '../features/dashboard/DashboardGerencialPage';
 import { AuditoriaPage } from '../features/auditoria/AuditoriaPage';
-import { EstoqueServicoPage } from '../features/estoque/EstoqueServicoPage';
 import { Play, CheckCircle2, AlertTriangle, Target } from 'lucide-react';
+
 
 export const AppShell: React.FC = () => {
   const { user } = useAuth();
@@ -34,7 +34,6 @@ export const AppShell: React.FC = () => {
     if (activeSection === 'fila_testes') return 'Fila de Controle de Qualidade';
     if (activeSection === 'retrabalho') return 'Fila de Reparos Corretivos (Retrabalho)';
     if (activeSection === 'metas') return 'Metas Coletivas de Produção';
-    if (activeSection === 'estoque_servico') return 'Controle de Estoque & Peças de Reposição';
     if (activeSection === 'ordens_servico') return 'Gerenciamento de Ordens de Serviço';
     if (activeSection === 'auditoria') return 'Trilha de Auditoria & Logs de Segurança';
     return 'Visão Geral da Produção';
@@ -55,12 +54,11 @@ export const AppShell: React.FC = () => {
       return 'Equipamentos reprovados no CQ aguardando intervenção técnica e re-inspeção.';
     if (activeSection === 'metas')
       return 'Acompanhamento do termômetro de pontos (Base 250, Alvo 300, Excelência 350), qualidade e bônus.';
-    if (activeSection === 'estoque_servico')
-      return 'Gestão de SKUs, componentes eletrônicos, alertas de estoque crítico e registro de movimentações.';
     if (activeSection === 'auditoria')
       return 'Registro imutável de todas as ações de usuários, mudanças de estado, logins e laudos técnicos.';
-    return 'Acompanhamento em tempo real das ordens de serviço, estoque e metas de produção.';
+    return 'Acompanhamento em tempo real das ordens de serviço e metas de produção.';
   };
+
 
   return (
     <div className="min-h-screen bg-surface-base text-gray-100 flex flex-col antialiased">
@@ -141,14 +139,13 @@ export const AppShell: React.FC = () => {
             <RetrabalhoPage />
           ) : activeSection === 'metas' ? (
             <MetasPage />
-          ) : activeSection === 'estoque_servico' ? (
-            <EstoqueServicoPage />
           ) : activeSection === 'auditoria' ? (
             <AuditoriaPage />
           ) : (
             <OsListPage onlyMine={activeSection === 'minhas_os' || user?.perfil === 'TECNICO'} />
           )}
         </main>
+
       </div>
 
       {/* Navegação Inferior para Mobile */}

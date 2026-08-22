@@ -80,3 +80,61 @@ export async function finalizarProducao(
 export async function getHistoricoProducao(tecnicoId: string, page: number, limit: number) {
   return repo.getHistoricoProducao(tecnicoId, page, limit);
 }
+
+// ─── Apontamento de Lote do Técnico (Ex: OS #1920 com 12 ONTs, 2 CCRs, 10 ONUs) ──
+export async function apontarLoteTecnico(
+  tecnicoId: string,
+  tecnicoNome: string,
+  dados: any
+) {
+  const { osService } = await import('../os/os.service.js');
+  const tiposEquipMap = Object.fromEntries(osService.getTiposEquipamento().map((e) => [e.id, e]));
+  const clientesMap = Object.fromEntries(osService.getClientes().map((c) => [c.id, c]));
+  const clienteInfo = clientesMap[dados.clienteId || 'cli-01'];
+
+  const resultado = await repo.criarApontamentoLote(
+    tecnicoId,
+    tecnicoNome,
+    dados,
+    tiposEquipMap,
+    clienteInfo
+  );
+
+  const totalUnidades = dados.itens.reduce((acc: number, it: any) => acc + Number(it.quantidade), 0);
+
+  // Broadcasts em tempo real para TV, CQ, Dashboard e Técnicos
+  realtimeService.broadcast('os:criada', { os: resultado.ordemServico });
+  if (dados.enviarDiretoTeste) {
+    realtimeService.broadcast('qualidade:novo_lote', {
+      os: resultado.ordemServico,
+      itens: resultado.itens,
+      tecnicoNome,
+    });
+    realtimeService.broadcast('producao:finalizada', {
+      producoes: resultado.producoes,
+      tecnicoNome,
+    });
+  } else {
+    realtimeService.broadcast('producao:iniciada', {
+      os: resultado.ordemServico,
+      tecnicoNome,
+    });
+  }
+
+  log({
+    acao: 'APONTAMENTO_LOTE_TECNICO',
+    usuarioId: tecnicoId,
+    entidade: 'Producao',
+    entidadeId: resultado.ordemServico.id,
+    descricao: `Técnico ${tecnicoNome} apontou lote da OS #${resultado.ordemServico.numeroOS} com ${totalUnidades} unidades (${dados.itens.length} tipo(s) de equipamento).`,
+    detalhes: {
+      numeroOS: resultado.ordemServico.numeroOS,
+      totalUnidades,
+      enviarDiretoTeste: dados.enviarDiretoTeste,
+      itens: dados.itens,
+    },
+  }).catch(() => {});
+
+  return resultado;
+}
+

@@ -44,7 +44,13 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const dispatchEvent = useCallback((event: RealtimeEvent) => {
     setLastEvent(event);
 
-    if (event.type === 'producao:iniciada') {
+    if (event.type === 'os:criada') {
+      addToastRef.current({ title: 'Nova OS Registrada', message: `OS #${(event.data as any)?.os?.numeroOS || ''} registrada no sistema.`, type: 'info' });
+    } else if (event.type === 'qualidade:novo_lote') {
+      addToastRef.current({ title: 'Novo Lote na Mesa de CQ', message: `Equipamentos liberados para teste por ${(event.data as any)?.tecnicoNome || 'técnico'}.`, type: 'info' });
+    } else if (event.type === 'retrabalho:criado') {
+      addToastRef.current({ title: 'Retrabalho Encaminhado ⚠️', message: 'Item reprovado no CQ enviado para a bancada do técnico responsável.', type: 'warning' });
+    } else if (event.type === 'producao:iniciada') {
       addToastRef.current({ title: 'Bancada Iniciada', message: 'Novo lote em produção na bancada técnica.', type: 'info' });
     } else if (event.type === 'producao:finalizada') {
       addToastRef.current({ title: 'Lote Finalizado', message: 'Montagem concluída! Encaminhado para Controle de Qualidade.', type: 'success' });
@@ -55,8 +61,9 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     } else if (event.type === 'retrabalho:concluido') {
       addToastRef.current({ title: 'Retrabalho Concluído', message: 'Reparo finalizado e enviado para Re-teste no CQ.', type: 'info' });
     } else if (event.type === 'meta:atualizada') {
-      addToastRef.current({ title: 'Metas Atualizadas', message: 'Novos limiares e configurações de meta foram aplicados.', type: 'info' });
+      addToastRef.current({ title: 'Metas Atualizadas', message: 'Novos pontos registrados no termômetro de produção.', type: 'info' });
     }
+
 
     const typeListeners = listenersRef.current.get(event.type);
     if (typeListeners) typeListeners.forEach((cb) => cb(event));

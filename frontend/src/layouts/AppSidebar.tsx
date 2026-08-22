@@ -4,13 +4,13 @@ import {
   Wrench, 
   CheckCircle, 
   Target, 
-  Package, 
   History, 
   BarChart2, 
   Layers,
   Tv,
   ChevronRight
 } from 'lucide-react';
+
 import { clsx } from 'clsx';
 import { useAuth } from '../features/auth/AuthContext';
 import type { NavSection } from '../types/auth';
@@ -43,7 +43,6 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       { id: 'fila_testes' as NavSection, label: 'Controle de Qualidade', icon: <CheckCircle className="w-4 h-4" /> },
       { id: 'retrabalho' as NavSection, label: 'Fila de Retrabalho', icon: <History className="w-4 h-4" /> },
       { id: 'metas' as NavSection, label: 'Metas e Produtividade', icon: <Target className="w-4 h-4" /> },
-      { id: 'estoque_servico' as NavSection, label: 'Estoque de Serviço', icon: <Package className="w-4 h-4" /> },
       { id: 'auditoria' as NavSection, label: 'Auditoria e Logs', icon: <Layers className="w-4 h-4" /> },
     ],
     TECNICO: [

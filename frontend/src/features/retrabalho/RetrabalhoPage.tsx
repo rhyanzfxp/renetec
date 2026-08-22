@@ -18,6 +18,8 @@ import {
   Activity
 } from 'lucide-react';
 
+import { useRealtime } from '../realtime/RealtimeContext';
+
 export const RetrabalhoPage: React.FC = () => {
   const [fila, setFila] = useState<RetrabalhoItemData[]>([]);
   const [historico, setHistorico] = useState<HistoricoRetrabalhoItem[]>([]);
@@ -44,9 +46,16 @@ export const RetrabalhoPage: React.FC = () => {
     }
   }, []);
 
+  const { subscribe } = useRealtime();
+
   useEffect(() => {
     loadData();
-  }, [loadData]);
+    const unsubscribe = subscribe('*', () => {
+      loadData();
+    });
+    return () => unsubscribe();
+  }, [loadData, subscribe]);
+
 
   // Iniciar a execução do retrabalho
   const handleIniciar = async (item: RetrabalhoItemData) => {

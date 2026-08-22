@@ -2,8 +2,12 @@ import { z } from 'zod';
 
 export const RealizarTesteSchema = z
   .object({
-    producaoId: z.string().min(1, { message: 'ID da produção é obrigatório' }),
-    itemOrdemServicoId: z.string().min(1, { message: 'ID do item é obrigatório' }),
+    producaoId: z.string().optional().default('prod-direto'),
+    itemOrdemServicoId: z.string().optional().default('item-direto'),
+    numeroOS: z.coerce.number().optional(),
+    tipoEquipamentoId: z.string().optional(),
+    origemTriagem: z.boolean().optional().default(false),
+    tecnicoResponsavelId: z.string().optional(),
     quantidadeTestada: z
       .number({ required_error: 'Quantidade testada é obrigatória' })
       .int()
@@ -41,3 +45,4 @@ export const RealizarTesteSchema = z
   );
 
 export type RealizarTesteInput = z.infer<typeof RealizarTesteSchema>;
+

@@ -39,7 +39,7 @@ export type NavSection =
   | 'retrabalho'
   | 'ordens_servico'
   | 'metas'
-  | 'estoque_servico'
   | 'auditoria';
 
 export type PrioridadeOS = 'BAIXA' | 'MEDIA' | 'ALTA' | 'URGENTE';
+

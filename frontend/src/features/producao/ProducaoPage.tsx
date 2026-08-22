@@ -5,6 +5,7 @@ import { useRealtime } from '../realtime/RealtimeContext';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Button } from '../../components/ui/Button';
 import { FinalizarProducaoDrawer } from './FinalizarProducaoDrawer';
+import { CriarLoteTecnicoDrawer } from './CriarLoteTecnicoDrawer';
 import {
   Play,
   CheckCircle2,
@@ -14,8 +15,11 @@ import {
   RefreshCw,
   Activity,
   History,
-  Timer
+  Timer,
+  PlusCircle,
+  Layers
 } from 'lucide-react';
+
 
 export const ProducaoPage: React.FC = () => {
   const [fila, setFila] = useState<FilaItemData[]>([]);
@@ -24,8 +28,10 @@ export const ProducaoPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isStarting, setIsStarting] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isCriarLoteOpen, setIsCriarLoteOpen] = useState(false);
   const [tempoDecorrido, setTempoDecorrido] = useState<string>('00:00:00');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Carrega os dados de produção
   const loadData = useCallback(async () => {
@@ -111,6 +117,41 @@ export const ProducaoPage: React.FC = () => {
         </div>
       )}
 
+      {successMessage && (
+        <div className="p-3.5 rounded-lg bg-emerald-950/40 border border-emerald-800/50 flex items-center justify-between text-xs text-emerald-200 animate-fadeIn">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+            <span>{successMessage}</span>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setSuccessMessage(null)}>
+            Fechar
+          </Button>
+        </div>
+      )}
+
+      {/* ─── BANNER OPERACIONAL DO TÉCNICO COM BOTÃO DE AUTO-APONTAMENTO ─────── */}
+      <div className="p-5 rounded-2xl bg-gradient-to-r from-surface-card via-surface-card to-brand-950/30 border border-surface-border flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+        <div className="space-y-1">
+          <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+            <Wrench className="w-5 h-5 text-brand-400" />
+            <span>Bancada Técnica & Apontamento Direto</span>
+          </h2>
+          <p className="text-xs text-gray-400 max-w-xl">
+            Você tem total autonomia para registrar sua produção (ex: 12 ONTs, 2 CCRs na OS #1920) e enviar diretamente para a mesa de testes sem depender da criação manual pelo administrador.
+          </p>
+        </div>
+
+        <Button
+          variant="primary"
+          size="lg"
+          onClick={() => setIsCriarLoteOpen(true)}
+          leftIcon={<PlusCircle className="w-5 h-5" />}
+          className="shadow-glow-primary font-bold sm:self-center"
+        >
+          Novo Apontamento / Minha OS
+        </Button>
+      </div>
+
       {/* ─── 1. CARD DE PRODUÇÃO EM ANDAMENTO (CRONÔMETRO AO VIVO) ─────────── */}
       {producaoAtiva ? (
         <div className="p-5 sm:p-6 rounded-xl bg-gradient-to-r from-amber-950/40 via-surface-card to-surface-card border-2 border-amber-500/40 shadow-panel relative overflow-hidden">
@@ -165,7 +206,7 @@ export const ProducaoPage: React.FC = () => {
                 leftIcon={<CheckCircle2 className="w-5 h-5" />}
                 className="w-full sm:w-auto shadow-glow-success"
               >
-                Finalizar Produção
+                Finalizar e Enviar ao CQ
               </Button>
             </div>
           </div>
@@ -177,8 +218,8 @@ export const ProducaoPage: React.FC = () => {
               <Timer className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-white">Nenhum lote em produção no momento</p>
-              <p className="text-xs text-gray-400">Selecione uma ordem de serviço da fila abaixo para iniciar o cronômetro.</p>
+              <p className="text-sm font-semibold text-white">Nenhum lote com cronômetro ativo no momento</p>
+              <p className="text-xs text-gray-400">Você pode criar um novo lote no botão acima ou iniciar um item da sua fila.</p>
             </div>
           </div>
           <Button variant="outline" size="sm" onClick={loadData} leftIcon={<RefreshCw className="w-3.5 h-3.5" />}>
@@ -192,7 +233,7 @@ export const ProducaoPage: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <Wrench className="w-4 h-4 text-sky-400" /> Fila de Trabalho Disponível ({fila.length})
+              <Layers className="w-4 h-4 text-sky-400" /> Fila de Trabalho em Aberto ({fila.length})
             </h3>
             <p className="text-xs text-gray-400 mt-0.5">Equipamentos alocados para sua bancada aguardando início de reparo.</p>
           </div>
@@ -211,9 +252,9 @@ export const ProducaoPage: React.FC = () => {
         ) : fila.length === 0 ? (
           <div className="p-8 rounded-xl bg-surface-card border border-surface-border text-center space-y-2">
             <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
-            <h4 className="text-sm font-bold text-white">Sua fila de bancada está zerada!</h4>
+            <h4 className="text-sm font-bold text-white">Sua fila de bancada está livre!</h4>
             <p className="text-xs text-gray-400 max-w-sm mx-auto">
-              Todas as ordens de serviço alocadas para você já foram iniciadas ou concluídas.
+              Clique em <strong>"Novo Apontamento / Minha OS"</strong> acima para registrar o lote que você concluiu hoje.
             </p>
           </div>
         ) : (
@@ -276,7 +317,7 @@ export const ProducaoPage: React.FC = () => {
       {historico.length > 0 && (
         <div className="space-y-3 pt-4 border-t border-surface-border">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-            <History className="w-3.5 h-3.5" /> Lotes Concluídos Recentemente
+            <History className="w-3.5 h-3.5" /> Lotes Concluídos Recentemente pelo Técnico
           </h3>
 
           <div className="bg-surface-card border border-surface-border rounded-xl divide-y divide-surface-border overflow-hidden">
@@ -308,14 +349,30 @@ export const ProducaoPage: React.FC = () => {
         </div>
       )}
 
-      {/* Drawer de Finalização */}
+      {/* Drawer de Auto-apontamento do Técnico */}
+      <CriarLoteTecnicoDrawer
+        isOpen={isCriarLoteOpen}
+        onClose={() => setIsCriarLoteOpen(false)}
+        onSuccess={() => {
+          setSuccessMessage('Lote de produção registrado e encaminhado para o Controle de Qualidade com sucesso!');
+          setTimeout(() => setSuccessMessage(null), 5000);
+          loadData();
+        }}
+      />
+
+      {/* Drawer de Finalização de Produção Ativa */}
       <FinalizarProducaoDrawer
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         producao={producaoAtiva}
         tempoDecorrido={tempoDecorrido}
-        onSuccess={loadData}
+        onSuccess={() => {
+          setSuccessMessage('Produção concluída e enviada ao CQ!');
+          setTimeout(() => setSuccessMessage(null), 5000);
+          loadData();
+        }}
       />
     </div>
   );
 };
+

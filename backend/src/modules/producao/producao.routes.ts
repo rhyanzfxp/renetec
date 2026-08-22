@@ -92,6 +92,32 @@ export const producaoRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
+  // ─── POST /producao/apontamento-lote ─────────────────────────────────────
+  // Auto-atendimento do Técnico: Cria OS + Itens e envia direto ao Teste (ou fila)
+  fastify.post(
+    '/producao/apontamento-lote',
+    { preHandler: [authenticate] },
+    async (request, reply) => {
+      const user = request.user as UserJwtPayload;
+      const { ApontamentoLoteSchema } = await import('./producao.schema.js');
+      const body = ApontamentoLoteSchema.parse(request.body);
+
+      try {
+        const resultado = await service.apontarLoteTecnico(user.sub, user.nome || 'Técnico', body);
+        return reply.status(201).send({
+          success: true,
+          message: `Lote da OS #${resultado.ordemServico.numeroOS} registrado com sucesso!`,
+          data: resultado,
+        });
+      } catch (err: any) {
+        return reply.status(400).send({
+          success: false,
+          message: err.message || 'Erro ao registrar apontamento de lote.',
+        });
+      }
+    }
+  );
+
   // ─── GET /producao/historico ──────────────────────────────────────────────
   // Histórico de produções do técnico logado
   fastify.get(
@@ -119,3 +145,4 @@ export const producaoRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 };
+

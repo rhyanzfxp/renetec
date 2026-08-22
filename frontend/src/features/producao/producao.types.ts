@@ -64,6 +64,25 @@ export interface FinalizarProducaoPayload {
   observacao?: string;
 }
 
+export interface ApontamentoLoteItemPayload {
+  tipoEquipamentoId: string;
+  quantidade: number;
+  tipoCategoria: 'REPARADO' | 'SEM_DEFEITO' | 'RETRABALHO';
+  defeitoRelatado?: string;
+  servicoRealizado?: string;
+  numeroSerie?: string;
+}
+
+export interface ApontamentoLotePayload {
+  numeroOS?: number;
+  clienteId?: string;
+  dataEntrada?: string;
+  prioridade?: PrioridadeOS;
+  observacoes?: string;
+  enviarDiretoTeste?: boolean;
+  itens: ApontamentoLoteItemPayload[];
+}
+
 export interface ProducaoHistoricoItem {
   id: string;
   dataInicio: string;
@@ -85,3 +104,4 @@ export interface ProducaoHistoricoItem {
     };
   };
 }
+

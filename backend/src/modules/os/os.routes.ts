@@ -81,8 +81,8 @@ export async function osRoutes(app: FastifyInstance) {
     }
   });
 
-  // Cadastro de Nova OS (Restrito a Admin)
-  app.post('/', { preHandler: [authenticate, authorize(['ADMIN'])] }, async (request, reply) => {
+  // Cadastro de Nova OS / Apontamento de Lote (Aberto a Técnicos, Qualidade e Admin)
+  app.post('/', { preHandler: [authenticate] }, async (request, reply) => {
     const parseResult = createOsSchema.safeParse(request.body);
     if (!parseResult.success) {
       return reply.status(400).send({
@@ -104,6 +104,7 @@ export async function osRoutes(app: FastifyInstance) {
       message: `Ordem de Serviço #${newOs.numeroOS} cadastrada com sucesso!`,
     });
   });
+
 
   // Atualização de Status da OS
   app.patch('/:id/status', { preHandler: [authenticate] }, async (request, reply) => {

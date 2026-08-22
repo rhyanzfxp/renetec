@@ -25,7 +25,9 @@ export interface OsListItem {
       modelo: string | null;
     };
     quantidade: number;
+    tipoCategoria?: 'REPARADO' | 'SEM_DEFEITO' | 'RETRABALHO';
     defeitoRelatado: string | null;
+    servicoRealizado?: string | null;
     statusItem: StatusOS;
     tecnicoAlocado: {
       id: string;
@@ -36,7 +38,7 @@ export interface OsListItem {
 }
 
 // Armazenamento em memória limpo para ambiente de produção
-let mockOsList: OsListItem[] = [];
+export let mockOsList: OsListItem[] = [];
 
 let nextOsNumber = 1001;
 
@@ -215,37 +217,45 @@ export class OsRepository {
   }
 
   async create(data: CreateOsInput, clientesMap: any, tiposEquipMap: any, tecnicosMap: any): Promise<OsListItem> {
-    const newNumero = nextOsNumber++;
-    const cliente = clientesMap[data.clienteId] || {
-      id: data.clienteId,
-      nomeRazaoSocial: 'Solar Power Brasil Ltda',
-      contatoTelefone: '(11) 98765-4321',
-      email: 'contato@cliente.com.br',
+    const newNumero = data.numeroOS ? Number(data.numeroOS) : nextOsNumber++;
+    if (data.numeroOS && Number(data.numeroOS) >= nextOsNumber) {
+      nextOsNumber = Number(data.numeroOS) + 1;
+    }
+    const cliente = clientesMap[data.clienteId || 'cli-01'] || {
+      id: data.clienteId || 'cli-01',
+      nomeRazaoSocial: 'MARANET Telecomunicações',
+      contatoTelefone: '(98) 98765-4321',
+      email: 'operacoes@maranet.com.br',
     };
 
+    const initialStatus = (data.status as StatusOS) || 'RECEBIDO';
+    const dataRegistro = data.dataEntrada ? new Date(data.dataEntrada).toISOString() : new Date().toISOString();
+
     const newOs: OsListItem = {
-      id: `os-${newNumero}-uuid`,
+      id: `os-${newNumero}-${Date.now()}`,
       numeroOS: newNumero,
-      dataEntrada: new Date().toISOString(),
-      prioridade: data.prioridade as PrioridadeOS,
-      status: 'RECEBIDO' as StatusOS,
+      dataEntrada: dataRegistro,
+      prioridade: (data.prioridade as PrioridadeOS) || 'MEDIA',
+      status: initialStatus,
       valorOrcamento: data.valorOrcamento || null,
       observacoes: data.observacoes || null,
       cliente,
       itens: data.itens.map((it, idx) => {
         const eq = tiposEquipMap[it.tipoEquipamentoId] || {
           id: it.tipoEquipamentoId,
-          nome: 'Inversor Solar Trifásico 15kW',
-          marca: 'Weg',
-          modelo: 'SIW500-T15',
+          nome: 'Equipamento Renetec',
+          marca: 'Geral',
+          modelo: 'Padrão',
         };
         const tec = it.tecnicoAlocadoId ? tecnicosMap[it.tecnicoAlocadoId] : null;
         return {
-          id: `item-${newNumero}-${idx + 1}`,
+          id: `item-${newNumero}-${idx + 1}-${Date.now()}`,
           tipoEquipamento: eq,
           quantidade: it.quantidade,
-          defeitoRelatado: it.defeitoRelatado,
-          statusItem: 'RECEBIDO' as StatusOS,
+          tipoCategoria: it.tipoCategoria || 'REPARADO',
+          defeitoRelatado: it.defeitoRelatado || 'Manutenção técnica realizada',
+          servicoRealizado: it.servicoRealizado || null,
+          statusItem: initialStatus,
           tecnicoAlocado: tec ? { id: tec.id, nome: tec.nome } : null,
         };
       }),
@@ -257,9 +267,9 @@ export class OsRepository {
         await prisma.ordemServico.create({
           data: {
             numeroOS: newNumero,
-            clienteId: data.clienteId,
-            prioridade: data.prioridade,
-            status: 'RECEBIDO',
+            clienteId: data.clienteId || 'cli-01',
+            prioridade: data.prioridade || 'MEDIA',
+            status: initialStatus,
             valorOrcamento: data.valorOrcamento,
             observacoes: data.observacoes,
             itens: {
@@ -267,7 +277,7 @@ export class OsRepository {
                 tipoEquipamentoId: it.tipoEquipamentoId,
                 quantidade: it.quantidade,
                 defeitoRelatado: it.defeitoRelatado,
-                statusItem: 'RECEBIDO',
+                statusItem: initialStatus,
                 tecnicoAlocadoId: it.tecnicoAlocadoId,
               })),
             },
@@ -305,5 +315,6 @@ export class OsRepository {
     return null;
   }
 }
+
 
 export const osRepository = new OsRepository();

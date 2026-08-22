@@ -3,14 +3,29 @@ import { z } from 'zod';
 export const createItemOsSchema = z.object({
   tipoEquipamentoId: z.string().min(1, 'Tipo de equipamento é obrigatório'),
   quantidade: z.coerce.number().int().min(1, 'Quantidade mínima é 1'),
-  defeitoRelatado: z.string().min(3, 'Descreva o defeito relatado'),
+  tipoCategoria: z.enum(['REPARADO', 'SEM_DEFEITO', 'RETRABALHO']).default('REPARADO').optional(),
+  defeitoRelatado: z.string().optional().default('Manutenção e reparo técnico'),
+  servicoRealizado: z.string().optional(),
   numeroSerie: z.string().optional(),
   tecnicoAlocadoId: z.string().optional(),
 });
 
 export const createOsSchema = z.object({
-  clienteId: z.string().min(1, 'Cliente é obrigatório'),
+  numeroOS: z.coerce.number().int().positive().optional(),
+  clienteId: z.string().optional().default('cli-01'),
+  dataEntrada: z.string().optional(),
   prioridade: z.enum(['BAIXA', 'MEDIA', 'ALTA', 'URGENTE']).default('MEDIA'),
+  status: z.enum([
+    'RECEBIDO',
+    'AGUARDANDO_PRODUCAO',
+    'EM_PRODUCAO',
+    'AGUARDANDO_TESTE',
+    'APROVADO',
+    'REPROVADO',
+    'RETRABALHO',
+    'AGUARDANDO_NOVO_TESTE',
+    'CONCLUIDO',
+  ]).optional(),
   valorOrcamento: z.coerce.number().optional(),
   observacoes: z.string().optional(),
   itens: z.array(createItemOsSchema).min(1, 'A OS deve conter ao menos 1 item'),
@@ -45,3 +60,4 @@ export const queryOsSchema = z.object({
   tecnicoId: z.string().optional(),
   clienteId: z.string().optional(),
 });
+

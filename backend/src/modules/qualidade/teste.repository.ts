@@ -55,8 +55,9 @@ const mockMotivos: MotivoReprovacaoRecord[] = [
 ];
 
 // Armazenamento em memória limpo para ambiente de produção
-let mockFilaCq: any[] = [];
-let mockTestes: TesteRecord[] = [];
+export let mockFilaCq: any[] = [];
+export let mockTestes: TesteRecord[] = [];
+
 
 // ─── Listar motivos de reprovação ─────────────────────────────────────────────
 export async function getMotivosReprovacao(): Promise<MotivoReprovacaoRecord[]> {
@@ -79,7 +80,7 @@ export async function getFilaTestes() {
   if (isDatabaseReady()) {
     try {
       const itens = await prisma.itemOrdemServico.findMany({
-        where: { statusItem: 'AGUARDANDO_TESTE' },
+        where: { statusItem: { in: ['AGUARDANDO_TESTE', 'AGUARDANDO_NOVO_TESTE'] } },
         include: {
           ordemServico: {
             select: {
@@ -114,7 +115,54 @@ export async function getFilaTestes() {
       // Fallback
     }
   }
-  return mockFilaCq.filter((i) => i.statusItem === 'AGUARDANDO_TESTE');
+
+  // Fallback no mock: buscar de mockFilaItens e de mockOsList
+  const daFila = mockFilaCq.filter((i) => ['AGUARDANDO_TESTE', 'AGUARDANDO_NOVO_TESTE'].includes(i.statusItem));
+  
+  // Buscar também do mockOsList
+  const { mockOsList } = await import('../os/os.repository.js');
+  const dosMockOs: any[] = [];
+  for (const os of mockOsList) {
+    if (['AGUARDANDO_TESTE', 'AGUARDANDO_NOVO_TESTE'].includes(os.status)) {
+      for (const it of os.itens) {
+        if (['AGUARDANDO_TESTE', 'AGUARDANDO_NOVO_TESTE'].includes(it.statusItem)) {
+          if (!daFila.some((f) => f.id === it.id)) {
+            dosMockOs.push({
+              id: it.id,
+              ordemServicoId: os.id,
+              tipoEquipamentoId: it.tipoEquipamento.id,
+              quantidade: it.quantidade,
+              tipoCategoria: it.tipoCategoria || 'REPARADO',
+              defeitoRelatado: it.defeitoRelatado,
+              servicoRealizado: it.servicoRealizado || (it.tipoCategoria === 'SEM_DEFEITO' ? 'Triagem inicial - sem defeito' : 'Reparo realizado na bancada'),
+              statusItem: it.statusItem,
+              tecnicoAlocadoId: it.tecnicoAlocado?.id || null,
+              tecnicoAlocado: it.tecnicoAlocado || { id: 'colab-samuel', nome: 'Samuel' },
+              ordemServico: {
+                id: os.id,
+                numeroOS: os.numeroOS,
+                prioridade: os.prioridade,
+                status: os.status,
+                dataEntrada: os.dataEntrada,
+                cliente: os.cliente,
+              },
+              tipoEquipamento: it.tipoEquipamento,
+              producoes: [
+                {
+                  id: `prod-${it.id}`,
+                  servicoRealizado: it.servicoRealizado || (it.tipoCategoria === 'SEM_DEFEITO' ? 'Triagem inicial - sem defeito' : 'Reparo realizado na bancada'),
+                  quantidadeProduzida: it.quantidade,
+                  dataFim: new Date(),
+                }
+              ],
+            });
+          }
+        }
+      }
+    }
+  }
+
+  return [...daFila, ...dosMockOs];
 }
 
 // ─── Realizar Teste de Qualidade com Validação Invariável ─────────────────────
@@ -162,6 +210,7 @@ export async function realizarTeste(
               testeId: teste.id,
               itemOrdemServicoId: dados.itemOrdemServicoId,
               motivoReprovacaoId: dados.motivoReprovacaoId,
+              tecnicoResponsavelId: dados.tecnicoResponsavelId,
               quantidadeRetrabalho: dados.quantidadeReprovada,
               detalhesDefeito: dados.detalhesDefeito || dados.observacao || 'Não conformidade detectada no CQ',
               status: 'PENDENTE',
@@ -200,38 +249,95 @@ export async function realizarTeste(
 
   // Fallback Mock
   let item = mockFilaCq.find((i) => i.id === dados.itemOrdemServicoId);
+  const { mockOsList } = await import('../os/os.repository.js');
+  const { mockFilaItens } = await import('../producao/producao.repository.js');
+
   if (!item) {
+    // Procurar em mockFilaItens
+    const filaIt = mockFilaItens.find((x) => x.id === dados.itemOrdemServicoId);
+    if (filaIt) {
+      item = filaIt;
+      item.statusItem = novoStatusItem;
+      if (item.ordemServico) item.ordemServico.status = novoStatusItem;
+    }
+  }
+
+  if (!item) {
+    // Procurar no mockOsList
+    for (const os of mockOsList) {
+      const it = os.itens.find((x) => x.id === dados.itemOrdemServicoId || (dados.numeroOS && os.numeroOS === Number(dados.numeroOS)));
+      if (it) {
+        item = {
+          id: it.id,
+          ordemServicoId: os.id,
+          tipoEquipamentoId: it.tipoEquipamento.id,
+          quantidade: it.quantidade,
+          tipoCategoria: it.tipoCategoria || 'REPARADO',
+          defeitoRelatado: it.defeitoRelatado,
+          statusItem: novoStatusItem,
+          tecnicoAlocado: it.tecnicoAlocado || (dados.tecnicoResponsavelId ? { id: dados.tecnicoResponsavelId, nome: 'Técnico' } : { id: 'colab-samuel', nome: 'Samuel' }),
+          ordemServico: os,
+          tipoEquipamento: it.tipoEquipamento,
+        };
+        it.statusItem = novoStatusItem;
+        os.status = novoStatusItem;
+        break;
+      }
+    }
+  }
+
+
+  if (!item) {
+    const numOS = dados.numeroOS ? Number(dados.numeroOS) : 1920;
+    const tecId = dados.tecnicoResponsavelId || 'colab-samuel';
+    const tecNome = tecId.includes('samuel') ? 'Samuel' : tecId.includes('joao') ? 'João' : tecId.includes('joas') ? 'Joás' : 'Samuel';
+
     item = {
-      id: dados.itemOrdemServicoId,
+      id: dados.itemOrdemServicoId || `item-${Date.now()}`,
       ordemServicoId: `os-${Date.now()}`,
-      tipoEquipamentoId: 'eq-01',
+      tipoEquipamentoId: dados.tipoEquipamentoId || 'pt-02',
       quantidade: dados.quantidadeTestada,
-      defeitoRelatado: 'Instabilidade detectada',
+      tipoCategoria: dados.origemTriagem ? 'SEM_DEFEITO' : 'REPARADO',
+      defeitoRelatado: dados.origemTriagem ? 'Triagem - sem defeito' : 'Reparo realizado na bancada',
       statusItem: novoStatusItem,
-      tecnicoAlocado: { id: 'usr-tecnico-01', nome: 'João Silva' },
+      tecnicoAlocado: { id: tecId, nome: tecNome },
       ordemServico: {
         id: `os-${Date.now()}`,
-        numeroOS: 1533,
+        numeroOS: numOS,
         prioridade: 'ALTA',
         status: novoStatusItem,
         dataEntrada: new Date().toISOString(),
-        cliente: { id: 'cli-01', nomeRazaoSocial: 'Solar Power Brasil Ltda' },
+        cliente: { id: 'cli-01', nomeRazaoSocial: 'MARANET Telecomunicações' },
       },
       tipoEquipamento: {
-        id: 'eq-01',
-        nome: 'Inversor Solar Trifásico 15kW',
-        marca: 'Weg',
+        id: dados.tipoEquipamentoId || 'pt-02',
+        nome: 'Roteador GIGA/ONT/',
+        marca: 'Geral',
       },
     };
     mockFilaCq.push(item);
   }
 
   item.statusItem = novoStatusItem;
-  item.ordemServico.status = novoStatusItem;
+  if (item.ordemServico) {
+    item.ordemServico.status = novoStatusItem;
+  }
+
+  // Atualizar também no mockOsList
+  for (const os of mockOsList) {
+    if (os.id === item.ordemServicoId || os.numeroOS === item.ordemServico?.numeroOS) {
+      os.status = novoStatusItem;
+      os.itens.forEach((it) => {
+        if (it.id === item.id) it.statusItem = novoStatusItem;
+      });
+    }
+  }
+
+  const tecResponsavel = item.tecnicoAlocado || (dados.tecnicoResponsavelId ? { id: dados.tecnicoResponsavelId, nome: 'Técnico' } : { id: 'colab-samuel', nome: 'Samuel' });
 
   const novoTeste: TesteRecord = {
     id: `teste-${Date.now()}`,
-    producaoId: dados.producaoId,
+    producaoId: dados.producaoId || `prod-${item.id}`,
     inspetorId,
     quantidadeTestada: dados.quantidadeTestada,
     quantidadeAprovada: dados.quantidadeAprovada,
@@ -240,36 +346,57 @@ export async function realizarTeste(
     observacao: dados.observacao || null,
     inspetor: {
       id: inspetorId,
-      nome: 'Controle de Qualidade',
+      nome: 'Rhyan (CQ / Testes)',
     },
     producao: {
-      id: dados.producaoId,
+      id: dados.producaoId || `prod-${item.id}`,
       itemOrdemServico: item,
     },
   };
 
   mockTestes.unshift(novoTeste);
 
-  // Se houver reprovação, registrar no mock de retrabalho automaticamente
+  // Se houver reprovação, registrar no mock de retrabalho automaticamente para o técnico
   if (temReprovacao) {
+    // Garantir que o itemOrdemServico tenha a estrutura completa que RetrabalhoRecord exige
+    const safeOrdemServico = item.ordemServico ?? {
+      id: item.ordemServicoId || `os-${Date.now()}`,
+      numeroOS: 9999,
+      prioridade: 'NORMAL' as const,
+      status: 'AGUARDANDO_NOVO_TESTE' as const,
+      dataEntrada: new Date().toISOString(),
+      cliente: { id: 'cli-01', nomeRazaoSocial: 'MARANET Telecomunicações' },
+    };
+
+    const safeItemOS = {
+      id: item.id,
+      quantidade: item.quantidade,
+      defeitoRelatado: item.defeitoRelatado || null,
+      statusItem: 'AGUARDANDO_NOVO_TESTE' as const,
+      ordemServico: safeOrdemServico,
+      tipoEquipamento: item.tipoEquipamento || { id: item.tipoEquipamentoId || 'pt-01', nome: 'Equipamento', marca: null, modelo: null },
+    };
+
     adicionarRetrabalhoMock({
       id: `ret-${Date.now()}`,
       testeId: novoTeste.id,
-      itemOrdemServicoId: dados.itemOrdemServicoId,
+      itemOrdemServicoId: item.id,
       motivoReprovacaoId: dados.motivoReprovacaoId || 'mot-01',
-      tecnicoResponsavelId: item.tecnicoAlocado?.id || 'usr-tecnico-01',
+      tecnicoResponsavelId: tecResponsavel.id,
+      tecnicoResponsavel: tecResponsavel,
       quantidadeRetrabalho: dados.quantidadeReprovada,
-      detalhesDefeito: dados.detalhesDefeito || dados.observacao || 'Não conformidade detectada no CQ',
+      detalhesDefeito: dados.detalhesDefeito || dados.observacao || 'Não conformidade detectada no teste de CQ',
       solucaoAplicada: null,
       dataInicio: agora,
       dataFim: null,
       status: 'PENDENTE',
-      itemOrdemServico: item,
+      itemOrdemServico: safeItemOS,
     });
   }
 
   return novoTeste;
 }
+
 
 // ─── Histórico de Testes ──────────────────────────────────────────────────────
 export async function getHistoricoTestes(page = 1, limit = 20) {

@@ -2,6 +2,8 @@ import { osRepository, OsListItem } from './os.repository.js';
 import { CreateOsInput } from './os.schema.js';
 import { StatusOS } from '@prisma/client';
 import { TABELA_PONTUACAO_OFICIAL } from '../meta/meta.repository.js';
+import { realtimeService } from '../realtime/realtime.service.js';
+import { log } from '../auditoria/auditoria.service.js';
 
 export class OsService {
   // Lista de clientes oficiais da Renetec
@@ -60,7 +62,23 @@ export class OsService {
     const tiposEquipMap = Object.fromEntries(this.getTiposEquipamento().map((e) => [e.id, e]));
     const tecnicosMap = Object.fromEntries(this.getTecnicos().map((t) => [t.id, t]));
 
-    return osRepository.create(data, clientesMap, tiposEquipMap, tecnicosMap);
+    const newOs = await osRepository.create(data, clientesMap, tiposEquipMap, tecnicosMap);
+    
+    realtimeService.broadcast('os:criada', { os: newOs });
+    if (newOs.status === 'AGUARDANDO_TESTE') {
+      realtimeService.broadcast('qualidade:novo_lote', { os: newOs });
+    }
+
+    log({
+      acao: 'OS_CRIADA',
+      usuarioId,
+      entidade: 'OrdemServico',
+      entidadeId: newOs.id,
+      descricao: `OS #${newOs.numeroOS} cadastrada com ${newOs.itens.length} tipo(s) de equipamento(s). Status inicial: ${newOs.status}`,
+      detalhes: { numeroOS: newOs.numeroOS, status: newOs.status, itens: newOs.itens },
+    }).catch(() => {});
+
+    return newOs;
   }
 
   async updateStatus(id: string, newStatus: StatusOS, observacao?: string, usuarioId?: string) {
@@ -70,8 +88,25 @@ export class OsService {
     }
 
     const updated = await osRepository.updateStatus(id, newStatus, observacao);
+    if (updated) {
+      realtimeService.broadcast('os:criada', { os: updated });
+      if (newStatus === 'AGUARDANDO_TESTE') {
+        realtimeService.broadcast('qualidade:novo_lote', { os: updated });
+      }
+    }
+
+    log({
+      acao: 'OS_STATUS_ATUALIZADO',
+      usuarioId,
+      entidade: 'OrdemServico',
+      entidadeId: id,
+      descricao: `Status da OS atualizado para ${newStatus}.`,
+      detalhes: { statusAnterior: os.status, statusNovo: newStatus, observacao },
+    }).catch(() => {});
+
     return updated;
   }
 }
 
 export const osService = new OsService();
+

@@ -100,8 +100,19 @@ export async function getRetrabalhosPendentes(tecnicoId?: string) {
     }
   }
 
-  return mockRetrabalhos.filter((r) => ['PENDENTE', 'EM_ANDAMENTO'].includes(r.status));
+  return mockRetrabalhos.filter((r) => {
+    const isStatusOk = ['PENDENTE', 'EM_ANDAMENTO', 'EM_EXECUCAO'].includes(r.status);
+    if (!isStatusOk) return false;
+    if (!tecnicoId) return true;
+    return (
+      !r.tecnicoResponsavelId ||
+      r.tecnicoResponsavelId === tecnicoId ||
+      r.tecnicoResponsavelId.toLowerCase().includes(tecnicoId.toLowerCase()) ||
+      tecnicoId.toLowerCase().includes(r.tecnicoResponsavelId.toLowerCase())
+    );
+  });
 }
+
 
 // ─── Iniciar retrabalho por um técnico ─────────────────────────────────────────
 export async function iniciarRetrabalho(retrabalhoId: string, tecnicoId: string) {

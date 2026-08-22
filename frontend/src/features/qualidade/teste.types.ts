@@ -12,12 +12,15 @@ export interface FilaTesteItem {
   id: string;
   ordemServicoId: string;
   quantidade: number;
+  tipoCategoria?: 'REPARADO' | 'SEM_DEFEITO' | 'RETRABALHO';
   defeitoRelatado: string | null;
+  servicoRealizado?: string | null;
   statusItem: StatusOS;
   tecnicoAlocado?: {
     id: string;
     nome: string;
   } | null;
+
   producoes?: {
     id: string;
     servicoRealizado: string | null;

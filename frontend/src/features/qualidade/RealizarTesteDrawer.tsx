@@ -144,7 +144,18 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
         <div className="p-3.5 rounded-lg bg-surface-elevated border border-surface-border space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs text-gray-400">Equipamento a Testar</span>
-            <StatusBadge prioridade={item.ordemServico.prioridade} size="sm" />
+            <div className="flex items-center gap-1.5">
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                item.tipoCategoria === 'SEM_DEFEITO'
+                  ? 'bg-sky-950/40 border-sky-500/40 text-sky-300'
+                  : item.tipoCategoria === 'RETRABALHO'
+                  ? 'bg-purple-950/40 border-purple-500/40 text-purple-300'
+                  : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+              }`}>
+                {item.tipoCategoria === 'SEM_DEFEITO' ? '✅ Triagem (Sem Defeito)' : item.tipoCategoria === 'RETRABALHO' ? '🔄 Retrabalho' : '🔧 Reparado'}
+              </span>
+              <StatusBadge prioridade={item.ordemServico.prioridade} size="sm" />
+            </div>
           </div>
           <p className="text-sm font-bold text-white">
             {item.tipoEquipamento.nome} {item.tipoEquipamento.marca ? `(${item.tipoEquipamento.marca})` : ''}
@@ -153,7 +164,7 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
           <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-surface-border/50 text-gray-300">
             <div className="flex items-center gap-1.5">
               <User className="w-3.5 h-3.5 text-sky-400" />
-              <span>Técnico: <strong className="text-white">{item.tecnicoAlocado?.nome || 'Bancada Geral'}</strong></span>
+              <span>Técnico Responsável: <strong className="text-white">{item.tecnicoAlocado?.nome || 'Samuel'}</strong></span>
             </div>
             <div className="text-right">
               <span>Tamanho do Lote: <strong className="text-amber-400 tabular-nums">{qtdLote} un</strong></span>
@@ -182,7 +193,7 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Aprovadas
+                <CheckCircle2 className="w-3.5 h-3.5" /> Aprovadas (Para a Meta)
               </label>
               <Input
                 type="number"
@@ -200,7 +211,7 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
 
             <div className="space-y-1">
               <label className="text-xs font-semibold text-red-400 flex items-center gap-1">
-                <XCircle className="w-3.5 h-3.5" /> Reprovadas
+                <XCircle className="w-3.5 h-3.5" /> Reprovadas (Retrabalho)
               </label>
               <Input
                 type="number"
@@ -237,9 +248,18 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
         {/* Seção Condicional: Motivo de Reprovação (se houver reprovadas > 0) */}
         {reprovadas > 0 && (
           <div className="p-3.5 rounded-xl bg-amber-950/20 border border-amber-500/30 space-y-3 animate-fadeIn">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400 uppercase tracking-wider">
-              <ShieldAlert className="w-4 h-4" /> Motivo de Não-Conformidade (Retrabalho)
+            <div className="flex items-center justify-between text-xs font-bold text-amber-400 uppercase tracking-wider">
+              <span className="flex items-center gap-1.5">
+                <ShieldAlert className="w-4 h-4" /> Motivo de Não-Conformidade & Retrabalho
+              </span>
+              <span className="text-[11px] text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded">
+                Devolução p/ {item.tecnicoAlocado?.nome || 'Samuel'}
+              </span>
             </div>
+
+            <p className="text-[11px] text-gray-300 bg-amber-950/40 p-2 rounded border border-amber-500/20">
+              🔄 <strong>Atenção:</strong> As <strong>{reprovadas} unidade(s)</strong> reprovadas serão encaminhadas imediatamente para a fila de Retrabalho do técnico <strong>{item.tecnicoAlocado?.nome || 'Samuel'}</strong> para correção.
+            </p>
 
             <div className="space-y-1.5">
               <label className="block text-xs font-semibold text-gray-300">
@@ -261,7 +281,7 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
 
             <div className="space-y-1.5">
               <label className="block text-xs font-semibold text-gray-300">
-                Detalhes da Não Conformidade para o Técnico
+                Detalhes da Não Conformidade para o Técnico Corrigir
               </label>
               <textarea
                 value={detalhesDefeito}
@@ -273,6 +293,7 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
             </div>
           </div>
         )}
+
 
         {/* Observações Gerais do Laudo */}
         <div className="space-y-1.5">
