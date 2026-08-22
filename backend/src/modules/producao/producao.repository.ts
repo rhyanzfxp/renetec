@@ -393,7 +393,7 @@ export async function criarApontamentoLote(
 ) {
   const agora = new Date();
   const dataRegistro = dados.dataEntrada ? new Date(dados.dataEntrada) : agora;
-  const initialStatus: StatusOS = dados.enviarDiretoTeste ? 'AGUARDANDO_TESTE' : 'AGUARDANDO_PRODUCAO';
+  const initialStatus: StatusOS = dados.enviarDiretoTeste ? 'AGUARDANDO_TESTE' : 'EM_PRODUCAO';
   const newNumero = dados.numeroOS ? Number(dados.numeroOS) : Math.floor(Math.random() * 9000) + 1000;
 
   const osId = `os-${newNumero}-${Date.now()}`;
@@ -458,8 +458,25 @@ export async function criarApontamentoLote(
       };
       createdProducoes.push(prodRecord);
       mockProducoes.unshift(prodRecord);
+    } else {
+      // Se optou por iniciar na bancada, criar como produção ativa EM_ANDAMENTO
+      const prodAtivaRecord: ProducaoRecord = {
+        id: `prod-${Date.now()}-${i + 1}`,
+        itemOrdemServicoId: itemId,
+        tecnicoId,
+        dataInicio: dataRegistro,
+        dataFim: null,
+        quantidadeProduzida: it.quantidade,
+        servicoRealizado: servico,
+        observacao: `Em manutenção na bancada pelo técnico ${tecnicoNome}. Categoria: ${categoria}`,
+        status: 'EM_ANDAMENTO',
+        itemOrdemServico: itemObj,
+      };
+      createdProducoes.push(prodAtivaRecord);
+      mockProducoes.unshift(prodAtivaRecord);
     }
   }
+
 
   // Também salvar no mock OS List
   const { mockOsList } = await import('../os/os.repository.js');
