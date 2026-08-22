@@ -26,6 +26,8 @@ export const QualidadePage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+
   const loadData = useCallback(async () => {
     try {
       setErrorMessage(null);
@@ -53,10 +55,17 @@ export const QualidadePage: React.FC = () => {
     return () => unsubscribe();
   }, [loadData, subscribe]);
 
-  // Aprovação Rápida 100% de um lote sem reprovações
+  // Aprovação Rápida 100% de um lote sem reprovações (com proteção contra clique triplo)
   const handleAprovacaoRapida = async (item: FilaTesteItem) => {
+    if (approvingId) return; // Evita cliques múltiplos concorrentes
+
     try {
+      setApprovingId(item.id);
       setErrorMessage(null);
+
+      // Remoção otimista imediata da fila para o card sumir na hora
+      setFila((prev) => prev.filter((x) => x.id !== item.id));
+
       const producaoId =
         item.producoes?.[0]?.id || item.producaoRecente?.id || `prod-ref-${item.id}`;
 
@@ -75,8 +84,12 @@ export const QualidadePage: React.FC = () => {
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } }; message?: string };
       setErrorMessage(e.response?.data?.message || 'Erro ao aprovar lote.');
+      await loadData(); // Restaura caso falhe
+    } finally {
+      setApprovingId(null);
     }
   };
+
 
   const openInspecao = (item: FilaTesteItem) => {
     setSelectedItem(item);
@@ -241,8 +254,10 @@ export const QualidadePage: React.FC = () => {
                     onClick={() => handleAprovacaoRapida(item)}
                     leftIcon={<CheckCircle2 className="w-3.5 h-3.5" />}
                     className="w-full"
+                    loading={approvingId === item.id}
+                    disabled={!!approvingId}
                   >
-                    Aprovar 100%
+                    {approvingId === item.id ? 'Aprovando...' : 'Aprovar 100%'}
                   </Button>
                 </div>
               </div>

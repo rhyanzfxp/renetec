@@ -116,8 +116,9 @@ export async function getFilaTestes() {
     }
   }
 
-  // Fallback no mock: buscar de mockFilaCq, mockFilaItens e mockOsList
+  // Fallback no mock: buscar de mockFilaCq, mockFilaItens, mockOsList e mockRetrabalhos
   const daFila = mockFilaCq.filter((i) => ['AGUARDANDO_TESTE', 'AGUARDANDO_NOVO_TESTE'].includes(i.statusItem));
+
 
   // Buscar dos mockFilaItens (itens criados via criarApontamentoLote e enviados direto ao CQ)
   const { mockFilaItens } = await import('../producao/producao.repository.js');
@@ -195,12 +196,11 @@ export async function getFilaTestes() {
     }
   }
 
-  // Buscar também retrabalhos finalizados aguardando re-teste
-
+  // Buscar também retrabalhos finalizados que AINDA NÃO foram aprovados
   const { mockRetrabalhos } = await import('../retrabalho/retrabalho.repository.js');
   const dosRetrabalhos: any[] = [];
   for (const ret of mockRetrabalhos) {
-    if (ret.status === 'FINALIZADO' && ret.itemOrdemServico) {
+    if (ret.status === 'FINALIZADO' && ret.itemOrdemServico && ret.itemOrdemServico.statusItem === 'AGUARDANDO_NOVO_TESTE') {
       const itemOS = ret.itemOrdemServico;
       const itemId = ret.itemOrdemServicoId || itemOS.id;
       const jaIncluso = daFila.some((f) => f.id === itemId) || dosFilaItens.some((f) => f.id === itemId) || dosMockOs.some((f) => f.id === itemId) || dosRetrabalhos.some((f) => f.id === itemId);
@@ -247,7 +247,6 @@ export async function getFilaTestes() {
 
   return [...daFila, ...dosFilaItens, ...dosMockOs, ...dosRetrabalhos];
 }
-
 
 // ─── Realizar Teste de Qualidade com Validação Invariável ─────────────────────
 export async function realizarTeste(
@@ -335,14 +334,21 @@ export async function realizarTeste(
   let item = mockFilaCq.find((i) => i.id === dados.itemOrdemServicoId);
   const { mockOsList } = await import('../os/os.repository.js');
   const { mockFilaItens } = await import('../producao/producao.repository.js');
+  const { mockRetrabalhos } = await import('../retrabalho/retrabalho.repository.js');
 
   if (!item) {
     // Procurar em mockFilaItens
     const filaIt = mockFilaItens.find((x) => x.id === dados.itemOrdemServicoId);
     if (filaIt) {
       item = filaIt;
-      item.statusItem = novoStatusItem;
-      if (item.ordemServico) item.ordemServico.status = novoStatusItem;
+    }
+  }
+
+  if (!item) {
+    // Procurar em mockRetrabalhos
+    const retIt = mockRetrabalhos.find((r) => r.itemOrdemServicoId === dados.itemOrdemServicoId || r.id === dados.itemOrdemServicoId);
+    if (retIt && retIt.itemOrdemServico) {
+      item = retIt.itemOrdemServico;
     }
   }
 
@@ -363,13 +369,10 @@ export async function realizarTeste(
           ordemServico: os,
           tipoEquipamento: it.tipoEquipamento,
         };
-        it.statusItem = novoStatusItem;
-        os.status = novoStatusItem;
         break;
       }
     }
   }
-
 
   if (!item) {
     const numOS = dados.numeroOS ? Number(dados.numeroOS) : 1920;
@@ -399,15 +402,42 @@ export async function realizarTeste(
         marca: 'Geral',
       },
     };
-    mockFilaCq.push(item);
   }
 
+  // 1. Atualizar status do item e da OS
   item.statusItem = novoStatusItem;
   if (item.ordemServico) {
     item.ordemServico.status = novoStatusItem;
   }
 
-  // Atualizar também no mockOsList
+  // 2. Atualizar em mockFilaItens
+  const fItem = mockFilaItens.find((x) => x.id === item.id);
+  if (fItem) {
+    fItem.statusItem = novoStatusItem;
+    if (fItem.ordemServico) fItem.ordemServico.status = novoStatusItem;
+  }
+
+  // 3. Atualizar em mockFilaCq
+  const cqItem = mockFilaCq.find((x) => x.id === item.id);
+  if (cqItem) {
+    cqItem.statusItem = novoStatusItem;
+    if (cqItem.ordemServico) cqItem.ordemServico.status = novoStatusItem;
+  }
+
+  // 4. Se for aprovação de retrabalho, atualizar status em mockRetrabalhos
+  for (const r of mockRetrabalhos) {
+    if (r.itemOrdemServicoId === item.id || r.id === item.id) {
+      if (!temReprovacao) {
+        r.status = 'APROVADO';
+      }
+      if (r.itemOrdemServico) {
+        r.itemOrdemServico.statusItem = novoStatusItem;
+        if (r.itemOrdemServico.ordemServico) r.itemOrdemServico.ordemServico.status = novoStatusItem;
+      }
+    }
+  }
+
+  // 5. Atualizar também no mockOsList
   for (const os of mockOsList) {
     if (os.id === item.ordemServicoId || os.numeroOS === item.ordemServico?.numeroOS) {
       os.status = novoStatusItem;
@@ -418,6 +448,7 @@ export async function realizarTeste(
   }
 
   const tecResponsavel = item.tecnicoAlocado || (dados.tecnicoResponsavelId ? { id: dados.tecnicoResponsavelId, nome: 'Técnico' } : { id: 'colab-samuel', nome: 'Samuel' });
+
 
   const novoTeste: TesteRecord = {
     id: `teste-${Date.now()}`,
