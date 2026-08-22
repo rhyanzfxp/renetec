@@ -21,7 +21,6 @@ interface EquipamentoLinha {
   tipoEquipamentoId: string;
   quantidade: number;
   tipoCategoria: 'REPARADO' | 'SEM_DEFEITO' | 'RETRABALHO';
-  defeitoRelatado: string;
   servicoRealizado: string;
 }
 
@@ -60,14 +59,12 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
       tipoEquipamentoId: 'pt-02', // ONT / Roteador Giga
       quantidade: 12,
       tipoCategoria: 'REPARADO',
-      defeitoRelatado: 'Porta PON sem link / Fonte inoperante',
       servicoRealizado: 'Substituição de capacitor e ressolda do circuito de alimentação',
     },
     {
       tipoEquipamentoId: 'pt-06', // CCR / Mimosas
       quantidade: 2,
       tipoCategoria: 'REPARADO',
-      defeitoRelatado: 'Porta SFP travando em carga máxima',
       servicoRealizado: 'Regravação de firmware e substituição de transceptor óptico',
     },
   ]);
@@ -98,7 +95,6 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
         tipoEquipamentoId: defaultId,
         quantidade: 1,
         tipoCategoria: 'REPARADO',
-        defeitoRelatado: 'Manutenção corretiva',
         servicoRealizado: 'Reparo e testes elétricos efetuados',
       },
     ]);
@@ -161,8 +157,8 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
           tipoEquipamentoId: it.tipoEquipamentoId,
           quantidade: Number(it.quantidade) || 1,
           tipoCategoria: it.tipoCategoria,
-          defeitoRelatado: it.defeitoRelatado.trim() || undefined,
-          servicoRealizado: it.servicoRealizado.trim() || undefined,
+          defeitoRelatado: it.tipoCategoria === 'SEM_DEFEITO' ? 'Sem defeito aparente (Triagem)' : (it.servicoRealizado.trim() || 'Manutenção corretiva'),
+          servicoRealizado: it.servicoRealizado.trim() || (it.tipoCategoria === 'SEM_DEFEITO' ? 'Equipamento testado e aprovado em triagem (sem defeito)' : 'Reparo realizado na bancada'),
         })),
       };
 
@@ -264,7 +260,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                 type="date"
                 value={dataRegistro}
                 onChange={(e) => setDataRegistro(e.target.value)}
-                className="w-full h-10 px-3 bg-surface-base border border-surface-border rounded-lg text-sm text-white focus:outline-none focus:border-brand-500"
+                className="w-full h-10 px-3 bg-[#12161f] border border-surface-border rounded-lg text-sm text-white focus:outline-none focus:border-brand-500"
                 required
               />
             </div>
@@ -277,7 +273,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                 type="time"
                 value={horaRegistro}
                 onChange={(e) => setHoraRegistro(e.target.value)}
-                className="w-full h-10 px-3 bg-surface-base border border-surface-border rounded-lg text-sm text-white focus:outline-none focus:border-brand-500"
+                className="w-full h-10 px-3 bg-[#12161f] border border-surface-border rounded-lg text-sm text-white focus:outline-none focus:border-brand-500"
                 required
               />
             </div>
@@ -324,7 +320,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                 <Layers className="w-4 h-4 text-emerald-400" /> Equipamentos do Lote ({itens.length})
               </h4>
               <p className="text-[11px] text-gray-400">
-                Especifique a quantidade de cada modelo e se teve defeito reparado ou foi sem defeito (triagem).
+                Especifique a quantidade e se foi reparado com defeito, sem defeito ou retrabalho.
               </p>
             </div>
 
@@ -348,15 +344,16 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
               return (
                 <div
                   key={idx}
-                  className="p-3.5 rounded-xl bg-surface-base border border-surface-border space-y-3 relative group"
+                  className="p-4 rounded-xl bg-surface-base border border-surface-border space-y-3.5 relative group shadow-sm"
                 >
-                  <div className="flex items-center justify-between pb-2 border-b border-surface-border/50">
+                  {/* Cabeçalho do Card */}
+                  <div className="flex items-center justify-between pb-2 border-b border-surface-border/60">
                     <div className="flex items-center gap-2">
                       <span className="w-5 h-5 rounded-full bg-brand-500/20 text-brand-300 text-xs font-bold flex items-center justify-center">
                         {idx + 1}
                       </span>
                       <span className="text-xs font-bold text-white">Item #{idx + 1}</span>
-                      <span className="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 tabular-nums">
+                      <span className="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 tabular-nums font-semibold">
                         {ptsUnit} pt/un • Subtotal: {subtotalPts.toFixed(1)} pts
                       </span>
                     </div>
@@ -373,21 +370,21 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                     )}
                   </div>
 
+                  {/* Linha 1: Modelo do Equipamento + Quantidade */}
                   <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-                    {/* Equipamento */}
-                    <div className="sm:col-span-5 space-y-1">
-                      <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">
-                        Modelo de Equipamento
+                    <div className="sm:col-span-8 space-y-1">
+                      <label className="text-[11px] font-semibold text-gray-300 uppercase tracking-wide">
+                        Modelo de Equipamento <span className="text-brand-400">*</span>
                       </label>
                       <select
                         value={item.tipoEquipamentoId}
                         onChange={(e) => handleUpdateItem(idx, 'tipoEquipamentoId', e.target.value)}
-                        className="w-full h-9 px-2.5 bg-[#12161f] border border-surface-border rounded-lg text-xs text-white focus:outline-none focus:border-brand-500"
+                        className="w-full h-10 px-3 bg-[#12161f] border border-surface-border rounded-lg text-xs text-white focus:outline-none focus:border-brand-500"
                       >
                         {tiposEquipamento.map((t) => {
                           const pts = t.pontos ?? 1;
                           return (
-                            <option key={t.id} value={t.id} className="bg-[#181d26] text-white py-1">
+                            <option key={t.id} value={t.id} className="bg-[#181d26] text-white py-1.5">
                               {t.nome} ({pts} pt{pts > 1 ? 's' : ''})
                             </option>
                           );
@@ -395,10 +392,9 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                       </select>
                     </div>
 
-                    {/* Quantidade */}
-                    <div className="sm:col-span-2 space-y-1">
-                      <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">
-                        Qtd (un)
+                    <div className="sm:col-span-4 space-y-1">
+                      <label className="text-[11px] font-semibold text-gray-300 uppercase tracking-wide">
+                        Quantidade (un) <span className="text-brand-400">*</span>
                       </label>
                       <input
                         type="number"
@@ -409,73 +405,75 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                           handleUpdateItem(idx, 'quantidade', v === '' ? 0 : parseInt(v));
                         }}
                         placeholder="1"
-                        className="w-full h-9 px-2.5 bg-[#12161f] border border-surface-border rounded-lg text-xs text-center text-white font-mono font-bold focus:outline-none focus:border-brand-500"
+                        className="w-full h-10 px-3 bg-[#12161f] border border-surface-border rounded-lg text-xs text-center text-white font-mono font-bold focus:outline-none focus:border-brand-500"
                         required
                       />
                     </div>
+                  </div>
 
-                    {/* Categoria / Tipo - Segmented Buttons de Alto Contraste */}
-                    <div className="sm:col-span-5 space-y-1">
-                      <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">
-                        Classificação do Lote
-                      </label>
-                      <div className="grid grid-cols-3 gap-1 bg-[#10141d] border border-surface-border p-0.5 rounded-lg h-9">
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateItem(idx, 'tipoCategoria', 'REPARADO')}
-                          className={`px-1 rounded-md text-[10.5px] font-bold transition-all flex items-center justify-center gap-1 ${
-                            item.tipoCategoria === 'REPARADO'
-                              ? 'bg-emerald-600 text-white shadow-md'
-                              : 'text-gray-400 hover:text-gray-200 hover:bg-surface-elevated'
-                          }`}
-                          title="Equipamento que tinha defeito e foi reparado na bancada"
-                        >
-                          🔧 Reparado
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateItem(idx, 'tipoCategoria', 'SEM_DEFEITO')}
-                          className={`px-1 rounded-md text-[10.5px] font-bold transition-all flex items-center justify-center gap-1 ${
-                            item.tipoCategoria === 'SEM_DEFEITO'
-                              ? 'bg-sky-600 text-white shadow-md'
-                              : 'text-gray-400 hover:text-gray-200 hover:bg-surface-elevated'
-                          }`}
-                          title="Equipamento testado em triagem sem defeitos encontrados"
-                        >
-                          ✅ Sem Defeito
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateItem(idx, 'tipoCategoria', 'RETRABALHO')}
-                          className={`px-1 rounded-md text-[10.5px] font-bold transition-all flex items-center justify-center gap-1 ${
-                            item.tipoCategoria === 'RETRABALHO'
-                              ? 'bg-purple-600 text-white shadow-md'
-                              : 'text-gray-400 hover:text-gray-200 hover:bg-surface-elevated'
-                          }`}
-                          title="Equipamento retrabalhado após reprovação do CQ"
-                        >
-                          🔄 Retrabalho
-                        </button>
-                      </div>
+                  {/* Linha 2: Classificação do Lote (Segmented Buttons com espaço total e sem quebra feia) */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold text-gray-300 uppercase tracking-wide">
+                      Classificação do Equipamento
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 bg-[#10141d] border border-surface-border p-1 rounded-lg">
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateItem(idx, 'tipoCategoria', 'REPARADO')}
+                        className={`h-9 px-3 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                          item.tipoCategoria === 'REPARADO'
+                            ? 'bg-emerald-600 text-white shadow-md ring-1 ring-emerald-400/50'
+                            : 'text-gray-400 hover:text-gray-200 hover:bg-surface-elevated'
+                        }`}
+                        title="Equipamento que tinha defeito e foi reparado na bancada"
+                      >
+                        <span>🔧</span>
+                        <span>Reparado</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateItem(idx, 'tipoCategoria', 'SEM_DEFEITO')}
+                        className={`h-9 px-3 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                          item.tipoCategoria === 'SEM_DEFEITO'
+                            ? 'bg-sky-600 text-white shadow-md ring-1 ring-sky-400/50'
+                            : 'text-gray-400 hover:text-gray-200 hover:bg-surface-elevated'
+                        }`}
+                        title="Equipamento testado em triagem sem defeitos encontrados"
+                      >
+                        <span>✅</span>
+                        <span>Sem Defeito</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateItem(idx, 'tipoCategoria', 'RETRABALHO')}
+                        className={`h-9 px-3 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                          item.tipoCategoria === 'RETRABALHO'
+                            ? 'bg-purple-600 text-white shadow-md ring-1 ring-purple-400/50'
+                            : 'text-gray-400 hover:text-gray-200 hover:bg-surface-elevated'
+                        }`}
+                        title="Equipamento retrabalhado após reprovação do CQ"
+                      >
+                        <span>🔄</span>
+                        <span>Retrabalho</span>
+                      </button>
                     </div>
                   </div>
 
-
-                  {/* Defeito e Serviço Realizado */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                    <input
-                      type="text"
-                      value={item.defeitoRelatado}
-                      onChange={(e) => handleUpdateItem(idx, 'defeitoRelatado', e.target.value)}
-                      placeholder={item.tipoCategoria === 'SEM_DEFEITO' ? 'Triagem inicial - sem falha' : 'Defeito encontrado (ex: Fonte queimada)...'}
-                      className="h-8 px-2.5 bg-surface-card border border-surface-border rounded-md text-[11px] text-gray-200 placeholder-gray-500 focus:outline-none focus:border-brand-500"
-                    />
+                  {/* Linha 3: 1 ÚNICO campo claro e identificado de Serviço Realizado / Observações */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">
+                      Serviço / Reparo Realizado (Opcional)
+                    </label>
                     <input
                       type="text"
                       value={item.servicoRealizado}
                       onChange={(e) => handleUpdateItem(idx, 'servicoRealizado', e.target.value)}
-                      placeholder={item.tipoCategoria === 'SEM_DEFEITO' ? 'Equipamento testado e aprovado em triagem' : 'Serviço realizado (ex: Troca de regulador e teste)...'}
-                      className="h-8 px-2.5 bg-surface-card border border-surface-border rounded-md text-[11px] text-gray-200 placeholder-gray-500 focus:outline-none focus:border-brand-500"
+                      placeholder={
+                        item.tipoCategoria === 'SEM_DEFEITO'
+                          ? 'Equipamento testado e aprovado em triagem (sem defeito)'
+                          : 'Ex: Troca de capacitor, ressolda da fonte, regravação de firmware...'
+                      }
+                      className="w-full h-9 px-3 bg-[#12161f] border border-surface-border rounded-lg text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-brand-500"
                     />
                   </div>
                 </div>
@@ -485,7 +483,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
 
           {/* Card Resumo do Lote */}
           <div className="p-3.5 rounded-xl bg-gradient-to-r from-surface-elevated via-surface-elevated to-surface-card border border-surface-border flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
                 <span className="text-gray-300">Reparados: <strong className="text-white tabular-nums">{totalReparados} un</strong></span>
@@ -502,7 +500,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
               )}
             </div>
 
-            <div className="text-right">
+            <div className="text-right whitespace-nowrap">
               <span className="text-gray-400">Total do Lote: </span>
               <strong className="text-amber-400 text-sm font-black tabular-nums">{totalEquipamentos} unidades</strong>
               <span className="text-gray-400 text-[11px] ml-1.5">({pontuacaoEstimada.toFixed(1)} pts na Meta)</span>
