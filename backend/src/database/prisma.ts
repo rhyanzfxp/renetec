@@ -9,10 +9,10 @@ export let isDbAvailable = false;
 
 export async function checkDatabaseConnection(): Promise<boolean> {
   try {
-    // Timeout rápido de 800ms para não bloquear a inicialização ou chamadas
+    // Timeout de 5s para dar tempo ao Supabase de responder (pgbouncer pode ter latência inicial)
     const connectPromise = prisma.$queryRaw`SELECT 1`;
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('DB_TIMEOUT')), 800)
+      setTimeout(() => reject(new Error('DB_TIMEOUT')), 5000)
     );
 
     await Promise.race([connectPromise, timeoutPromise]);

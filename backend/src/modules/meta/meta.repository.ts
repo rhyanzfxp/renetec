@@ -237,7 +237,6 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
 
   if (isDatabaseReady()) {
     try {
-      // Se houver banco, agrega dos itens produzidos e seus pontos unitários
       const inicioMes = new Date(ano, mes - 1, 1);
       const fimMes = new Date(ano, mes, 0, 23, 59, 59, 999);
 
@@ -259,6 +258,8 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
       if (producoes.length > 0) {
         let pts = 0;
         let fat = 0;
+        const colaboradoresMap: Record<string, number> = {};
+
         for (const p of producoes) {
           const eqNome = p.itemOrdemServico.tipoEquipamento.nome;
           const matched = TABELA_PONTUACAO_OFICIAL.find((t) =>
@@ -266,23 +267,16 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
           );
           const ptsUnit = matched ? matched.pontos : 1.0;
           pts += p.quantidadeProduzida * ptsUnit;
-          fat += Number(p.itemOrdemServico.ordemServico.valorOrcamento || 0);
+          fat += Number((p.itemOrdemServico.ordemServico as any).valorOrcamento || 0);
+
+          const tecId = p.itemOrdemServico.tecnicoAlocadoId || 'desconhecido';
+          colaboradoresMap[tecId] = (colaboradoresMap[tecId] || 0) + p.quantidadeProduzida * ptsUnit;
         }
+
         pontosTotais = pts;
         faturamentoLancado = fat;
         totalLancamentos = producoes.length;
 
-        // Recalcular pontos individuais por técnico quando há DB
-        const colaboradoresMap: Record<string, number> = {};
-        for (const p of producoes) {
-          const tecId = p.itemOrdemServico.tecnicoAlocadoId || 'desconhecido';
-          const eqNome = p.itemOrdemServico.tipoEquipamento.nome;
-          const matched = TABELA_PONTUACAO_OFICIAL.find((t) =>
-            eqNome.toLowerCase().includes(t.equipamentoServico.toLowerCase().split('/')[0].trim())
-          );
-          const ptsUnit = matched ? matched.pontos : 1.0;
-          colaboradoresMap[tecId] = (colaboradoresMap[tecId] || 0) + p.quantidadeProduzida * ptsUnit;
-        }
         if (pts > 0) {
           mockColaboradores = mockColaboradores.map((c) => ({
             ...c,
@@ -290,10 +284,53 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
             percentualTotal: Number(((colaboradoresMap[c.id] || 0) / pts * 100).toFixed(1)),
           }));
         }
+
+        const taxaRetrabalho = totalLancamentos > 0 ? Number(((totalRetrabalho / totalLancamentos) * 100).toFixed(1)) : 0;
+        return { pontosTotais, faturamentoLancado, totalLancamentos, totalRetrabalho, taxaRetrabalho, colaboradores: mockColaboradores };
       }
     } catch {
       // fallback para mock
     }
+  }
+
+  // ─── Fallback em Memória: calcula pontos das produções aprovadas nos mocks ────
+  try {
+    const { mockProducoes } = await import('../producao/producao.repository.js');
+    const inicioMes = new Date(ano, mes - 1, 1).getTime();
+    const fimMes = new Date(ano, mes, 0, 23, 59, 59, 999).getTime();
+    const colaboradoresMap: Record<string, number> = {};
+
+    for (const p of mockProducoes) {
+      if (p.status !== 'FINALIZADO') continue;
+      const dataP = new Date(p.dataInicio instanceof Date ? p.dataInicio : p.dataInicio).getTime();
+      if (dataP < inicioMes || dataP > fimMes) continue;
+
+      const itemOS = p.itemOrdemServico as any;
+      if (!itemOS) continue;
+
+      const eqNome = itemOS.tipoEquipamento?.nome || '';
+      const matched = TABELA_PONTUACAO_OFICIAL.find((t) =>
+        eqNome.toLowerCase().includes(t.equipamentoServico.toLowerCase().split('/')[0].trim())
+      ) || TABELA_PONTUACAO_OFICIAL.find((t) => itemOS.tipoEquipamentoId === t.id);
+      const ptsUnit = matched ? matched.pontos : 1.0;
+      const qtd = p.quantidadeProduzida || itemOS.quantidade || 1;
+
+      pontosTotais += qtd * ptsUnit;
+      totalLancamentos++;
+
+      const tecId = p.tecnicoId || itemOS.tecnicoAlocadoId || itemOS.tecnicoAlocado?.id || 'desconhecido';
+      colaboradoresMap[tecId] = (colaboradoresMap[tecId] || 0) + qtd * ptsUnit;
+    }
+
+    if (pontosTotais > 0) {
+      mockColaboradores = mockColaboradores.map((c) => ({
+        ...c,
+        pontosRealizados: Number((colaboradoresMap[c.id] || 0).toFixed(1)),
+        percentualTotal: Number(((colaboradoresMap[c.id] || 0) / pontosTotais * 100).toFixed(1)),
+      }));
+    }
+  } catch {
+    // sem produções em memória ainda
   }
 
   const taxaRetrabalho = totalLancamentos > 0 ? Number(((totalRetrabalho / totalLancamentos) * 100).toFixed(1)) : 0;
@@ -307,6 +344,7 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
     colaboradores: mockColaboradores,
   };
 }
+
 
 // ─── Busca ou cria a configuração de metas do mês ─────────────────────────────
 export async function getMetaConfig(mes: number, ano: number): Promise<MetaConfigRecord> {

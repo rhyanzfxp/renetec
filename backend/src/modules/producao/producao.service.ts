@@ -2,6 +2,7 @@ import * as repo from './producao.repository.js';
 import type { FinalizarProducaoInput } from './producao.schema.js';
 import { realtimeService } from '../realtime/realtime.service.js';
 import { log } from '../auditoria/auditoria.service.js';
+import { getMetasAtual } from '../meta/meta.service.js';
 
 // ─── Fila do técnico ──────────────────────────────────────────────────────────
 export async function getMinhaFila(tecnicoId: string) {
@@ -65,6 +66,12 @@ export async function finalizarProducao(
 
   const finalizada = await repo.finalizarProducao(producaoId, dados);
   realtimeService.broadcast('producao:finalizada', { producao: finalizada });
+
+  // Atualiza meta coletiva em tempo real após produção finalizada
+  getMetasAtual().then((metas) => {
+    realtimeService.broadcast('meta:atualizada', { metas });
+  }).catch(() => {});
+
   log({
     acao: 'PRODUCAO_FINALIZADA',
     usuarioId: tecnicoId,
@@ -114,6 +121,10 @@ export async function apontarLoteTecnico(
       producoes: resultado.producoes,
       tecnicoNome,
     });
+    // Atualiza meta coletiva em tempo real após lote aprovado diretamente
+    getMetasAtual().then((metas) => {
+      realtimeService.broadcast('meta:atualizada', { metas });
+    }).catch(() => {});
   } else {
     realtimeService.broadcast('producao:iniciada', {
       os: resultado.ordemServico,
