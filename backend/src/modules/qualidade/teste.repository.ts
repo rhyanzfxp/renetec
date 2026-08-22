@@ -116,17 +116,50 @@ export async function getFilaTestes() {
     }
   }
 
-  // Fallback no mock: buscar de mockFilaItens e de mockOsList
+  // Fallback no mock: buscar de mockFilaCq, mockFilaItens e mockOsList
   const daFila = mockFilaCq.filter((i) => ['AGUARDANDO_TESTE', 'AGUARDANDO_NOVO_TESTE'].includes(i.statusItem));
-  
-  // Buscar também do mockOsList
+
+  // Buscar dos mockFilaItens (itens criados via criarApontamentoLote e enviados direto ao CQ)
+  const { mockFilaItens } = await import('../producao/producao.repository.js');
+  const dosFilaItens: any[] = [];
+  for (const it of mockFilaItens) {
+    if (['AGUARDANDO_TESTE', 'AGUARDANDO_NOVO_TESTE'].includes(it.statusItem)) {
+      if (!daFila.some((f) => f.id === it.id)) {
+        dosFilaItens.push({
+          id: it.id,
+          ordemServicoId: it.ordemServicoId,
+          tipoEquipamentoId: it.tipoEquipamentoId,
+          quantidade: it.quantidade,
+          tipoCategoria: it.tipoCategoria || 'REPARADO',
+          defeitoRelatado: it.defeitoRelatado,
+          servicoRealizado: it.servicoRealizado || 'Reparo realizado na bancada',
+          statusItem: it.statusItem,
+          tecnicoAlocadoId: it.tecnicoAlocadoId || it.tecnicoAlocado?.id || null,
+          tecnicoAlocado: it.tecnicoAlocado || null,
+          ordemServico: it.ordemServico,
+          tipoEquipamento: it.tipoEquipamento,
+          producoes: it.producoes || [
+            {
+              id: `prod-${it.id}`,
+              servicoRealizado: it.servicoRealizado || 'Reparo realizado na bancada',
+              quantidadeProduzida: it.quantidade,
+              dataFim: new Date(),
+            },
+          ],
+        });
+      }
+    }
+  }
+
+  // Buscar também do mockOsList (compatibilidade com fluxo antigo via admin)
   const { mockOsList } = await import('../os/os.repository.js');
   const dosMockOs: any[] = [];
   for (const os of mockOsList) {
     if (['AGUARDANDO_TESTE', 'AGUARDANDO_NOVO_TESTE'].includes(os.status)) {
       for (const it of os.itens) {
         if (['AGUARDANDO_TESTE', 'AGUARDANDO_NOVO_TESTE'].includes(it.statusItem)) {
-          if (!daFila.some((f) => f.id === it.id)) {
+          const jaIncluso = daFila.some((f) => f.id === it.id) || dosFilaItens.some((f) => f.id === it.id);
+          if (!jaIncluso) {
             dosMockOs.push({
               id: it.id,
               ordemServicoId: os.id,
@@ -153,7 +186,7 @@ export async function getFilaTestes() {
                   servicoRealizado: it.servicoRealizado || (it.tipoCategoria === 'SEM_DEFEITO' ? 'Triagem inicial - sem defeito' : 'Reparo realizado na bancada'),
                   quantidadeProduzida: it.quantidade,
                   dataFim: new Date(),
-                }
+                },
               ],
             });
           }
@@ -162,7 +195,8 @@ export async function getFilaTestes() {
     }
   }
 
-  return [...daFila, ...dosMockOs];
+  return [...daFila, ...dosFilaItens, ...dosMockOs];
+
 }
 
 // ─── Realizar Teste de Qualidade com Validação Invariável ─────────────────────
