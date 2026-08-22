@@ -4,7 +4,8 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { qualidadeApiService } from './teste.service';
-import type { FilaTesteItem, MotivoReprovacaoData } from './teste.types';
+import type { FilaTesteItem } from './teste.types';
+
 import {
   CheckCircle2,
   XCircle,
@@ -29,22 +30,11 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
 }) => {
   const [aprovadas, setAprovadas] = useState<number>(0);
   const [reprovadas, setReprovadas] = useState<number>(0);
-  const [motivos, setMotivos] = useState<MotivoReprovacaoData[]>([]);
-  const [motivoId, setMotivoId] = useState<string>('');
   const [detalhesDefeito, setDetalhesDefeito] = useState<string>('');
   const [observacao, setObservacao] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Carrega catálogo de motivos ao abrir
-  useEffect(() => {
-    if (isOpen) {
-      qualidadeApiService.getMotivos().then((data) => {
-        setMotivos(data);
-        if (data.length > 0) setMotivoId(data[0].id);
-      });
-    }
-  }, [isOpen]);
 
   // Sincroniza quantidades com o lote do item selecionado
   useEffect(() => {
@@ -74,8 +64,8 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
       return;
     }
 
-    if (reprovadas > 0 && !motivoId) {
-      setErrorMessage('Selecione o motivo da reprovação para os itens não-conformes.');
+    if (reprovadas > 0 && !detalhesDefeito.trim() && !observacao.trim()) {
+      setErrorMessage('Informe a descrição do defeito/não-conformidade para o técnico corrigir no retrabalho.');
       return;
     }
 
@@ -93,10 +83,11 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
         quantidadeTestada: qtdLote,
         quantidadeAprovada: Number(aprovadas),
         quantidadeReprovada: Number(reprovadas),
-        motivoReprovacaoId: reprovadas > 0 ? motivoId : undefined,
-        detalhesDefeito: reprovadas > 0 ? detalhesDefeito : undefined,
-        observacao: observacao.trim() || undefined,
+        motivoReprovacaoId: reprovadas > 0 ? 'mot-01' : undefined,
+        detalhesDefeito: reprovadas > 0 ? (detalhesDefeito.trim() || observacao.trim() || 'Defeito identificado no CQ') : undefined,
+        observacao: observacao.trim() || detalhesDefeito.trim() || undefined,
       });
+
 
       onSuccess();
       onClose();
@@ -252,48 +243,30 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
               <span className="flex items-center gap-1.5">
                 <ShieldAlert className="w-4 h-4" /> Motivo de Não-Conformidade & Retrabalho
               </span>
-              <span className="text-[11px] text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded">
+              <span className="text-[11px] text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded font-bold">
                 Devolução p/ {item.tecnicoAlocado?.nome || 'Samuel'}
               </span>
             </div>
 
-            <p className="text-[11px] text-gray-300 bg-amber-950/40 p-2 rounded border border-amber-500/20">
+            <p className="text-[11px] text-amber-200 bg-amber-950/40 p-2.5 rounded-lg border border-amber-500/30">
               🔄 <strong>Atenção:</strong> As <strong>{reprovadas} unidade(s)</strong> reprovadas serão encaminhadas imediatamente para a fila de Retrabalho do técnico <strong>{item.tecnicoAlocado?.nome || 'Samuel'}</strong> para correção.
             </p>
 
             <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-gray-300">
-                Categoria / Código do Defeito <span className="text-red-400">*</span>
-              </label>
-              <select
-                value={motivoId}
-                onChange={(e) => setMotivoId(e.target.value)}
-                className="w-full bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-xs text-gray-100 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                required
-              >
-                {motivos.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    [{m.codigo}] {m.descricao} ({m.categoria})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-gray-300">
-                Detalhes da Não Conformidade para o Técnico Corrigir
+              <label className="block text-xs font-semibold text-gray-200">
+                Descrição do Defeito / O que o técnico precisa corrigir <span className="text-red-400">*</span>
               </label>
               <textarea
                 value={detalhesDefeito}
                 onChange={(e) => setDetalhesDefeito(e.target.value)}
-                rows={2}
-                placeholder="Ex: Tensão no terminal secundário abaixo do nominal de 12V em teste de carga máxima."
-                className="w-full bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 resize-none"
+                rows={3}
+                placeholder="Ex: 4 unidades apresentaram ripple excessivo na alimentação secundária e capacitor C12 estufado..."
+                className="w-full bg-[#131720] border border-surface-border rounded-lg px-3 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 resize-none"
+                required
               />
             </div>
           </div>
         )}
-
 
         {/* Observações Gerais do Laudo */}
         <div className="space-y-1.5">
@@ -304,11 +277,12 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
             value={observacao}
             onChange={(e) => setObservacao(e.target.value)}
             rows={2}
-            placeholder="Ex: Lote submetido a 45 minutos de ensaio de burn-in térmico sem desvios térmicos adicionais."
-            className="w-full bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 resize-none"
+            placeholder="Ex: Lote submetido a ensaio de carga e teste óptico em bancada."
+            className="w-full bg-[#131720] border border-surface-border rounded-lg px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 resize-none"
           />
         </div>
       </form>
     </Drawer>
   );
 };
+

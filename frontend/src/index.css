@@ -19,6 +19,20 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* Estilização universal de selects e options para alto contraste em modo escuro */
+  select {
+    color-scheme: dark;
+    background-color: #12161f;
+    color: #f9fafb;
+  }
+
+  select option {
+    background-color: #161c26;
+    color: #ffffff;
+    padding: 6px 10px;
+  }
+
+
   /* Custom scrollbar discreta */
   ::-webkit-scrollbar {
     width: 6px;

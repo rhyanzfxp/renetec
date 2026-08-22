@@ -289,10 +289,10 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
               <select
                 value={clienteId}
                 onChange={(e) => setClienteId(e.target.value)}
-                className="w-full h-10 px-3 bg-surface-base border border-surface-border rounded-lg text-xs text-white focus:outline-none focus:border-brand-500"
+                className="w-full h-10 px-3 bg-[#12161f] border border-surface-border rounded-lg text-xs text-white focus:outline-none focus:border-brand-500"
               >
                 {clientes.map((c) => (
-                  <option key={c.id} value={c.id}>
+                  <option key={c.id} value={c.id} className="bg-[#181d26] text-white py-1">
                     {c.nomeRazaoSocial}
                   </option>
                 ))}
@@ -304,16 +304,17 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
               <select
                 value={prioridade}
                 onChange={(e) => setPrioridade(e.target.value as any)}
-                className="w-full h-10 px-3 bg-surface-base border border-surface-border rounded-lg text-xs text-white focus:outline-none focus:border-brand-500"
+                className="w-full h-10 px-3 bg-[#12161f] border border-surface-border rounded-lg text-xs text-white focus:outline-none focus:border-brand-500"
               >
-                <option value="BAIXA">Baixa</option>
-                <option value="MEDIA">Média (Padrão)</option>
-                <option value="ALTA">Alta Prioridade</option>
-                <option value="URGENTE">Urgente (Linha Parada)</option>
+                <option value="BAIXA" className="bg-[#181d26] text-white py-1">Baixa</option>
+                <option value="MEDIA" className="bg-[#181d26] text-white py-1">Média (Padrão)</option>
+                <option value="ALTA" className="bg-[#181d26] text-white py-1">Alta Prioridade</option>
+                <option value="URGENTE" className="bg-[#181d26] text-white py-1">Urgente (Linha Parada)</option>
               </select>
             </div>
           </div>
         </div>
+
 
         {/* ─── 2. LISTA DINÂMICA DE EQUIPAMENTOS DO LOTE ──────────────────────── */}
         <div className="space-y-3">
@@ -374,25 +375,24 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
 
                   <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
                     {/* Equipamento */}
-                    <div className="sm:col-span-6 space-y-1">
+                    <div className="sm:col-span-5 space-y-1">
                       <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">
                         Modelo de Equipamento
                       </label>
                       <select
                         value={item.tipoEquipamentoId}
                         onChange={(e) => handleUpdateItem(idx, 'tipoEquipamentoId', e.target.value)}
-                        className="w-full h-9 px-2.5 bg-surface-card border border-surface-border rounded-lg text-xs text-white focus:outline-none focus:border-brand-500"
+                        className="w-full h-9 px-2.5 bg-[#12161f] border border-surface-border rounded-lg text-xs text-white focus:outline-none focus:border-brand-500"
                       >
                         {tiposEquipamento.map((t) => {
                           const pts = t.pontos ?? 1;
                           return (
-                            <option key={t.id} value={t.id}>
+                            <option key={t.id} value={t.id} className="bg-[#181d26] text-white py-1">
                               {t.nome} ({pts} pt{pts > 1 ? 's' : ''})
                             </option>
                           );
                         })}
                       </select>
-
                     </div>
 
                     {/* Quantidade */}
@@ -409,33 +409,57 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                           handleUpdateItem(idx, 'quantidade', v === '' ? 0 : parseInt(v));
                         }}
                         placeholder="1"
-                        className="w-full h-9 px-2.5 bg-surface-card border border-surface-border rounded-lg text-xs text-center text-white font-mono font-bold focus:outline-none focus:border-brand-500"
+                        className="w-full h-9 px-2.5 bg-[#12161f] border border-surface-border rounded-lg text-xs text-center text-white font-mono font-bold focus:outline-none focus:border-brand-500"
                         required
                       />
                     </div>
 
-                    {/* Categoria / Tipo */}
-                    <div className="sm:col-span-4 space-y-1">
+                    {/* Categoria / Tipo - Segmented Buttons de Alto Contraste */}
+                    <div className="sm:col-span-5 space-y-1">
                       <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">
                         Classificação do Lote
                       </label>
-                      <select
-                        value={item.tipoCategoria}
-                        onChange={(e) => handleUpdateItem(idx, 'tipoCategoria', e.target.value as any)}
-                        className={`w-full h-9 px-2.5 border rounded-lg text-xs font-semibold focus:outline-none ${
-                          item.tipoCategoria === 'REPARADO'
-                            ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-300'
-                            : item.tipoCategoria === 'SEM_DEFEITO'
-                            ? 'bg-sky-950/30 border-sky-500/40 text-sky-300'
-                            : 'bg-purple-950/30 border-purple-500/40 text-purple-300'
-                        }`}
-                      >
-                        <option value="REPARADO">🔧 Reparado (Com Defeito)</option>
-                        <option value="SEM_DEFEITO">✅ Sem Defeito (Triagem)</option>
-                        <option value="RETRABALHO">🔄 Retrabalho Realizado</option>
-                      </select>
+                      <div className="grid grid-cols-3 gap-1 bg-[#10141d] border border-surface-border p-0.5 rounded-lg h-9">
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateItem(idx, 'tipoCategoria', 'REPARADO')}
+                          className={`px-1 rounded-md text-[10.5px] font-bold transition-all flex items-center justify-center gap-1 ${
+                            item.tipoCategoria === 'REPARADO'
+                              ? 'bg-emerald-600 text-white shadow-md'
+                              : 'text-gray-400 hover:text-gray-200 hover:bg-surface-elevated'
+                          }`}
+                          title="Equipamento que tinha defeito e foi reparado na bancada"
+                        >
+                          🔧 Reparado
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateItem(idx, 'tipoCategoria', 'SEM_DEFEITO')}
+                          className={`px-1 rounded-md text-[10.5px] font-bold transition-all flex items-center justify-center gap-1 ${
+                            item.tipoCategoria === 'SEM_DEFEITO'
+                              ? 'bg-sky-600 text-white shadow-md'
+                              : 'text-gray-400 hover:text-gray-200 hover:bg-surface-elevated'
+                          }`}
+                          title="Equipamento testado em triagem sem defeitos encontrados"
+                        >
+                          ✅ Sem Defeito
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateItem(idx, 'tipoCategoria', 'RETRABALHO')}
+                          className={`px-1 rounded-md text-[10.5px] font-bold transition-all flex items-center justify-center gap-1 ${
+                            item.tipoCategoria === 'RETRABALHO'
+                              ? 'bg-purple-600 text-white shadow-md'
+                              : 'text-gray-400 hover:text-gray-200 hover:bg-surface-elevated'
+                          }`}
+                          title="Equipamento retrabalhado após reprovação do CQ"
+                        >
+                          🔄 Retrabalho
+                        </button>
+                      </div>
                     </div>
                   </div>
+
 
                   {/* Defeito e Serviço Realizado */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
