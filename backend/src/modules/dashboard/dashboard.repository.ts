@@ -116,17 +116,34 @@ function getPontosUnitarios(nome?: string): number {
 function isTecnicoMatch(tId1?: string | null, tNome1?: string | null, tId2?: string | null, tNome2?: string | null): boolean {
   if (!tId1 && !tNome1) return false;
   if (!tId2 && !tNome2) return false;
+
+  // Match exato por ID
   if (tId1 && tId2 && tId1.toLowerCase() === tId2.toLowerCase()) return true;
+  // Match parcial de ID (ex: colab-joao contém joao)
   if (tId1 && tId2 && (tId1.includes(tId2) || tId2.includes(tId1))) return true;
+
+  // Match por nome
   if (tNome1 && tNome2) {
     const n1 = tNome1.toLowerCase().trim();
     const n2 = tNome2.toLowerCase().trim();
     if (n1.includes(n2) || n2.includes(n1)) return true;
   }
-  if (tId1 && tNome2 && tId1.toLowerCase().includes(tNome2.toLowerCase().trim())) return true;
-  if (tId2 && tNome1 && tId2.toLowerCase().includes(tNome1.toLowerCase().trim())) return true;
+
+  // ID do tipo "colab-joao" vs nome "João"
+  if (tId1 && tNome2) {
+    const idNorm = tId1.toLowerCase().replace(/[^a-z]/g, '');
+    const nomeNorm = tNome2.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
+    if (idNorm.includes(nomeNorm) || nomeNorm.includes(idNorm)) return true;
+  }
+  if (tId2 && tNome1) {
+    const idNorm = tId2.toLowerCase().replace(/[^a-z]/g, '');
+    const nomeNorm = tNome1.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
+    if (idNorm.includes(nomeNorm) || nomeNorm.includes(idNorm)) return true;
+  }
+
   return false;
 }
+
 
 // ─── Agregação para a TV da Fábrica ──────────────────────────────────────────
 export async function getTvFabricaData(): Promise<TvFabricaData> {
@@ -254,52 +271,76 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
     }
   }
 
-  // Fallback em memória (mock) se vazio
-  if (producoesAtivasList.length === 0 && producoesFinalizadasHoje.length === 0) {
+  // Fallback em memória (mock) se DB vazio ou sem produção ativa
+  const dbTemAtivas = producoesAtivasList.length > 0;
+  if (!dbTemAtivas) {
     const { mockProducoes, mockFilaItens } = await import('../producao/producao.repository.js');
     const { mockOsList } = await import('../os/os.repository.js');
     const { mockTestes } = await import('../qualidade/teste.repository.js');
 
-    producoesAtivasList = mockProducoes.filter((p) => p.status === 'EM_ANDAMENTO');
-    producoesFinalizadasHoje = mockProducoes.filter((p) => p.status === 'FINALIZADO');
-    testesHojeList = mockTestes;
+    // Hidratar produções mock com campo tecnico para isTecnicoMatch funcionar
+    const hydrateMock = (p: any) => {
+      const itemOS = p.itemOrdemServico as any;
+      const tAlocado = itemOS?.tecnicoAlocado;
+      return {
+        ...p,
+        tecnico: tAlocado ? { id: tAlocado.id, nome: tAlocado.nome } : null,
+        // Garante que tecnicoId esteja presente
+        tecnicoId: p.tecnicoId || tAlocado?.id || null,
+      };
+    };
+
+    const mockAtivas = mockProducoes.filter((p) => p.status === 'EM_ANDAMENTO').map(hydrateMock);
+    const mockFinalizadas = mockProducoes.filter((p) => p.status === 'FINALIZADO').map(hydrateMock);
+
+    // Mescla com DB: DB prevalece se tiver, mock complementa
+    if (mockAtivas.length > 0) {
+      producoesAtivasList = [...producoesAtivasList, ...mockAtivas.filter(
+        (m) => !producoesAtivasList.some((d) => d.id === m.id)
+      )];
+    }
+    if (mockFinalizadas.length > 0) {
+      producoesFinalizadasHoje = [...producoesFinalizadasHoje, ...mockFinalizadas.filter(
+        (m) => !producoesFinalizadasHoje.some((d) => d.id === m.id)
+      )];
+    }
+    if (testesHojeList.length === 0) testesHojeList = mockTestes;
 
     // Fila prioritária a partir do mock
     const itensFila = mockFilaItens.filter((it) =>
       ['AGUARDANDO_PRODUCAO', 'RECEBIDO'].includes(it.statusItem)
     );
 
-    // Também checar mockOsList
     for (const os of mockOsList) {
       if (['AGUARDANDO_PRODUCAO', 'RECEBIDO'].includes(os.status)) {
         for (const it of os.itens) {
           if (['AGUARDANDO_PRODUCAO', 'RECEBIDO'].includes(it.statusItem)) {
             if (!itensFila.some((f) => f.id === it.id)) {
-              itensFila.push({
-                ...it,
-                ordemServico: os,
-              });
+              itensFila.push({ ...it, ordemServico: os });
             }
           }
         }
       }
     }
 
-    filaPrioritariaList = itensFila.slice(0, 5).map((it) => {
-      const eqNome = it.tipoEquipamento?.nome || 'Equipamento';
-      const ptsUnit = getPontosUnitarios(eqNome);
-      return {
-        id: it.id,
-        numeroOS: it.ordemServico?.numeroOS || 1000,
-        clienteNome: it.ordemServico?.cliente?.nomeRazaoSocial || 'MARANET Telecomunicações',
-        equipamentoNome: eqNome,
-        quantidade: it.quantidade,
-        pontosTotais: Number((it.quantidade * ptsUnit).toFixed(1)),
-        prioridade: it.ordemServico?.prioridade || 'MEDIA',
-        status: it.statusItem,
-      };
-    });
+    if (filaPrioritariaList.length === 0) {
+      filaPrioritariaList = itensFila.slice(0, 5).map((it) => {
+        const eqNome = it.tipoEquipamento?.nome || 'Equipamento';
+        const ptsUnit = getPontosUnitarios(eqNome);
+        return {
+          id: it.id,
+          numeroOS: it.ordemServico?.numeroOS || 1000,
+          clienteNome: it.ordemServico?.cliente?.nomeRazaoSocial || 'MARANET Telecomunicações',
+          equipamentoNome: eqNome,
+          quantidade: it.quantidade,
+          pontosTotais: Number((it.quantidade * ptsUnit).toFixed(1)),
+          prioridade: it.ordemServico?.prioridade || 'MEDIA',
+          status: it.statusItem,
+        };
+      });
+    }
   }
+
 
   // Montar bancadas ao vivo
   const bancadas: BancadaStatus[] = baseBancadas.map((b) => {
