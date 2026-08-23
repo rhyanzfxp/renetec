@@ -3,21 +3,21 @@ import { z } from 'zod';
 export const UpdateMetaConfigSchema = z.object({
   mesReferencia: z.number().int().min(1).max(12).optional(),
   anoReferencia: z.number().int().min(2020).max(2050).optional(),
-  // Metas Oficiais em Pontos
-  metaBase: z.number().min(1).default(250),
-  metaAlvo: z.number().min(1).default(300),
-  metaExcelencia: z.number().min(1).default(350),
+  // Metas Oficiais em Pontos (sem default para não sobrescrever em updates parciais)
+  metaBase: z.number().min(1).optional(),
+  metaAlvo: z.number().min(1).optional(),
+  metaExcelencia: z.number().min(1).optional(),
   // Suporte a Período Piloto
-  isPeriodoPiloto: z.boolean().default(false),
-  metaPilotoMinima: z.number().min(1).default(160),
-  metaPilotoAlvo: z.number().min(1).default(190),
-  metaPilotoExcelencia: z.number().min(1).default(220),
+  isPeriodoPiloto: z.boolean().optional(),
+  metaPilotoMinima: z.number().min(1).optional(),
+  metaPilotoAlvo: z.number().min(1).optional(),
+  metaPilotoExcelencia: z.number().min(1).optional(),
   // Parâmetros de Qualidade e Bônus
-  retrabalhoMaximo: z.number().min(0).max(1).default(0.05), // 5%
-  percentualFundoBonus: z.number().min(0).max(1).default(0.015), // 1.5%
-  percentualColetivo: z.number().min(0).max(1).default(0.70), // 70%
-  percentualIndividual: z.number().min(0).max(1).default(0.30), // 30%
-  faturamentoRecebido: z.number().min(0).default(0),
+  retrabalhoMaximo: z.number().min(0).max(1).optional(),
+  percentualFundoBonus: z.number().min(0).max(1).optional(),
+  percentualColetivo: z.number().min(0).max(1).optional(),
+  percentualIndividual: z.number().min(0).max(1).optional(),
+  faturamentoRecebido: z.number().min(0).optional(),
   diasUteis: z.number().int().min(1).max(31).optional(),
   // Compatibilidade legada
   metaBronze: z.number().optional(),
@@ -29,7 +29,7 @@ export type UpdateMetaConfigInput = z.infer<typeof UpdateMetaConfigSchema>;
 
 export const UpdateBonusSimulationSchema = z.object({
   faturamentoRecebido: z.number().min(0),
-  metaIndividualStatus: z.record(z.string(), z.boolean()).optional(), // { "usr-samuel": true, "usr-joao": true, ... }
+  metaIndividualStatus: z.record(z.string(), z.boolean()).optional(), // { "colab-samuel": true, ... }
 });
 
 export type UpdateBonusSimulationInput = z.infer<typeof UpdateBonusSimulationSchema>;

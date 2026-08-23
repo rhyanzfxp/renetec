@@ -99,6 +99,18 @@ let inMemoryMetaIndividualStatus: Record<string, boolean> = {
   'colab-luana': true,
 };
 
+let inMemoryMetaParamOverrides: {
+  isPeriodoPiloto?: boolean;
+  metaPilotoMinima?: number;
+  metaPilotoAlvo?: number;
+  metaPilotoExcelencia?: number;
+  retrabalhoMaximo?: number;
+  percentualFundoBonus?: number;
+  percentualColetivo?: number;
+  percentualIndividual?: number;
+  diasUteis?: number;
+} = {};
+
 function getPontosUnitarios(nome?: string): number {
   if (!nome) return 1.5;
   const n = nome.toLowerCase();
@@ -237,16 +249,16 @@ export async function getMetaConfig(mes: number, ano: number): Promise<MetaConfi
     metaBase: 250,
     metaAlvo: 300,
     metaExcelencia: 350,
-    isPeriodoPiloto: false,
-    metaPilotoMinima: 160,
-    metaPilotoAlvo: 190,
-    metaPilotoExcelencia: 220,
-    retrabalhoMaximo: 0.05,
-    percentualFundoBonus: 0.015,
-    percentualColetivo: 0.70,
-    percentualIndividual: 0.30,
+    isPeriodoPiloto: inMemoryMetaParamOverrides.isPeriodoPiloto ?? false,
+    metaPilotoMinima: inMemoryMetaParamOverrides.metaPilotoMinima ?? 160,
+    metaPilotoAlvo: inMemoryMetaParamOverrides.metaPilotoAlvo ?? 190,
+    metaPilotoExcelencia: inMemoryMetaParamOverrides.metaPilotoExcelencia ?? 220,
+    retrabalhoMaximo: inMemoryMetaParamOverrides.retrabalhoMaximo ?? 0.05,
+    percentualFundoBonus: inMemoryMetaParamOverrides.percentualFundoBonus ?? 0.015,
+    percentualColetivo: inMemoryMetaParamOverrides.percentualColetivo ?? 0.70,
+    percentualIndividual: inMemoryMetaParamOverrides.percentualIndividual ?? 0.30,
     faturamentoRecebido: inMemoryFaturamentoRecebido,
-    diasUteis: 22,
+    diasUteis: inMemoryMetaParamOverrides.diasUteis ?? 22,
     ativo: true,
   };
 
@@ -279,16 +291,29 @@ export async function updateMetaConfig(dados: UpdateMetaConfigInput): Promise<Me
   const mes = dados.mesReferencia || new Date().getMonth() + 1;
   const ano = dados.anoReferencia || new Date().getFullYear();
 
-  const metaBase = dados.metaBase ?? 250;
-  const metaAlvo = dados.metaAlvo ?? 300;
-  const metaExcelencia = dados.metaExcelencia ?? 350;
-
   if (dados.faturamentoRecebido !== undefined) {
     inMemoryFaturamentoRecebido = dados.faturamentoRecebido;
   }
+  if (dados.isPeriodoPiloto !== undefined) inMemoryMetaParamOverrides.isPeriodoPiloto = dados.isPeriodoPiloto;
+  if (dados.metaPilotoMinima !== undefined) inMemoryMetaParamOverrides.metaPilotoMinima = dados.metaPilotoMinima;
+  if (dados.metaPilotoAlvo !== undefined) inMemoryMetaParamOverrides.metaPilotoAlvo = dados.metaPilotoAlvo;
+  if (dados.metaPilotoExcelencia !== undefined) inMemoryMetaParamOverrides.metaPilotoExcelencia = dados.metaPilotoExcelencia;
+  if (dados.retrabalhoMaximo !== undefined) inMemoryMetaParamOverrides.retrabalhoMaximo = dados.retrabalhoMaximo;
+  if (dados.percentualFundoBonus !== undefined) inMemoryMetaParamOverrides.percentualFundoBonus = dados.percentualFundoBonus;
+  if (dados.percentualColetivo !== undefined) inMemoryMetaParamOverrides.percentualColetivo = dados.percentualColetivo;
+  if (dados.percentualIndividual !== undefined) inMemoryMetaParamOverrides.percentualIndividual = dados.percentualIndividual;
+  if (dados.diasUteis !== undefined) inMemoryMetaParamOverrides.diasUteis = dados.diasUteis;
 
   if (isDatabaseReady()) {
     try {
+      const existing = await prisma.metaConfig.findUnique({
+        where: { mesReferencia_anoReferencia: { mesReferencia: mes, anoReferencia: ano } },
+      });
+
+      const metaBase = dados.metaBase !== undefined ? dados.metaBase : (existing?.metaBronze ?? 250);
+      const metaAlvo = dados.metaAlvo !== undefined ? dados.metaAlvo : (existing?.metaPrata ?? 300);
+      const metaExcelencia = dados.metaExcelencia !== undefined ? dados.metaExcelencia : (existing?.metaOuro ?? 350);
+
       const cfg = await prisma.metaConfig.upsert({
         where: { mesReferencia_anoReferencia: { mesReferencia: mes, anoReferencia: ano } },
         update: {
@@ -313,22 +338,26 @@ export async function updateMetaConfig(dados: UpdateMetaConfigInput): Promise<Me
         metaBase: cfg.metaBronze,
         metaAlvo: cfg.metaPrata,
         metaExcelencia: cfg.metaOuro,
-        isPeriodoPiloto: dados.isPeriodoPiloto ?? false,
-        metaPilotoMinima: dados.metaPilotoMinima ?? 160,
-        metaPilotoAlvo: dados.metaPilotoAlvo ?? 190,
-        metaPilotoExcelencia: dados.metaPilotoExcelencia ?? 220,
-        retrabalhoMaximo: dados.retrabalhoMaximo ?? 0.05,
-        percentualFundoBonus: dados.percentualFundoBonus ?? 0.015,
-        percentualColetivo: dados.percentualColetivo ?? 0.70,
-        percentualIndividual: dados.percentualIndividual ?? 0.30,
+        isPeriodoPiloto: inMemoryMetaParamOverrides.isPeriodoPiloto ?? false,
+        metaPilotoMinima: inMemoryMetaParamOverrides.metaPilotoMinima ?? 160,
+        metaPilotoAlvo: inMemoryMetaParamOverrides.metaPilotoAlvo ?? 190,
+        metaPilotoExcelencia: inMemoryMetaParamOverrides.metaPilotoExcelencia ?? 220,
+        retrabalhoMaximo: inMemoryMetaParamOverrides.retrabalhoMaximo ?? 0.05,
+        percentualFundoBonus: inMemoryMetaParamOverrides.percentualFundoBonus ?? 0.015,
+        percentualColetivo: inMemoryMetaParamOverrides.percentualColetivo ?? 0.70,
+        percentualIndividual: inMemoryMetaParamOverrides.percentualIndividual ?? 0.30,
         faturamentoRecebido: inMemoryFaturamentoRecebido,
-        diasUteis: dados.diasUteis ?? 22,
+        diasUteis: inMemoryMetaParamOverrides.diasUteis ?? 22,
         ativo: cfg.ativo,
       };
     } catch (err) {
       console.error('[updateMetaConfig] Erro ao salvar metaConfig no Supabase:', err);
     }
   }
+
+  const metaBase = dados.metaBase ?? 250;
+  const metaAlvo = dados.metaAlvo ?? 300;
+  const metaExcelencia = dados.metaExcelencia ?? 350;
 
   return {
     id: `meta-${mes}-${ano}`,
@@ -337,16 +366,16 @@ export async function updateMetaConfig(dados: UpdateMetaConfigInput): Promise<Me
     metaBase,
     metaAlvo,
     metaExcelencia,
-    isPeriodoPiloto: dados.isPeriodoPiloto ?? false,
-    metaPilotoMinima: dados.metaPilotoMinima ?? 160,
-    metaPilotoAlvo: dados.metaPilotoAlvo ?? 190,
-    metaPilotoExcelencia: dados.metaPilotoExcelencia ?? 220,
-    retrabalhoMaximo: dados.retrabalhoMaximo ?? 0.05,
-    percentualFundoBonus: dados.percentualFundoBonus ?? 0.015,
-    percentualColetivo: dados.percentualColetivo ?? 0.70,
-    percentualIndividual: dados.percentualIndividual ?? 0.30,
+    isPeriodoPiloto: inMemoryMetaParamOverrides.isPeriodoPiloto ?? false,
+    metaPilotoMinima: inMemoryMetaParamOverrides.metaPilotoMinima ?? 160,
+    metaPilotoAlvo: inMemoryMetaParamOverrides.metaPilotoAlvo ?? 190,
+    metaPilotoExcelencia: inMemoryMetaParamOverrides.metaPilotoExcelencia ?? 220,
+    retrabalhoMaximo: inMemoryMetaParamOverrides.retrabalhoMaximo ?? 0.05,
+    percentualFundoBonus: inMemoryMetaParamOverrides.percentualFundoBonus ?? 0.015,
+    percentualColetivo: inMemoryMetaParamOverrides.percentualColetivo ?? 0.70,
+    percentualIndividual: inMemoryMetaParamOverrides.percentualIndividual ?? 0.30,
     faturamentoRecebido: inMemoryFaturamentoRecebido,
-    diasUteis: dados.diasUteis ?? 22,
+    diasUteis: inMemoryMetaParamOverrides.diasUteis ?? 22,
     ativo: true,
   };
 }
