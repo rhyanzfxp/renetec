@@ -91,6 +91,17 @@ export const COLABORADORES_BASE: ColaboradorMeta[] = [
   { id: 'colab-luana', nome: 'Luana', funcao: 'Atendimento/Comercial', pesoBonus: 0.17, pontosRealizados: 0, percentualTotal: 0, metaIndividualCumprida: true },
 ];
 
+function getPontosUnitarios(nome?: string): number {
+  if (!nome) return 1.5;
+  const n = nome.toLowerCase();
+  if (n.includes('ccr') || n.includes('mimosa') || n.includes('ac')) return 2.5;
+  if (n.includes('olt') || n.includes('switch') || n.includes('especial')) return 3.0;
+  if (n.includes('rb') || n.includes('basebox') || n.includes('placa') || n.includes('pacpon')) return 2.0;
+  if (n.includes('ont') || n.includes('giga') || n.includes('radio') || n.includes('sxt') || n.includes('nano') || n.includes('litebeam')) return 1.5;
+  if (n.includes('onu')) return 1.0;
+  return 1.5;
+}
+
 // ─── Busca a agregação de pontos realizados no mês corrente ──────────────────
 export async function getProducaoPontosMes(mes: number, ano: number) {
   let pontosTotais = 0;
@@ -107,7 +118,10 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
       const [producoes, retrabalhos] = await Promise.all([
         prisma.producao.findMany({
           where: {
-            dataInicio: { gte: inicioMes, lte: fimMes },
+            OR: [
+              { dataInicio: { gte: inicioMes, lte: fimMes } },
+              { dataFim: { gte: inicioMes, lte: fimMes } },
+            ],
             status: 'FINALIZADO',
           },
           include: {
@@ -135,10 +149,7 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
 
         for (const p of producoes) {
           const eqNome = p.itemOrdemServico?.tipoEquipamento?.nome || '';
-          const matched = TABELA_PONTUACAO_OFICIAL.find((t) =>
-            eqNome.toLowerCase().includes(t.equipamentoServico.toLowerCase().split('/')[0].trim())
-          );
-          const ptsUnit = matched ? matched.pontos : 1.0;
+          const ptsUnit = getPontosUnitarios(eqNome);
           const pontosProd = (p.quantidadeProduzida || 1) * ptsUnit;
           pts += pontosProd;
           fat += Number((p.itemOrdemServico?.ordemServico as any)?.valorOrcamento || 0);

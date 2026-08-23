@@ -170,24 +170,24 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
     const { getMetasAtual } = await import('../meta/meta.service.js');
     const metasData = await getMetasAtual();
     metaInfo = {
-      mesNome: metasData.mesNome,
-      ano: metasData.ano,
-      pontosRealizados: metasData.pontosRealizados,
-      metaBase: metasData.faixas.metaBase,
-      metaAlvo: metasData.faixas.metaAlvo,
-      metaExcelencia: metasData.faixas.metaExcelencia,
-      statusMeta: metasData.statusMeta,
-      statusMetaLabel: metasData.statusMetaLabel,
-      percentualAlvo: metasData.percentuais.percentualAlvo,
-      ritmoAtual: metasData.ritmos.ritmoAtual,
-      projecaoFechamento: metasData.projecoes.projecaoFechamento,
-      diasUteisRestantes: metasData.diasUteisRestantes,
-      faturamentoLancado: metasData.faturamentoLancado,
-      taxaRetrabalho: metasData.taxaRetrabalho,
-      statusQualidadeLabel: metasData.statusQualidadeLabel,
+      mesNome: metasData.nomeMes || agora.toLocaleString('pt-BR', { month: 'long' }),
+      ano: metasData.anoReferencia || agora.getFullYear(),
+      pontosRealizados: metasData.pontosRealizados || 0,
+      metaBase: metasData.metaBase || 250,
+      metaAlvo: metasData.metaAlvo || 300,
+      metaExcelencia: metasData.metaExcelencia || 350,
+      statusMeta: metasData.statusMeta || 'ABAIXO_DA_META',
+      statusMetaLabel: metasData.statusMetaLabel || '🔴 ABAIXO DA META',
+      percentualAlvo: metasData.percentualAlvo || 0.0,
+      ritmoAtual: metasData.ritmoAtual || 0.0,
+      projecaoFechamento: metasData.projecaoFechamento || 0,
+      diasUteisRestantes: metasData.diasUteisRestantes || 22,
+      faturamentoLancado: metasData.faturamentoLancado || 0.0,
+      taxaRetrabalho: metasData.taxaRetrabalho || 0.0,
+      statusQualidadeLabel: metasData.statusQualidadeLabel || 'Sem dados',
     };
-  } catch {
-    // fallback seguro
+  } catch (err) {
+    console.error('[getTvFabricaData] Erro ao integrar metas:', err);
   }
 
   // 2. Colaboradores / Bancadas Base
