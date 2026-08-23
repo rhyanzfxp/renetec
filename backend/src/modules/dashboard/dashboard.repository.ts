@@ -246,6 +246,18 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
         }),
         prisma.teste.findMany({
           where: { dataTeste: { gte: inicioDia } },
+          include: {
+            inspetor: true,
+            producao: {
+              include: {
+                itemOrdemServico: {
+                  include: {
+                    tipoEquipamento: true,
+                  },
+                },
+              },
+            },
+          },
         }),
       ]);
 
@@ -301,16 +313,25 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
       };
     }
 
-    // 2. Calcular pontos produzidos hoje por este técnico
+    // 2. Calcular pontos produzidos/testados hoje por este técnico
     let ptsHoje = 0;
-    for (const fin of producoesFinalizadasHoje) {
-      const tId = fin.tecnicoId || fin.tecnico?.id;
-      const tNome = fin.tecnico?.nome;
-      if (isTecnicoMatch(tId, tNome, b.id, b.nome) || isTecnicoMatch(tId, tNome, b.tecId, b.nome)) {
-        const eqNome = fin.itemOrdemServico?.tipoEquipamento?.nome || '';
-        const qtd = fin.quantidadeProduzida || 1;
+    if (b.funcao.includes('Qualidade') || b.nome.toLowerCase().includes('rhyan')) {
+      for (const t of testesHojeList) {
+        const eqNome = (t as any).producao?.itemOrdemServico?.tipoEquipamento?.nome || '';
+        const qtd = t.quantidadeAprovada || t.quantidadeTestada || 1;
         const ptsUnit = getPontosUnitarios(eqNome);
         ptsHoje += qtd * ptsUnit;
+      }
+    } else {
+      for (const fin of producoesFinalizadasHoje) {
+        const tId = fin.tecnicoId || fin.tecnico?.id;
+        const tNome = fin.tecnico?.nome;
+        if (isTecnicoMatch(tId, tNome, b.id, b.nome) || isTecnicoMatch(tId, tNome, b.tecId, b.nome)) {
+          const eqNome = fin.itemOrdemServico?.tipoEquipamento?.nome || '';
+          const qtd = fin.quantidadeProduzida || 1;
+          const ptsUnit = getPontosUnitarios(eqNome);
+          ptsHoje += qtd * ptsUnit;
+        }
       }
     }
 

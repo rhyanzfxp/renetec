@@ -1,57 +1,43 @@
 import { prisma, isDatabaseReady } from '../../database/prisma.js';
 import type { UpdateMetaConfigInput } from './meta.schema.js';
 
-export interface TabelaPontuacaoItem {
+export interface MetaConfigRecord {
   id: string;
-  equipamentoServico: string;
-  pontos: number;
-  observacao: string;
+  mesReferencia: number;
+  anoReferencia: number;
+  metaBase: number;
+  metaAlvo: number;
+  metaExcelencia: number;
+  isPeriodoPiloto: boolean;
+  metaPilotoMinima: number;
+  metaPilotoAlvo: number;
+  metaPilotoExcelencia: number;
+  retrabalhoMaximo: number;
+  percentualFundoBonus: number;
+  percentualColetivo: number;
+  percentualIndividual: number;
+  faturamentoRecebido: number;
+  diasUteis: number;
+  ativo: boolean;
 }
 
 export interface ColaboradorMeta {
   id: string;
   nome: string;
   funcao: string;
-  pesoBonus: number; // ex: 0.22 ou 0.17
+  pesoBonus: number;
   pontosRealizados: number;
   percentualTotal: number;
   metaIndividualCumprida: boolean;
 }
 
-export interface MetaConfigRecord {
+export interface TabelaPontuacaoItem {
   id: string;
-  mesReferencia: number;
-  anoReferencia: number;
-  // Faixas Oficiais em Pontos
-  metaBase: number;
-  metaAlvo: number;
-  metaExcelencia: number;
-  // Período Piloto
-  isPeriodoPiloto: boolean;
-  metaPilotoMinima: number;
-  metaPilotoAlvo: number;
-  metaPilotoExcelencia: number;
-  // Parâmetros de Qualidade e Bônus
-  retrabalhoMaximo: number; // 0.05 (5%)
-  percentualFundoBonus: number; // 0.015 (1.5%)
-  percentualColetivo: number; // 0.70 (70%)
-  percentualIndividual: number; // 0.30 (30%)
-  faturamentoRecebido: number;
-  diasUteis: number;
-  ativo: boolean;
-}
-
-export interface HistoricoMetaRecord {
-  mes: number;
-  ano: number;
-  metaBase: number;
-  metaAlvo: number;
-  metaExcelencia: number;
-  pontosRealizados: number;
-  atingido: 'ABAIXO_DA_META' | 'META_BASE' | 'META_ALVO' | 'META_EXCELENCIA';
-  percentualAlvo: number;
-  faturamento: number;
-  bonusDistribuido: number;
+  equipamentoServico: string;
+  tempoEstimadoMinutos: number;
+  pontos: number;
+  categoria: string;
+  observacoes: string;
 }
 
 export interface GuiaComoUsarItem {
@@ -60,23 +46,36 @@ export interface GuiaComoUsarItem {
   oQueFazer: string;
 }
 
-// ─── TABELA OFICIAL DE PONTUAÇÃO (Planilha: Aba 'Pontuação') ─────────────────
+export interface HistoricoMetaRecord {
+  id: string;
+  mesReferencia: number;
+  anoReferencia: number;
+  metaBase: number;
+  metaAlvo: number;
+  metaExcelencia: number;
+  pontosRealizados: number;
+  taxaRetrabalho: number;
+  statusMeta: string;
+  bonusDistribuido: number;
+}
+
+// ─── Tabela Oficial de Pontuação Renetec ──────────────────────────────────────
 export const TABELA_PONTUACAO_OFICIAL: TabelaPontuacaoItem[] = [
-  { id: 'pt-01', equipamentoServico: 'ONU simples', pontos: 1.0, observacao: 'Reparo padrão' },
-  { id: 'pt-02', equipamentoServico: 'Roteador GIGA/ONT/', pontos: 1.5, observacao: 'Reparo/manutenção' },
-  { id: 'pt-03', equipamentoServico: 'Rádio / SXT / Nano / Airgrid / LiteBeam', pontos: 1.5, observacao: 'Reparo/manutenção' },
-  { id: 'pt-04', equipamentoServico: 'RB/BASEBOX/', pontos: 2.0, observacao: 'Conforme avaliação' },
-  { id: 'pt-05', equipamentoServico: 'Placa / PACPON', pontos: 2.0, observacao: 'Reparo/manutenção' },
-  { id: 'pt-06', equipamentoServico: 'CCR/MIMOSAS/RADIOS AC', pontos: 2.5, observacao: 'Equipamento de maior complexidade' },
-  { id: 'pt-07', equipamentoServico: 'OLT/SWITCH/NE E OUTROS', pontos: 3.0, observacao: 'Equipamento complexo' },
-  { id: 'pt-08', equipamentoServico: 'Reparo eletrônico / diagnóstico complexo', pontos: 3.0, observacao: 'Serviço especial' },
+  { id: 'pt-01', equipamentoServico: 'ONU / Reparo Básico', tempoEstimadoMinutos: 25, pontos: 1.0, categoria: 'Básico', observacoes: 'Troca de conector, limpeza óptica, regravação de firmware básica.' },
+  { id: 'pt-02', equipamentoServico: 'ONT Wi-Fi / Roteador Giga', tempoEstimadoMinutos: 40, pontos: 1.5, categoria: 'Padrão', observacoes: 'Troca de chipset Wi-Fi, reparo em portas GbE, substituição de capacitores.' },
+  { id: 'pt-03', equipamentoServico: 'Rádio 5GHz (SXT, Nano, LiteBeam)', tempoEstimadoMinutos: 40, pontos: 1.5, categoria: 'Padrão', observacoes: 'Reparo de RF, proteção ESD, troca de PoE interno.' },
+  { id: 'pt-04', equipamentoServico: 'RouterBoard / BaseBox / Placa', tempoEstimadoMinutos: 55, pontos: 2.0, categoria: 'Intermediário', observacoes: 'Troca de reguladores de tensão, portas Ether com defeito.' },
+  { id: 'pt-05', equipamentoServico: 'Fonte PACPON / Nobreak DC', tempoEstimadoMinutos: 55, pontos: 2.0, categoria: 'Intermediário', observacoes: 'Reparo de circuito primário/secundário, troca de MOSFETs e relés.' },
+  { id: 'pt-06', equipamentoServico: 'CCR / Roteador de Borda (Básico)', tempoEstimadoMinutos: 75, pontos: 2.5, categoria: 'Avançado', observacoes: 'Reparo de fonte redundante, cooler, slots SFP.' },
+  { id: 'pt-07', equipamentoServico: 'Rádio PTP Alto Desempenho (Mimosa/AC)', tempoEstimadoMinutos: 75, pontos: 2.5, categoria: 'Avançado', observacoes: 'Reparo complexo de RF MIMO, substituição de amplificadores de potência.' },
+  { id: 'pt-08', equipamentoServico: 'OLT / Switch Core / Especial', tempoEstimadoMinutos: 90, pontos: 3.0, categoria: 'Especial', observacoes: 'Placas de controle OLT, fontes industriais, reparo multilayer.' },
 ];
 
-export const GUIA_COMO_USAR_OFICIAL: GuiaComoUsarItem[] = [
-  { etapa: 1, quando: 'Todos os dias', oQueFazer: "Abra 'Lançamentos' e registre cada serviço concluído pelos técnicos." },
-  { etapa: 2, quando: 'Equipamento', oQueFazer: "Use exatamente um dos nomes cadastrados na aba 'Pontuação' para a pontuação automática funcionar." },
-  { etapa: 3, quando: 'Rhyan', oQueFazer: 'Registre se o equipamento foi testado e o resultado do teste. O objetivo é garantir qualidade, não aprovar tudo.' },
-  { etapa: 4, quando: 'Retrabalho', oQueFazer: "Marque 'Sim' quando o equipamento retornar por problema relacionado ao reparo." },
+export const GUIA_COMO_USAR: GuiaComoUsarItem[] = [
+  { etapa: 1, quando: 'Início do Mês', oQueFazer: 'Ajuste os dias úteis, as faixas de meta (Base, Alvo, Excelência) e os percentuais de bônus.' },
+  { etapa: 2, quando: 'Diariamente', oQueFazer: 'Os técnicos apontam os reparos diretamente pela fila do chão de fábrica.' },
+  { etapa: 3, quando: 'Ao Finalizar', oQueFazer: 'O controle de qualidade (CQ) inspeciona o lote. As peças aprovadas pontuam para a meta; as reprovadas vão para retrabalho.' },
+  { etapa: 4, quando: 'Retrabalho', oQueFazer: 'Peças em retrabalho não geram pontuação na primeira passagem e impactam o indicador de qualidade.' },
   { etapa: 5, quando: 'Luana', oQueFazer: "A produção comercial pode ser acompanhada inicialmente em 'Bônus'; depois podemos criar indicadores comerciais detalhados." },
   { etapa: 6, quando: 'Dashboard', oQueFazer: 'Acompanhe pontos, meta, retrabalho e faturamento. Os cálculos e termômetros são gerados em tempo real.' },
   { etapa: 7, quando: 'Bônus', oQueFazer: "Informe o faturamento recebido no mês na célula de faturamento. O fundo potencial e a partilha 70/30 são calculados automaticamente." },
@@ -90,6 +89,15 @@ export const COLABORADORES_BASE: ColaboradorMeta[] = [
   { id: 'colab-rhyan', nome: 'Rhyan', funcao: 'Qualidade/Testes', pesoBonus: 0.17, pontosRealizados: 0, percentualTotal: 0, metaIndividualCumprida: true },
   { id: 'colab-luana', nome: 'Luana', funcao: 'Atendimento/Comercial', pesoBonus: 0.17, pontosRealizados: 0, percentualTotal: 0, metaIndividualCumprida: true },
 ];
+
+let inMemoryFaturamentoRecebido: number = 0;
+let inMemoryMetaIndividualStatus: Record<string, boolean> = {
+  'colab-samuel': true,
+  'colab-joao': true,
+  'colab-joas': true,
+  'colab-rhyan': true,
+  'colab-luana': true,
+};
 
 function getPontosUnitarios(nome?: string): number {
   if (!nome) return 1.5;
@@ -115,7 +123,7 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
       const inicioMes = new Date(ano, mes - 1, 1);
       const fimMes = new Date(ano, mes, 0, 23, 59, 59, 999);
 
-      const [producoes, retrabalhos] = await Promise.all([
+      const [producoes, testes, retrabalhos] = await Promise.all([
         prisma.producao.findMany({
           where: {
             OR: [
@@ -135,6 +143,21 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
             },
           },
         }),
+        prisma.teste.findMany({
+          where: { dataTeste: { gte: inicioMes, lte: fimMes } },
+          include: {
+            inspetor: { select: { id: true, nome: true } },
+            producao: {
+              include: {
+                itemOrdemServico: {
+                  include: {
+                    tipoEquipamento: true,
+                  },
+                },
+              },
+            },
+          },
+        }),
         prisma.retrabalho.count({
           where: { dataInicio: { gte: inicioMes, lte: fimMes } },
         }),
@@ -142,11 +165,12 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
 
       totalRetrabalho = retrabalhos;
 
-      if (producoes.length > 0) {
+      if (producoes.length > 0 || testes.length > 0) {
         let pts = 0;
         let fat = 0;
         const colaboradoresMapPorNome: Record<string, number> = {};
 
+        // 1. Pontos de Produção em Bancada (Samuel, João, Joás)
         for (const p of producoes) {
           const eqNome = p.itemOrdemServico?.tipoEquipamento?.nome || '';
           const ptsUnit = getPontosUnitarios(eqNome);
@@ -156,6 +180,15 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
 
           const tecNome = p.tecnico?.nome || (p.itemOrdemServico as any)?.tecnicoAlocado?.nome || 'desconhecido';
           colaboradoresMapPorNome[tecNome] = (colaboradoresMapPorNome[tecNome] || 0) + pontosProd;
+        }
+
+        // 2. Pontos de Inspeção e Controle de Qualidade (Rhyan / Qualidade)
+        for (const t of testes) {
+          const eqNome = t.producao?.itemOrdemServico?.tipoEquipamento?.nome || '';
+          const ptsUnit = getPontosUnitarios(eqNome);
+          const pontosTeste = (t.quantidadeAprovada || t.quantidadeTestada || 1) * ptsUnit;
+          const inspNome = t.inspetor?.nome || 'Rhyan';
+          colaboradoresMapPorNome[inspNome] = (colaboradoresMapPorNome[inspNome] || 0) + pontosTeste;
         }
 
         pontosTotais = Number(pts.toFixed(1));
@@ -172,6 +205,9 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
             ...c,
             pontosRealizados: Number(pontos.toFixed(1)),
             percentualTotal: pts > 0 ? Number(((pontos / pts) * 100).toFixed(1)) : 0,
+            metaIndividualCumprida: inMemoryMetaIndividualStatus[c.id] !== undefined
+              ? inMemoryMetaIndividualStatus[c.id]
+              : true,
           };
         });
       }
@@ -209,7 +245,7 @@ export async function getMetaConfig(mes: number, ano: number): Promise<MetaConfi
     percentualFundoBonus: 0.015,
     percentualColetivo: 0.70,
     percentualIndividual: 0.30,
-    faturamentoRecebido: 0,
+    faturamentoRecebido: inMemoryFaturamentoRecebido,
     diasUteis: 22,
     ativo: true,
   };
@@ -226,6 +262,7 @@ export async function getMetaConfig(mes: number, ano: number): Promise<MetaConfi
           metaBase: cfg.metaBronze,
           metaAlvo: cfg.metaPrata,
           metaExcelencia: cfg.metaOuro,
+          faturamentoRecebido: inMemoryFaturamentoRecebido,
           ativo: cfg.ativo,
         };
       }
@@ -245,6 +282,10 @@ export async function updateMetaConfig(dados: UpdateMetaConfigInput): Promise<Me
   const metaBase = dados.metaBase ?? 250;
   const metaAlvo = dados.metaAlvo ?? 300;
   const metaExcelencia = dados.metaExcelencia ?? 350;
+
+  if (dados.faturamentoRecebido !== undefined) {
+    inMemoryFaturamentoRecebido = dados.faturamentoRecebido;
+  }
 
   if (isDatabaseReady()) {
     try {
@@ -280,7 +321,7 @@ export async function updateMetaConfig(dados: UpdateMetaConfigInput): Promise<Me
         percentualFundoBonus: dados.percentualFundoBonus ?? 0.015,
         percentualColetivo: dados.percentualColetivo ?? 0.70,
         percentualIndividual: dados.percentualIndividual ?? 0.30,
-        faturamentoRecebido: dados.faturamentoRecebido ?? 0,
+        faturamentoRecebido: inMemoryFaturamentoRecebido,
         diasUteis: dados.diasUteis ?? 22,
         ativo: cfg.ativo,
       };
@@ -304,7 +345,7 @@ export async function updateMetaConfig(dados: UpdateMetaConfigInput): Promise<Me
     percentualFundoBonus: dados.percentualFundoBonus ?? 0.015,
     percentualColetivo: dados.percentualColetivo ?? 0.70,
     percentualIndividual: dados.percentualIndividual ?? 0.30,
-    faturamentoRecebido: dados.faturamentoRecebido ?? 0,
+    faturamentoRecebido: inMemoryFaturamentoRecebido,
     diasUteis: dados.diasUteis ?? 22,
     ativo: true,
   };
@@ -312,9 +353,10 @@ export async function updateMetaConfig(dados: UpdateMetaConfigInput): Promise<Me
 
 // ─── Atualiza o status de cumprimento individual de cada colaborador ──────────
 export async function updateMetaIndividualColaboradores(statusMap: Record<string, boolean>) {
+  inMemoryMetaIndividualStatus = { ...inMemoryMetaIndividualStatus, ...statusMap };
   return COLABORADORES_BASE.map((c) => ({
     ...c,
-    metaIndividualCumprida: statusMap[c.id] !== undefined ? statusMap[c.id] : true,
+    metaIndividualCumprida: inMemoryMetaIndividualStatus[c.id] !== undefined ? inMemoryMetaIndividualStatus[c.id] : true,
   }));
 }
 
@@ -323,12 +365,10 @@ export async function getHistoricoMetas(ano: number): Promise<HistoricoMetaRecor
   return [];
 }
 
-// ─── Tabela de Pontuação Oficial ──────────────────────────────────────────────
-export async function getTabelaPontuacao(): Promise<TabelaPontuacaoItem[]> {
+export function getTabelaPontuacao(): TabelaPontuacaoItem[] {
   return TABELA_PONTUACAO_OFICIAL;
 }
 
-// ─── Guia Como Usar ───────────────────────────────────────────────────────────
-export async function getGuiaComoUsar(): Promise<GuiaComoUsarItem[]> {
-  return GUIA_COMO_USAR_OFICIAL;
+export function getGuiaComoUsar(): GuiaComoUsarItem[] {
+  return GUIA_COMO_USAR;
 }

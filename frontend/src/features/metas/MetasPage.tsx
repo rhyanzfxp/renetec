@@ -100,11 +100,14 @@ export const MetasPage: React.FC = () => {
     try {
       setIsUpdatingBonus(true);
       setBonusFeedback(null);
-      const valor = parseFloat(simuladorFaturamento.replace(',', '.')) || 0;
+      const cleaned = simuladorFaturamento.trim().replace(/^R\$\s?/, '').replace(/\./g, '').replace(',', '.');
+      const valor = parseFloat(cleaned) || 0;
       const updated = await metaApiService.updateBonusSimulation({
         faturamentoRecebido: valor,
       });
-      setData(updated);
+      if (updated) {
+        setData(updated);
+      }
       setBonusFeedback('Cálculo de bônus atualizado com sucesso!');
       setTimeout(() => setBonusFeedback(null), 3000);
     } catch {
@@ -119,11 +122,15 @@ export const MetasPage: React.FC = () => {
     try {
       setIsUpdatingBonus(true);
       const statusMap = { [colabId]: !currentStatus };
+      const cleaned = simuladorFaturamento.trim().replace(/^R\$\s?/, '').replace(/\./g, '').replace(',', '.');
+      const valor = parseFloat(cleaned) || data.faturamentoBaseCalculo;
       const updated = await metaApiService.updateBonusSimulation({
-        faturamentoRecebido: parseFloat(simuladorFaturamento.replace(',', '.')) || data.faturamentoBaseCalculo,
+        faturamentoRecebido: valor,
         metaIndividualStatus: statusMap,
       });
-      setData(updated);
+      if (updated) {
+        setData(updated);
+      }
     } catch {
       setErrorMessage('Erro ao alterar status da meta individual.');
     } finally {
