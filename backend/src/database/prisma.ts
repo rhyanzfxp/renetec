@@ -5,6 +5,7 @@ export const prisma = new PrismaClient({
   log: env.NODE_ENV === 'development' ? [] : ['error'],
 });
 
+export let isDbAvailable = false;
 let isChecking = false;
 
 export async function checkDatabaseConnection(): Promise<boolean> {
