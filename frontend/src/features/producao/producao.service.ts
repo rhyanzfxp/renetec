@@ -10,13 +10,13 @@ export const producaoApiService = {
   // Busca a fila de itens disponíveis para o técnico
   async getMinhaFila(): Promise<FilaItemData[]> {
     const response = await api.get<{ success: boolean; data: FilaItemData[] }>('/producao/minha-fila');
-    return response.data.data;
+    return Array.isArray(response.data?.data) ? response.data.data : [];
   },
 
   // Busca a produção que está atualmente em andamento
   async getProducaoAtiva(): Promise<ProducaoAtivaData | null> {
     const response = await api.get<{ success: boolean; data: ProducaoAtivaData | null }>('/producao/ativa');
-    return response.data.data;
+    return response.data?.data || null;
   },
 
   // Inicia um apontamento de produção
@@ -51,9 +51,11 @@ export const producaoApiService = {
     const response = await api.get<{
       success: boolean;
       data: ProducaoHistoricoItem[];
-      meta: { total: number };
+      meta?: { total?: number };
     }>('/producao/historico', { params: { page, limit } });
-    return { data: response.data.data, total: response.data.meta.total };
+    return {
+      data: Array.isArray(response.data?.data) ? response.data.data : [],
+      total: response.data?.meta?.total || 0,
+    };
   },
 };
-

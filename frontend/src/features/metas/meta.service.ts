@@ -12,19 +12,19 @@ export const metaApiService = {
   // Retorna os dados completos do mês atual
   async getMetaAtual(): Promise<MetaAtualData> {
     const response = await api.get<{ success: boolean; data: MetaAtualData }>('/metas/atual');
-    return response.data.data;
+    return response.data?.data;
   },
 
   // Retorna a tabela oficial de pontuação de equipamentos
   async getTabelaPontuacao(): Promise<TabelaPontuacaoItem[]> {
     const response = await api.get<{ success: boolean; data: TabelaPontuacaoItem[] }>('/metas/pontuacao');
-    return response.data.data;
+    return Array.isArray(response.data?.data) ? response.data.data : [];
   },
 
   // Retorna o guia operacional "Como usar"
   async getGuiaComoUsar(): Promise<GuiaComoUsarItem[]> {
     const response = await api.get<{ success: boolean; data: GuiaComoUsarItem[] }>('/metas/guia');
-    return response.data.data;
+    return Array.isArray(response.data?.data) ? response.data.data : [];
   },
 
   // Retorna o histórico de metas
@@ -32,7 +32,7 @@ export const metaApiService = {
     const response = await api.get<{ success: boolean; data: HistoricoMetaItem[] }>('/metas/historico', {
       params: { ano },
     });
-    return response.data.data;
+    return Array.isArray(response.data?.data) ? response.data.data : [];
   },
 
   // Atualiza configuração de metas (somente ADMIN)
@@ -50,6 +50,6 @@ export const metaApiService = {
       '/metas/bonus-simulacao',
       payload
     );
-    return response.data.data;
+    return response.data?.data;
   },
 };

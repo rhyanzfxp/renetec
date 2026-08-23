@@ -10,16 +10,14 @@ import {
   Play,
   CheckCircle2,
   Clock,
-  Wrench,
-  AlertCircle,
   RefreshCw,
   Activity,
   History,
   Timer,
   PlusCircle,
-  Layers
+  Layers,
+  AlertTriangle
 } from 'lucide-react';
-
 
 export const ProducaoPage: React.FC = () => {
   const [fila, setFila] = useState<FilaItemData[]>([]);
@@ -42,12 +40,15 @@ export const ProducaoPage: React.FC = () => {
         producaoApiService.getProducaoAtiva(),
         producaoApiService.getHistorico(1, 5),
       ]);
-      setFila(filaData);
-      setProducaoAtiva(ativaData);
-      setHistorico(histData.data);
+      setFila(Array.isArray(filaData) ? filaData : []);
+      setProducaoAtiva(ativaData || null);
+      setHistorico(Array.isArray(histData?.data) ? histData.data : []);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } }; message?: string };
       setErrorMessage(e.response?.data?.message || 'Erro ao carregar dados do chão de fábrica.');
+      setFila([]);
+      setProducaoAtiva(null);
+      setHistorico([]);
     } finally {
       setIsLoading(false);
     }
@@ -103,12 +104,15 @@ export const ProducaoPage: React.FC = () => {
     }
   };
 
+  const currentFila = Array.isArray(fila) ? fila : [];
+  const currentHistorico = Array.isArray(historico) ? historico : [];
+
   return (
     <div className="space-y-6">
       {errorMessage && (
         <div className="p-3.5 rounded-lg bg-red-950/40 border border-red-800/50 flex items-center justify-between text-xs text-red-200">
           <div className="flex items-center gap-2.5">
-            <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+            <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
             <span>{errorMessage}</span>
           </div>
           <Button variant="ghost" size="sm" onClick={() => setErrorMessage(null)}>
@@ -129,24 +133,24 @@ export const ProducaoPage: React.FC = () => {
         </div>
       )}
 
-      {/* ─── BANNER OPERACIONAL DO TÉCNICO COM BOTÃO DE AUTO-APONTAMENTO ─────── */}
-      <div className="p-5 rounded-2xl bg-gradient-to-r from-surface-card via-surface-card to-brand-950/30 border border-surface-border flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
-        <div className="space-y-1">
-          <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-            <Wrench className="w-5 h-5 text-brand-400" />
-            <span>Bancada Técnica & Apontamento Direto</span>
+      {/* ─── BARRA DE AÇÃO RÁPIDA (AUTO-ATENDIMENTO DO TÉCNICO) ─────────────── */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 rounded-xl bg-gradient-to-r from-surface-card via-surface-card to-sky-950/20 border border-surface-border">
+        <div>
+          <h2 className="text-sm font-bold text-white flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-sky-400 animate-pulse" />
+            Bancada de Produção & Reparo Técnico
           </h2>
-          <p className="text-xs text-gray-400 max-w-xl">
-            Você tem total autonomia para registrar sua produção (ex: 12 ONTs, 2 CCRs na OS #1920) e enviar diretamente para a mesa de testes sem depender da criação manual pelo administrador.
+          <p className="text-xs text-gray-400 mt-0.5">
+            Apontamento com cronômetro em tempo real ou registro direto de lotes para testes de qualidade.
           </p>
         </div>
 
         <Button
           variant="primary"
-          size="lg"
+          size="md"
           onClick={() => setIsCriarLoteOpen(true)}
-          leftIcon={<PlusCircle className="w-5 h-5" />}
-          className="shadow-glow-primary font-bold sm:self-center"
+          leftIcon={<PlusCircle className="w-4 h-4" />}
+          className="shadow-glow-primary flex-shrink-0"
         >
           Novo Apontamento / Minha OS
         </Button>
@@ -167,21 +171,23 @@ export const ProducaoPage: React.FC = () => {
                 <span className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
                   <Activity className="w-4 h-4" /> Produção em Andamento na Bancada
                 </span>
-                <StatusBadge prioridade={producaoAtiva.itemOrdemServico.ordemServico.prioridade} size="sm" />
+                {producaoAtiva?.itemOrdemServico?.ordemServico?.prioridade && (
+                  <StatusBadge prioridade={producaoAtiva.itemOrdemServico.ordemServico.prioridade} size="sm" />
+                )}
               </div>
 
               <div>
                 <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
-                  <span>OS #{producaoAtiva.itemOrdemServico.ordemServico.numeroOS}</span>
+                  <span>OS #{producaoAtiva?.itemOrdemServico?.ordemServico?.numeroOS || '—'}</span>
                   <span className="text-gray-400 font-normal">|</span>
-                  <span className="text-gray-200">{producaoAtiva.itemOrdemServico.tipoEquipamento.nome}</span>
+                  <span className="text-gray-200">{producaoAtiva?.itemOrdemServico?.tipoEquipamento?.nome || 'Equipamento'}</span>
                 </h2>
                 <p className="text-xs text-gray-400 mt-1">
-                  Cliente: <strong className="text-white">{producaoAtiva.itemOrdemServico.ordemServico.cliente.nomeRazaoSocial}</strong> • Lote: <strong className="text-amber-300 tabular-nums">{producaoAtiva.itemOrdemServico.quantidade} un</strong>
+                  Cliente: <strong className="text-white">{producaoAtiva?.itemOrdemServico?.ordemServico?.cliente?.nomeRazaoSocial || 'MARANET Telecomunicações'}</strong> • Lote: <strong className="text-amber-300 tabular-nums">{producaoAtiva?.itemOrdemServico?.quantidade || 1} un</strong>
                 </p>
               </div>
 
-              {producaoAtiva.itemOrdemServico.defeitoRelatado && (
+              {producaoAtiva?.itemOrdemServico?.defeitoRelatado && (
                 <div className="p-2.5 rounded-lg bg-surface-base/80 border border-surface-border text-xs text-gray-300 max-w-xl">
                   <span className="text-gray-400 font-semibold">Defeito:</span> {producaoAtiva.itemOrdemServico.defeitoRelatado}
                 </div>
@@ -233,7 +239,7 @@ export const ProducaoPage: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <Layers className="w-4 h-4 text-sky-400" /> Fila de Trabalho em Aberto ({fila.length})
+              <Layers className="w-4 h-4 text-sky-400" /> Fila de Trabalho em Aberto ({currentFila.length})
             </h3>
             <p className="text-xs text-gray-400 mt-0.5">Equipamentos alocados para sua bancada aguardando início de reparo.</p>
           </div>
@@ -249,7 +255,7 @@ export const ProducaoPage: React.FC = () => {
               <div key={n} className="h-44 rounded-xl bg-surface-card border border-surface-border animate-pulse p-4 space-y-3" />
             ))}
           </div>
-        ) : fila.length === 0 ? (
+        ) : currentFila.length === 0 ? (
           <div className="p-8 rounded-xl bg-surface-card border border-surface-border text-center space-y-2">
             <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
             <h4 className="text-sm font-bold text-white">Sua fila de bancada está livre!</h4>
@@ -259,78 +265,83 @@ export const ProducaoPage: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {fila.map((item) => (
-              <div
-                key={item.id}
-                className="p-4 rounded-xl bg-surface-card border border-surface-border hover:border-surface-muted transition-all duration-150 flex flex-col justify-between space-y-4"
-              >
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-sky-400 tabular-nums">
-                      OS #{item.ordemServico.numeroOS}
-                    </span>
-                    <StatusBadge prioridade={item.ordemServico.prioridade} size="sm" />
-                  </div>
+            {currentFila.map((item) => {
+              const os = item?.ordemServico;
+              const equip = item?.tipoEquipamento;
 
-                  <div>
-                    <h4 className="text-sm font-bold text-white line-clamp-1">
-                      {item.tipoEquipamento.nome}
-                    </h4>
-                    <p className="text-xs text-gray-400 line-clamp-1">
-                      {item.ordemServico.cliente.nomeRazaoSocial}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs text-gray-300 py-1.5 border-y border-surface-border/50">
-                    <span>Lote: <strong className="text-white tabular-nums">{item.quantidade} un</strong></span>
-                    <span className="flex items-center gap-1 text-gray-400">
-                      <Clock className="w-3 h-3 text-sky-400" />
-                      Estimado: <strong className="text-gray-200 tabular-nums">{item.tipoEquipamento.tempoEstimadoMinutos} min</strong>
-                    </span>
-                  </div>
-
-                  {item.defeitoRelatado && (
-                    <p className="text-xs text-gray-400 line-clamp-2 bg-surface-base/60 p-2 rounded border border-surface-border/50">
-                      {item.defeitoRelatado}
-                    </p>
-                  )}
-                </div>
-
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => handleIniciar(item.id)}
-                  disabled={isStarting || !!producaoAtiva}
-                  title={producaoAtiva ? 'Finalize a produção ativa antes de iniciar outro lote' : ''}
-                  leftIcon={<Play className="w-3.5 h-3.5" />}
-                  className="w-full"
+              return (
+                <div
+                  key={item.id}
+                  className="p-4 rounded-xl bg-surface-card border border-surface-border hover:border-surface-muted transition-all duration-150 flex flex-col justify-between space-y-4"
                 >
-                  Iniciar Produção
-                </Button>
-              </div>
-            ))}
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-sky-400 tabular-nums">
+                        OS #{os?.numeroOS || '—'}
+                      </span>
+                      {os?.prioridade && <StatusBadge prioridade={os.prioridade} size="sm" />}
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-bold text-white line-clamp-1">
+                        {equip?.nome || 'Equipamento'}
+                      </h4>
+                      <p className="text-xs text-gray-400 line-clamp-1">
+                        {os?.cliente?.nomeRazaoSocial || 'MARANET Telecomunicações'}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs text-gray-300 py-1.5 border-y border-surface-border/50">
+                      <span>Lote: <strong className="text-white tabular-nums">{item.quantidade} un</strong></span>
+                      <span className="flex items-center gap-1 text-gray-400">
+                        <Clock className="w-3 h-3 text-sky-400" />
+                        Estimado: <strong className="text-gray-200 tabular-nums">{equip?.tempoEstimadoMinutos || 40} min</strong>
+                      </span>
+                    </div>
+
+                    {item.defeitoRelatado && (
+                      <p className="text-xs text-gray-400 line-clamp-2 bg-surface-base/60 p-2 rounded border border-surface-border/50">
+                        {item.defeitoRelatado}
+                      </p>
+                    )}
+                  </div>
+
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handleIniciar(item.id)}
+                    disabled={isStarting || !!producaoAtiva}
+                    title={producaoAtiva ? 'Finalize a produção ativa antes de iniciar outro lote' : ''}
+                    leftIcon={<Play className="w-3.5 h-3.5" />}
+                    className="w-full"
+                  >
+                    Iniciar Produção
+                  </Button>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
 
       {/* ─── 3. HISTÓRICO DE PRODUÇÕES FINALIZADAS RECENTEMENTE ─────────────── */}
-      {historico.length > 0 && (
+      {currentHistorico.length > 0 && (
         <div className="space-y-3 pt-4 border-t border-surface-border">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
             <History className="w-3.5 h-3.5" /> Lotes Concluídos Recentemente pelo Técnico
           </h3>
 
           <div className="bg-surface-card border border-surface-border rounded-xl divide-y divide-surface-border overflow-hidden">
-            {historico.map((h) => (
+            {currentHistorico.map((h) => (
               <div key={h.id} className="p-3 sm:px-4 flex items-center justify-between text-xs">
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-white tabular-nums">
-                      OS #{h.itemOrdemServico.ordemServico.numeroOS}
+                      OS #{h.itemOrdemServico?.ordemServico?.numeroOS || '—'}
                     </span>
                     <span className="text-gray-400">—</span>
                     <span className="text-gray-300 font-medium">
-                      {h.itemOrdemServico.tipoEquipamento.nome}
+                      {h.itemOrdemServico?.tipoEquipamento?.nome || 'Equipamento'}
                     </span>
                   </div>
                   <p className="text-[11px] text-gray-400 truncate max-w-md">
@@ -375,4 +386,3 @@ export const ProducaoPage: React.FC = () => {
     </div>
   );
 };
-

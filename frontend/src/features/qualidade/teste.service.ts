@@ -10,13 +10,13 @@ export const qualidadeApiService = {
   // Lista itens aguardando teste
   async getFila(): Promise<FilaTesteItem[]> {
     const response = await api.get<{ success: boolean; data: FilaTesteItem[] }>('/qualidade/fila');
-    return response.data.data;
+    return Array.isArray(response.data?.data) ? response.data.data : [];
   },
 
   // Lista motivos de reprovação
   async getMotivos(): Promise<MotivoReprovacaoData[]> {
     const response = await api.get<{ success: boolean; data: MotivoReprovacaoData[] }>('/qualidade/motivos');
-    return response.data.data;
+    return Array.isArray(response.data?.data) ? response.data.data : [];
   },
 
   // Envia resultado da inspeção (Aprovados + Reprovados = Testados)
@@ -33,8 +33,11 @@ export const qualidadeApiService = {
     const response = await api.get<{
       success: boolean;
       data: HistoricoTesteItem[];
-      meta: { total: number };
+      meta?: { total?: number };
     }>('/qualidade/historico', { params: { page, limit } });
-    return { data: response.data.data, total: response.data.meta.total };
+    return {
+      data: Array.isArray(response.data?.data) ? response.data.data : [],
+      total: response.data?.meta?.total || 0,
+    };
   },
 };

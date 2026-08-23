@@ -11,12 +11,15 @@ import type { StatusOS } from '../../types/auth';
 export const osApiService = {
   async list(params?: { search?: string; status?: string; tecnicoId?: string; page?: number; limit?: number }) {
     const response = await api.get<{ success: boolean; data: OrdemServicoData[]; meta: { total: number; totalPages: number } }>('/os', { params });
-    return response.data;
+    return {
+      data: Array.isArray(response.data?.data) ? response.data.data : [],
+      meta: response.data?.meta || { total: 0, totalPages: 1 },
+    };
   },
 
   async getById(id: string) {
     const response = await api.get<{ success: boolean; data: OrdemServicoData }>(`/os/${id}`);
-    return response.data.data;
+    return response.data?.data;
   },
 
   async create(data: CreateOsPayload) {
@@ -32,18 +35,18 @@ export const osApiService = {
     return response.data;
   },
 
-  async getClientes() {
+  async getClientes(): Promise<ClienteOption[]> {
     const response = await api.get<{ success: boolean; data: ClienteOption[] }>('/os/clientes');
-    return response.data.data;
+    return Array.isArray(response.data?.data) ? response.data.data : [];
   },
 
-  async getTiposEquipamento() {
+  async getTiposEquipamento(): Promise<TipoEquipamentoOption[]> {
     const response = await api.get<{ success: boolean; data: TipoEquipamentoOption[] }>('/os/tipos-equipamento');
-    return response.data.data;
+    return Array.isArray(response.data?.data) ? response.data.data : [];
   },
 
-  async getTecnicos() {
+  async getTecnicos(): Promise<TecnicoOption[]> {
     const response = await api.get<{ success: boolean; data: TecnicoOption[] }>('/os/tecnicos');
-    return response.data.data;
+    return Array.isArray(response.data?.data) ? response.data.data : [];
   },
 };

@@ -84,11 +84,11 @@ export const qualidadeRoutes: FastifyPluginAsync = async (fastify) => {
       const resultado = await service.getHistoricoTestes(parseInt(page), parseInt(limit));
       return reply.send({
         success: true,
-        data: resultado.testes,
+        data: resultado.data || [],
         meta: {
-          total: resultado.total,
+          total: resultado.total || 0,
           page: parseInt(page),
-          totalPages: resultado.totalPages,
+          totalPages: resultado.totalPages || 0,
         },
       });
     }

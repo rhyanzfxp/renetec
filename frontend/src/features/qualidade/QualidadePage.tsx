@@ -35,11 +35,13 @@ export const QualidadePage: React.FC = () => {
         qualidadeApiService.getFila(),
         qualidadeApiService.getHistorico(1, 5),
       ]);
-      setFila(filaData);
-      setHistorico(histData.data);
+      setFila(Array.isArray(filaData) ? filaData : []);
+      setHistorico(Array.isArray(histData?.data) ? histData.data : []);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } }; message?: string };
       setErrorMessage(e.response?.data?.message || 'Erro ao carregar fila de controle de qualidade.');
+      setFila([]);
+      setHistorico([]);
     } finally {
       setIsLoading(false);
     }
@@ -64,7 +66,7 @@ export const QualidadePage: React.FC = () => {
       setErrorMessage(null);
 
       // Remoção otimista imediata da fila para o card sumir na hora
-      setFila((prev) => prev.filter((x) => x.id !== item.id));
+      setFila((prev) => (Array.isArray(prev) ? prev.filter((x) => x.id !== item.id) : []));
 
       const producaoId =
         item.producoes?.[0]?.id || item.producaoRecente?.id || `prod-ref-${item.id}`;
@@ -78,7 +80,8 @@ export const QualidadePage: React.FC = () => {
         observacao: 'Aprovação direta em conformidade 100% no teste de bancada de CQ.',
       });
 
-      setSuccessMessage(`OS #${item.ordemServico.numeroOS}: Lote de ${item.quantidade} un aprovado com sucesso!`);
+      const numOS = item.ordemServico?.numeroOS || '—';
+      setSuccessMessage(`OS #${numOS}: Lote de ${item.quantidade} un aprovado com sucesso!`);
       setTimeout(() => setSuccessMessage(null), 4000);
       await loadData();
     } catch (err: unknown) {
@@ -90,11 +93,13 @@ export const QualidadePage: React.FC = () => {
     }
   };
 
-
   const openInspecao = (item: FilaTesteItem) => {
     setSelectedItem(item);
     setIsDrawerOpen(true);
   };
+
+  const currentFila = Array.isArray(fila) ? fila : [];
+  const currentHistorico = Array.isArray(historico) ? historico : [];
 
   return (
     <div className="space-y-6">
@@ -126,7 +131,7 @@ export const QualidadePage: React.FC = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <KpiCard
           label="Lotes na Mesa de CQ"
-          value={fila.length}
+          value={currentFila.length}
           unit="lotes"
           subtext="Aguardando inspeção"
           variant="info"
@@ -134,7 +139,7 @@ export const QualidadePage: React.FC = () => {
         />
         <KpiCard
           label="Unidades no CQ"
-          value={fila.reduce((acc, i) => acc + i.quantidade, 0)}
+          value={currentFila.reduce((acc, i) => acc + (i?.quantidade || 0), 0)}
           unit="unidades"
           subtext="Volume total para teste"
           variant="default"
@@ -161,7 +166,7 @@ export const QualidadePage: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <FileCheck className="w-4 h-4 text-emerald-400" /> Fila de Inspeção de Qualidade ({fila.length})
+              <FileCheck className="w-4 h-4 text-emerald-400" /> Fila de Inspeção de Qualidade ({currentFila.length})
             </h3>
             <p className="text-xs text-gray-400 mt-0.5">
               Lotes liberados pelos técnicos de produção aguardando testes de carga, calibração e validação para a meta.
@@ -179,7 +184,7 @@ export const QualidadePage: React.FC = () => {
               <div key={n} className="h-48 rounded-xl bg-surface-card border border-surface-border animate-pulse p-4 space-y-3" />
             ))}
           </div>
-        ) : fila.length === 0 ? (
+        ) : currentFila.length === 0 ? (
           <div className="p-8 rounded-xl bg-surface-card border border-surface-border text-center space-y-2">
             <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
             <h4 className="text-sm font-bold text-white">Mesa de Controle de Qualidade limpa!</h4>
@@ -189,92 +194,96 @@ export const QualidadePage: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {fila.map((item) => (
-              <div
-                key={item.id}
-                className="p-4 rounded-xl bg-surface-card border border-surface-border hover:border-surface-muted transition-all duration-150 flex flex-col justify-between space-y-4"
-              >
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-sky-400 tabular-nums">
-                        OS #{item.ordemServico.numeroOS}
-                      </span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
-                        item.tipoCategoria === 'SEM_DEFEITO'
-                          ? 'bg-sky-950/40 border-sky-500/40 text-sky-300'
-                          : item.tipoCategoria === 'RETRABALHO'
-                          ? 'bg-purple-950/40 border-purple-500/40 text-purple-300'
-                          : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
-                      }`}>
-                        {item.tipoCategoria === 'SEM_DEFEITO' ? '✅ Sem Defeito' : item.tipoCategoria === 'RETRABALHO' ? '🔄 Retrabalho' : '🔧 Reparado'}
+            {currentFila.map((item) => {
+              const os = item?.ordemServico;
+              const equip = item?.tipoEquipamento;
+
+              return (
+                <div
+                  key={item.id}
+                  className="p-4 rounded-xl bg-surface-card border border-surface-border hover:border-surface-muted transition-all duration-150 flex flex-col justify-between space-y-4"
+                >
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-sky-400 tabular-nums">
+                          OS #{os?.numeroOS || '—'}
+                        </span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                          item.tipoCategoria === 'SEM_DEFEITO'
+                            ? 'bg-sky-950/40 border-sky-500/40 text-sky-300'
+                            : item.tipoCategoria === 'RETRABALHO'
+                            ? 'bg-purple-950/40 border-purple-500/40 text-purple-300'
+                            : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+                        }`}>
+                          {item.tipoCategoria === 'SEM_DEFEITO' ? '✅ Sem Defeito' : item.tipoCategoria === 'RETRABALHO' ? '🔄 Retrabalho' : '🔧 Reparado'}
+                        </span>
+                      </div>
+                      {os?.prioridade && <StatusBadge prioridade={os.prioridade} size="sm" />}
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-bold text-white line-clamp-1">
+                        {equip?.nome || 'Equipamento'}
+                      </h4>
+                      <p className="text-xs text-gray-400 line-clamp-1">
+                        {os?.cliente?.nomeRazaoSocial || 'MARANET Telecomunicações'}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs text-gray-300 py-1.5 border-y border-surface-border/50">
+                      <span>Lote a Testar: <strong className="text-white tabular-nums">{item.quantidade} un</strong></span>
+                      <span className="flex items-center gap-1 text-gray-400">
+                        <User className="w-3 h-3 text-sky-400" />
+                        Técnico: <strong className="text-gray-200">{item.tecnicoAlocado?.nome || 'Bancada'}</strong>
                       </span>
                     </div>
-                    <StatusBadge prioridade={item.ordemServico.prioridade} size="sm" />
+
+                    {(item.producoes?.[0]?.servicoRealizado || item.producaoRecente?.servicoRealizado || item.servicoRealizado) && (
+                      <p className="text-xs text-gray-400 line-clamp-2 bg-surface-base/60 p-2 rounded border border-surface-border/50">
+                        <span className="font-semibold text-gray-300">Serviço Feito:</span> {item.producoes?.[0]?.servicoRealizado || item.producaoRecente?.servicoRealizado || item.servicoRealizado}
+                      </p>
+                    )}
                   </div>
 
-                  <div>
-                    <h4 className="text-sm font-bold text-white line-clamp-1">
-                      {item.tipoEquipamento.nome}
-                    </h4>
-                    <p className="text-xs text-gray-400 line-clamp-1">
-                      {item.ordemServico.cliente.nomeRazaoSocial}
-                    </p>
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-surface-border/50">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openInspecao(item)}
+                      leftIcon={<FileCheck className="w-3.5 h-3.5" />}
+                      className="w-full"
+                    >
+                      Inspecionar
+                    </Button>
+                    <Button
+                      variant="success"
+                      size="sm"
+                      onClick={() => handleAprovacaoRapida(item)}
+                      leftIcon={<CheckCircle2 className="w-3.5 h-3.5" />}
+                      className="w-full"
+                      loading={approvingId === item.id}
+                      disabled={!!approvingId}
+                    >
+                      {approvingId === item.id ? 'Aprovando...' : 'Aprovar 100%'}
+                    </Button>
                   </div>
-
-                  <div className="flex items-center justify-between text-xs text-gray-300 py-1.5 border-y border-surface-border/50">
-                    <span>Lote a Testar: <strong className="text-white tabular-nums">{item.quantidade} un</strong></span>
-                    <span className="flex items-center gap-1 text-gray-400">
-                      <User className="w-3 h-3 text-sky-400" />
-                      Técnico: <strong className="text-gray-200">{item.tecnicoAlocado?.nome || 'Samuel'}</strong>
-                    </span>
-                  </div>
-
-                  {(item.producoes?.[0]?.servicoRealizado || item.producaoRecente?.servicoRealizado || item.servicoRealizado) && (
-                    <p className="text-xs text-gray-400 line-clamp-2 bg-surface-base/60 p-2 rounded border border-surface-border/50">
-                      <span className="font-semibold text-gray-300">Serviço Feito:</span> {item.producoes?.[0]?.servicoRealizado || item.producaoRecente?.servicoRealizado || item.servicoRealizado}
-                    </p>
-                  )}
                 </div>
-
-
-                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-surface-border/50">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openInspecao(item)}
-                    leftIcon={<FileCheck className="w-3.5 h-3.5" />}
-                    className="w-full"
-                  >
-                    Inspecionar
-                  </Button>
-                  <Button
-                    variant="success"
-                    size="sm"
-                    onClick={() => handleAprovacaoRapida(item)}
-                    leftIcon={<CheckCircle2 className="w-3.5 h-3.5" />}
-                    className="w-full"
-                    loading={approvingId === item.id}
-                    disabled={!!approvingId}
-                  >
-                    {approvingId === item.id ? 'Aprovando...' : 'Aprovar 100%'}
-                  </Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
 
       {/* ─── 3. HISTÓRICO DE LAUDOS DE CQ ──────────────────────────────────── */}
-      {historico.length > 0 && (
+      {currentHistorico.length > 0 && (
         <div className="space-y-3 pt-4 border-t border-surface-border">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
             <History className="w-3.5 h-3.5" /> Laudos de Inspeção Concluídos Recentemente
           </h3>
 
           <div className="bg-surface-card border border-surface-border rounded-xl divide-y divide-surface-border overflow-hidden">
-            {historico.map((h, idx) => (
+            {currentHistorico.map((h, idx) => (
               <div key={h.id || idx} className="p-3 sm:px-4 flex items-center justify-between text-xs">
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
