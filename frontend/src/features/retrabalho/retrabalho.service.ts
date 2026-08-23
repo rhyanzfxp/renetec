@@ -9,7 +9,7 @@ export const retrabalhoApiService = {
   // Lista fila de retrabalhos pendentes e em execução
   async getFila(): Promise<RetrabalhoItemData[]> {
     const response = await api.get<{ success: boolean; data: RetrabalhoItemData[] }>('/retrabalho/fila');
-    return response.data.data;
+    return Array.isArray(response.data?.data) ? response.data.data : [];
   },
 
   // Inicia o reparo do retrabalho
@@ -34,8 +34,11 @@ export const retrabalhoApiService = {
     const response = await api.get<{
       success: boolean;
       data: HistoricoRetrabalhoItem[];
-      meta: { total: number };
+      meta?: { total?: number };
     }>('/retrabalho/historico', { params: { page, limit } });
-    return { data: response.data.data, total: response.data.meta.total };
+    return {
+      data: Array.isArray(response.data?.data) ? response.data.data : [],
+      total: response.data?.meta?.total || 0,
+    };
   },
 };

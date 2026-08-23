@@ -97,11 +97,11 @@ export const retrabalhoRoutes: FastifyPluginAsync = async (fastify) => {
       const resultado = await service.getHistoricoRetrabalhos(parseInt(page), parseInt(limit));
       return reply.send({
         success: true,
-        data: resultado.retrabalhos,
+        data: resultado.data || [],
         meta: {
-          total: resultado.total,
+          total: resultado.total || 0,
           page: parseInt(page),
-          totalPages: resultado.totalPages,
+          totalPages: resultado.totalPages || 0,
         },
       });
     }

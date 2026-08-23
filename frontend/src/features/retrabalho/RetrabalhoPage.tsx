@@ -36,11 +36,13 @@ export const RetrabalhoPage: React.FC = () => {
         retrabalhoApiService.getFila(),
         retrabalhoApiService.getHistorico(1, 5),
       ]);
-      setFila(filaData);
-      setHistorico(histData.data);
+      setFila(Array.isArray(filaData) ? filaData : []);
+      setHistorico(Array.isArray(histData?.data) ? histData.data : []);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } }; message?: string };
       setErrorMessage(e.response?.data?.message || 'Erro ao carregar fila de retrabalho.');
+      setFila([]);
+      setHistorico([]);
     } finally {
       setIsLoading(false);
     }
@@ -56,13 +58,13 @@ export const RetrabalhoPage: React.FC = () => {
     return () => unsubscribe();
   }, [loadData, subscribe]);
 
-
   // Iniciar a execução do retrabalho
   const handleIniciar = async (item: RetrabalhoItemData) => {
     try {
       setErrorMessage(null);
       await retrabalhoApiService.iniciar(item.id);
-      setSuccessMessage(`Retrabalho da OS #${item.itemOrdemServico.ordemServico.numeroOS} iniciado.`);
+      const numOS = item.itemOrdemServico?.ordemServico?.numeroOS || '';
+      setSuccessMessage(`Retrabalho da OS #${numOS} iniciado.`);
       setTimeout(() => setSuccessMessage(null), 4000);
       await loadData();
     } catch (err: unknown) {
@@ -76,8 +78,11 @@ export const RetrabalhoPage: React.FC = () => {
     setIsDrawerOpen(true);
   };
 
-  const pendentesCount = fila.filter((r) => r.status === 'PENDENTE').length;
-  const emExecucaoCount = fila.filter((r) => r.status === 'EM_EXECUCAO').length;
+  const currentFila = Array.isArray(fila) ? fila : [];
+  const currentHistorico = Array.isArray(historico) ? historico : [];
+
+  const pendentesCount = currentFila.filter((r) => r?.status === 'PENDENTE').length;
+  const emExecucaoCount = currentFila.filter((r) => r?.status === 'EM_EXECUCAO').length;
 
   return (
     <div className="space-y-6">
@@ -125,7 +130,7 @@ export const RetrabalhoPage: React.FC = () => {
         />
         <KpiCard
           label="Volume em Correção"
-          value={fila.reduce((acc, r) => acc + r.quantidadeRetrabalho, 0)}
+          value={currentFila.reduce((acc, r) => acc + (r?.quantidadeRetrabalho || 0), 0)}
           unit="unidades"
           subtext="Total de peças não-conformes"
           variant="default"
@@ -145,7 +150,7 @@ export const RetrabalhoPage: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <Wrench className="w-4 h-4 text-amber-400" /> Fila de Reparos Corretivos ({fila.length})
+              <Wrench className="w-4 h-4 text-amber-400" /> Fila de Reparos Corretivos ({currentFila.length})
             </h3>
             <p className="text-xs text-gray-400 mt-0.5">
               Peças reprovadas no teste de CQ aguardando intervenção técnica e encaminhamento para re-inspeção.
@@ -163,7 +168,7 @@ export const RetrabalhoPage: React.FC = () => {
               <div key={n} className="h-52 rounded-xl bg-surface-card border border-surface-border animate-pulse p-4 space-y-3" />
             ))}
           </div>
-        ) : fila.length === 0 ? (
+        ) : currentFila.length === 0 ? (
           <div className="p-8 rounded-xl bg-surface-card border border-surface-border text-center space-y-2">
             <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
             <h4 className="text-sm font-bold text-white">Nenhum equipamento em retrabalho!</h4>
@@ -173,9 +178,9 @@ export const RetrabalhoPage: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {fila.map((item) => {
-              const os = item.itemOrdemServico.ordemServico;
-              const equip = item.itemOrdemServico.tipoEquipamento;
+            {currentFila.map((item) => {
+              const os = item?.itemOrdemServico?.ordemServico;
+              const equip = item?.itemOrdemServico?.tipoEquipamento;
 
               return (
                 <div
@@ -189,7 +194,7 @@ export const RetrabalhoPage: React.FC = () => {
                   <div className="space-y-2.5">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-amber-400 tabular-nums">
-                        OS #{os.numeroOS}
+                        OS #{os?.numeroOS || '—'}
                       </span>
                       <div className="flex items-center gap-1.5">
                         <span
@@ -201,16 +206,16 @@ export const RetrabalhoPage: React.FC = () => {
                         >
                           {item.status === 'EM_EXECUCAO' ? 'Em Reparo' : 'Pendente'}
                         </span>
-                        <StatusBadge prioridade={os.prioridade} size="sm" />
+                        {os?.prioridade && <StatusBadge prioridade={os.prioridade} size="sm" />}
                       </div>
                     </div>
 
                     <div>
                       <h4 className="text-sm font-bold text-white line-clamp-1">
-                        {equip.nome}
+                        {equip?.nome || 'Equipamento'}
                       </h4>
                       <p className="text-xs text-gray-400 line-clamp-1">
-                        {os.cliente.nomeRazaoSocial}
+                        {os?.cliente?.nomeRazaoSocial || 'MARANET Telecomunicações'}
                       </p>
                     </div>
 
@@ -268,14 +273,14 @@ export const RetrabalhoPage: React.FC = () => {
       </div>
 
       {/* ─── 3. HISTÓRICO DE RETRABALHOS CONCLUÍDOS ───────────────────────── */}
-      {historico.length > 0 && (
+      {currentHistorico.length > 0 && (
         <div className="space-y-3 pt-4 border-t border-surface-border">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
             <History className="w-3.5 h-3.5" /> Reparos Corretivos Concluídos Recentemente
           </h3>
 
           <div className="bg-surface-card border border-surface-border rounded-xl divide-y divide-surface-border overflow-hidden">
-            {historico.map((h, idx) => (
+            {currentHistorico.map((h, idx) => (
               <div key={h.id || idx} className="p-3 sm:px-4 flex items-center justify-between text-xs">
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
