@@ -1,4 +1,5 @@
 import { prisma, isDatabaseReady } from '../../database/prisma.js';
+import { getTecnicoAliasIds, ensureUsuarioDbId } from '../../database/db-utils.js';
 import type { ConcluirRetrabalhoInput } from './retrabalho.schema.js';
 import { StatusRetrabalho, StatusOS, PrioridadeOS } from '@prisma/client';
 
@@ -58,13 +59,19 @@ export function adicionarRetrabalhoMock(ret: RetrabalhoRecord) {
 
 // ─── Listar fila de retrabalhos pendentes ─────────────────────────────────────
 export async function getRetrabalhosPendentes(tecnicoId?: string) {
+  const aliasIds = tecnicoId ? await getTecnicoAliasIds(tecnicoId) : [];
+
   if (isDatabaseReady()) {
     try {
       const where: any = {
         status: { in: ['PENDENTE', 'EM_ANDAMENTO'] },
       };
       if (tecnicoId) {
-        where.OR = [{ tecnicoResponsavelId: tecnicoId }, { tecnicoResponsavelId: null }];
+        where.OR = [
+          { tecnicoResponsavelId: { in: aliasIds } },
+          { tecnicoResponsavelId: null },
+          { tecnicoResponsavel: { nome: { contains: tecnicoId.replace(/usr-|colab-/g, ''), mode: 'insensitive' } } },
+        ];
       }
 
       const lista = await prisma.retrabalho.findMany({
@@ -106,7 +113,7 @@ export async function getRetrabalhosPendentes(tecnicoId?: string) {
     if (!tecnicoId) return true;
     return (
       !r.tecnicoResponsavelId ||
-      r.tecnicoResponsavelId === tecnicoId ||
+      aliasIds.includes(r.tecnicoResponsavelId) ||
       r.tecnicoResponsavelId.toLowerCase().includes(tecnicoId.toLowerCase()) ||
       tecnicoId.toLowerCase().includes(r.tecnicoResponsavelId.toLowerCase())
     );
@@ -116,12 +123,14 @@ export async function getRetrabalhosPendentes(tecnicoId?: string) {
 
 // ─── Iniciar retrabalho por um técnico ─────────────────────────────────────────
 export async function iniciarRetrabalho(retrabalhoId: string, tecnicoId: string) {
+  const tecDbId = await ensureUsuarioDbId(tecnicoId, 'TECNICO');
+
   if (isDatabaseReady()) {
     try {
       const ret = await prisma.retrabalho.update({
         where: { id: retrabalhoId },
         data: {
-          tecnicoResponsavelId: tecnicoId,
+          tecnicoResponsavelId: tecDbId,
           status: 'EM_ANDAMENTO',
         },
         include: {
@@ -149,6 +158,7 @@ export async function iniciarRetrabalho(retrabalhoId: string, tecnicoId: string)
   }
   throw new Error('Ordem de retrabalho não encontrada');
 }
+
 
 // ─── Concluir retrabalho e encaminhar para Re-teste ───────────────────────────
 export async function concluirRetrabalho(

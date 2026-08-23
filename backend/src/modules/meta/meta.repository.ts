@@ -246,6 +246,7 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
           status: 'FINALIZADO',
         },
         include: {
+          tecnico: { select: { id: true, nome: true } },
           itemOrdemServico: {
             include: {
               tipoEquipamento: true,
@@ -272,8 +273,8 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
           pts += pontosProd;
           fat += Number((p.itemOrdemServico.ordemServico as any).valorOrcamento || 0);
 
-          // Usar nome do técnico para mapear (robusto entre UUID e mock ID)
-          const tecNome = (p.itemOrdemServico as any).tecnicoAlocado?.nome || 'desconhecido';
+          // Usar nome do técnico de producao.tecnico OU itemOrdemServico.tecnicoAlocado
+          const tecNome = (p as any).tecnico?.nome || (p.itemOrdemServico as any).tecnicoAlocado?.nome || 'desconhecido';
           colaboradoresMapPorNome[tecNome] = (colaboradoresMapPorNome[tecNome] || 0) + pontosProd;
         }
 

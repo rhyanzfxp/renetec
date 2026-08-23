@@ -1,4 +1,5 @@
 import { prisma, isDatabaseReady } from '../../database/prisma.js';
+import { ensureUsuarioDbId } from '../../database/db-utils.js';
 import type { RealizarTesteInput } from './teste.schema.js';
 import { StatusOS, CategoriaReprovacao } from '@prisma/client';
 import { adicionarRetrabalhoMock } from '../retrabalho/retrabalho.repository.js';
@@ -259,12 +260,44 @@ export async function realizarTeste(
 
   if (isDatabaseReady()) {
     try {
+      const inspetorDbId = await ensureUsuarioDbId(inspetorId, 'QUALIDADE');
+      const tecnicoRespDbId = dados.tecnicoResponsavelId
+        ? await ensureUsuarioDbId(dados.tecnicoResponsavelId, 'TECNICO')
+        : null;
+
       const resultado = await prisma.$transaction(async (tx) => {
+        // 0. Garantir que a produção existe no DB (ou buscar a mais recente)
+        let producaoDbId = dados.producaoId;
+        const producaoExiste = await tx.producao.findUnique({ where: { id: producaoDbId } });
+        if (!producaoExiste) {
+          const prodMaisRecente = await tx.producao.findFirst({
+            where: { itemOrdemServicoId: dados.itemOrdemServicoId },
+            orderBy: { dataInicio: 'desc' },
+          });
+          if (prodMaisRecente) {
+            producaoDbId = prodMaisRecente.id;
+          } else {
+            // Cria uma produção concluída para satisfazer a chave estrangeira
+            const novaProd = await tx.producao.create({
+              data: {
+                itemOrdemServicoId: dados.itemOrdemServicoId,
+                tecnicoId: tecnicoRespDbId || inspetorDbId,
+                dataInicio: agora,
+                dataFim: agora,
+                quantidadeProduzida: dados.quantidadeTestada,
+                status: 'FINALIZADO',
+                servicoRealizado: 'Produção apontada',
+              },
+            });
+            producaoDbId = novaProd.id;
+          }
+        }
+
         // 1. Criar o registro do Teste
         const teste = await tx.teste.create({
           data: {
-            producaoId: dados.producaoId,
-            inspetorId,
+            producaoId: producaoDbId,
+            inspetorId: inspetorDbId,
             quantidadeTestada: dados.quantidadeTestada,
             quantidadeAprovada: dados.quantidadeAprovada,
             quantidadeReprovada: dados.quantidadeReprovada,
@@ -288,12 +321,21 @@ export async function realizarTeste(
 
         // 2. Se houver unidades reprovadas, gerar automaticamente o Retrabalho
         if (temReprovacao) {
+          let motivoId = dados.motivoReprovacaoId;
+          if (motivoId) {
+            const m = await tx.motivoReprovacao.findUnique({ where: { id: motivoId } });
+            if (!m) {
+              const firstM = await tx.motivoReprovacao.findFirst();
+              motivoId = firstM?.id || null;
+            }
+          }
+
           await tx.retrabalho.create({
             data: {
               testeId: teste.id,
               itemOrdemServicoId: dados.itemOrdemServicoId,
-              motivoReprovacaoId: dados.motivoReprovacaoId,
-              tecnicoResponsavelId: dados.tecnicoResponsavelId,
+              motivoReprovacaoId: motivoId,
+              tecnicoResponsavelId: tecnicoRespDbId,
               quantidadeRetrabalho: dados.quantidadeReprovada,
               detalhesDefeito: dados.detalhesDefeito || dados.observacao || 'Não conformidade detectada no CQ',
               status: 'PENDENTE',
@@ -326,9 +368,11 @@ export async function realizarTeste(
 
       return resultado;
     } catch (err) {
+      console.error('[realizarTeste] Erro no Supabase, usando fallback mock:', err);
       // Fallback
     }
   }
+
 
   // Fallback Mock
   let item = mockFilaCq.find((i) => i.id === dados.itemOrdemServicoId);

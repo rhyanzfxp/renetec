@@ -1,4 +1,5 @@
 import { prisma, isDatabaseReady } from '../../database/prisma.js';
+import { getTecnicoAliasIds, ensureUsuarioDbId } from '../../database/db-utils.js';
 import type { FinalizarProducaoInput } from './producao.schema.js';
 import { StatusOS, PrioridadeOS } from '@prisma/client';
 
@@ -46,11 +47,16 @@ export let mockProducoes: ProducaoRecord[] = [];
 
 // ─── Busca a fila de OSs disponíveis para um técnico específico ───────────────
 export async function getMinhaFila(tecnicoId: string) {
+  const aliasIds = await getTecnicoAliasIds(tecnicoId);
+
   if (isDatabaseReady()) {
     try {
       const itens = await prisma.itemOrdemServico.findMany({
         where: {
-          tecnicoAlocadoId: tecnicoId,
+          OR: [
+            { tecnicoAlocadoId: { in: aliasIds } },
+            { tecnicoAlocado: { nome: { contains: tecnicoId.replace(/usr-|colab-/g, ''), mode: 'insensitive' } } },
+          ],
           statusItem: { in: ['AGUARDANDO_PRODUCAO', 'RECEBIDO'] },
         },
         include: {
@@ -81,18 +87,24 @@ export async function getMinhaFila(tecnicoId: string) {
 
   return mockFilaItens.filter(
     (item) =>
-      (item.tecnicoAlocadoId === tecnicoId || item.tecnicoAlocadoId === 'usr-tecnico-01') &&
+      (aliasIds.includes(item.tecnicoAlocadoId) || aliasIds.includes('usr-tecnico-01')) &&
       ['AGUARDANDO_PRODUCAO', 'RECEBIDO'].includes(item.statusItem)
   );
 }
 
 // ─── Busca a produção ativa (EM_ANDAMENTO) do técnico ─────────────────────────
 export async function getProducaoAtiva(tecnicoId: string) {
+  const aliasIds = await getTecnicoAliasIds(tecnicoId);
+
   if (isDatabaseReady()) {
     try {
       const p = await prisma.producao.findFirst({
         where: {
-          tecnicoId,
+          OR: [
+            { tecnicoId: { in: aliasIds } },
+            { tecnico: { nome: { contains: tecnicoId.replace(/usr-|colab-/g, ''), mode: 'insensitive' } } },
+            { itemOrdemServico: { tecnicoAlocadoId: { in: aliasIds } } },
+          ],
           status: 'EM_ANDAMENTO',
         },
         include: {
@@ -121,23 +133,26 @@ export async function getProducaoAtiva(tecnicoId: string) {
 
   return mockProducoes.find(
     (p) =>
-      (p.tecnicoId === tecnicoId || p.tecnicoId === 'usr-tecnico-01') &&
+      (aliasIds.includes(p.tecnicoId) || aliasIds.includes('usr-tecnico-01')) &&
       p.status === 'EM_ANDAMENTO'
   ) || null;
 }
 
 // ─── Inicia uma nova produção ─────────────────────────────────────────────────
 export async function iniciarProducao(itemOrdemServicoId: string, tecnicoId: string) {
+  const tecnicoDbId = await ensureUsuarioDbId(tecnicoId, 'TECNICO');
+
   if (isDatabaseReady()) {
     try {
       const p = await prisma.$transaction(async (tx) => {
         const producao = await tx.producao.create({
           data: {
             itemOrdemServicoId,
-            tecnicoId,
+            tecnicoId: tecnicoDbId,
             status: 'EM_ANDAMENTO',
             dataInicio: new Date(),
           },
+
           include: {
             itemOrdemServico: {
               include: {
@@ -396,6 +411,172 @@ export async function criarApontamentoLote(
   const initialStatus: StatusOS = dados.enviarDiretoTeste ? 'AGUARDANDO_TESTE' : 'EM_PRODUCAO';
   const newNumero = dados.numeroOS ? Number(dados.numeroOS) : Math.floor(Math.random() * 9000) + 1000;
 
+  // ─── SUPABASE: persistência real ─────────────────────────────────────────────
+  if (isDatabaseReady()) {
+    try {
+      // 0. Garantir ID de usuário válido no PostgreSQL para chave estrangeira
+      const tecnicoDbId = await ensureUsuarioDbId(tecnicoId || tecnicoNome, 'TECNICO');
+
+      // 1. Garantir que o cliente existe no banco
+      let clienteDb = await prisma.cliente.findFirst({
+        where: { nomeRazaoSocial: { contains: clienteInfo?.nomeRazaoSocial || 'MARANET', mode: 'insensitive' } },
+      });
+      if (!clienteDb) {
+        clienteDb = await prisma.cliente.create({
+          data: {
+            nomeRazaoSocial: clienteInfo?.nomeRazaoSocial || 'MARANET Telecomunicações',
+            documento: clienteInfo?.documento || '00.000.000/0001-00',
+            contatoTelefone: clienteInfo?.contatoTelefone || null,
+            email: clienteInfo?.email || null,
+          },
+        });
+      }
+
+      // 2. Garantir que os tipos de equipamento existem no banco
+      const tiposDbMap: Record<string, any> = {};
+      for (const it of dados.itens) {
+        if (tiposDbMap[it.tipoEquipamentoId]) continue;
+        const equip = tiposEquipMap[it.tipoEquipamentoId] || { nome: 'Equipamento Renetec', marca: 'Geral', modelo: 'Padrão', tempoEstimadoMinutos: 45 };
+
+        let tipoDb = await prisma.tipoEquipamento.findFirst({
+          where: { nome: { contains: equip.nome.split('/')[0].trim(), mode: 'insensitive' } },
+        });
+        if (!tipoDb) {
+          tipoDb = await prisma.tipoEquipamento.create({
+            data: {
+              nome: equip.nome,
+              marca: equip.marca || 'Geral',
+              modelo: equip.modelo || 'Padrão',
+              tempoEstimadoMinutos: equip.tempoEstimadoMinutos || 45,
+            },
+          });
+        }
+        tiposDbMap[it.tipoEquipamentoId] = tipoDb;
+      }
+
+      // 3. Criar a Ordem de Serviço no banco
+      const osDb = await prisma.ordemServico.create({
+        data: {
+          numeroOS: newNumero,
+          clienteId: clienteDb.id,
+          prioridade: (dados.prioridade || 'MEDIA') as PrioridadeOS,
+          status: initialStatus,
+          dataEntrada: dataRegistro,
+          observacoes: dados.observacoes || `OS criada pelo técnico ${tecnicoNome}`,
+          valorOrcamento: null,
+        },
+      });
+
+      // 4. Criar os itens e produções no banco
+      const createdItens: any[] = [];
+      const createdProducoes: any[] = [];
+
+      for (const it of dados.itens) {
+        const tipoDb = tiposDbMap[it.tipoEquipamentoId];
+        const categoria = it.tipoCategoria || 'REPARADO';
+        const defeito = it.defeitoRelatado || (categoria === 'SEM_DEFEITO' ? 'Sem defeito aparente (Triagem)' : 'Manutenção corretiva');
+        const servico = it.servicoRealizado || (categoria === 'SEM_DEFEITO' ? 'Equipamento testado e aprovado em triagem (sem defeito)' : 'Reparo realizado na bancada');
+
+        const itemDb = await prisma.itemOrdemServico.create({
+          data: {
+            ordemServicoId: osDb.id,
+            tipoEquipamentoId: tipoDb.id,
+            quantidade: it.quantidade,
+            defeitoRelatado: defeito,
+            servicoRealizado: servico,
+            statusItem: initialStatus,
+            tecnicoAlocadoId: tecnicoDbId,
+          },
+          include: {
+            tipoEquipamento: true,
+            tecnicoAlocado: { select: { id: true, nome: true } },
+            ordemServico: { include: { cliente: true } },
+          },
+        });
+
+        createdItens.push(itemDb);
+
+        // 5. Criar registro de produção
+        if (dados.enviarDiretoTeste) {
+          const prodDb = await prisma.producao.create({
+            data: {
+              itemOrdemServicoId: itemDb.id,
+              tecnicoId: tecnicoDbId,
+              dataInicio: dataRegistro,
+              dataFim: agora,
+              quantidadeProduzida: it.quantidade,
+              servicoRealizado: servico,
+              observacao: `Apontamento técnico direto pelo operador ${tecnicoNome}. Categoria: ${categoria}`,
+              status: 'FINALIZADO',
+            },
+          });
+          createdProducoes.push(prodDb);
+        } else {
+          const prodDb = await prisma.producao.create({
+            data: {
+              itemOrdemServicoId: itemDb.id,
+              tecnicoId: tecnicoDbId,
+              dataInicio: agora,
+              dataFim: null,
+              quantidadeProduzida: it.quantidade,
+              servicoRealizado: servico,
+              observacao: `Em manutenção na bancada pelo técnico ${tecnicoNome}. Categoria: ${categoria}`,
+              status: 'EM_ANDAMENTO',
+            },
+          });
+          createdProducoes.push(prodDb);
+
+
+          // Também adiciona ao mock local para que TV Fábrica mostre em tempo real
+          const itemMock = {
+            id: itemDb.id,
+            ordemServicoId: osDb.id,
+            tipoEquipamentoId: tipoDb.id,
+            quantidade: it.quantidade,
+            tipoCategoria: categoria,
+            defeitoRelatado: defeito,
+            servicoRealizado: servico,
+            statusItem: initialStatus,
+            tecnicoAlocadoId: tecnicoId,
+            tecnicoAlocado: { id: tecnicoId, nome: tecnicoNome },
+            ordemServico: { id: osDb.id, numeroOS: newNumero, prioridade: dados.prioridade || 'MEDIA', status: initialStatus, dataEntrada: dataRegistro.toISOString(), cliente: { id: clienteDb.id, nomeRazaoSocial: clienteDb.nomeRazaoSocial } },
+            tipoEquipamento: tipoDb,
+          };
+          mockFilaItens.unshift(itemMock);
+          mockProducoes.unshift({
+            id: prodDb.id,
+            itemOrdemServicoId: itemDb.id,
+            tecnicoId,
+            dataInicio: agora,
+            dataFim: null,
+            quantidadeProduzida: it.quantidade,
+            servicoRealizado: servico,
+            observacao: `Em manutenção na bancada pelo técnico ${tecnicoNome}`,
+            status: 'EM_ANDAMENTO',
+            itemOrdemServico: itemMock as any,
+          });
+        }
+      }
+
+      // Estrutura de retorno compatível com o resto do sistema
+      const osRecord = {
+        id: osDb.id,
+        numeroOS: osDb.numeroOS,
+        prioridade: osDb.prioridade,
+        status: osDb.status,
+        dataEntrada: osDb.dataEntrada.toISOString(),
+        cliente: { id: clienteDb.id, nomeRazaoSocial: clienteDb.nomeRazaoSocial },
+        observacoes: osDb.observacoes,
+      };
+
+      return { ordemServico: osRecord, itens: createdItens, producoes: createdProducoes };
+    } catch (err) {
+      console.error('[criarApontamentoLote] Erro ao salvar no Supabase, usando mock:', err);
+      // Fallback para mock abaixo
+    }
+  }
+
+  // ─── FALLBACK EM MEMÓRIA (sem DB) ────────────────────────────────────────────
   const osId = `os-${newNumero}-${Date.now()}`;
   const osRecord = {
     id: osId,
@@ -459,7 +640,6 @@ export async function criarApontamentoLote(
       createdProducoes.push(prodRecord);
       mockProducoes.unshift(prodRecord);
     } else {
-      // Se optou por iniciar na bancada, criar como produção ativa EM_ANDAMENTO com início no momento atual
       const prodAtivaRecord: ProducaoRecord = {
         id: `prod-${Date.now()}-${i + 1}`,
         itemOrdemServicoId: itemId,
@@ -476,8 +656,6 @@ export async function criarApontamentoLote(
       mockProducoes.unshift(prodAtivaRecord);
     }
   }
-
-
 
   // Também salvar no mock OS List
   const { mockOsList } = await import('../os/os.repository.js');
@@ -514,4 +692,5 @@ export async function criarApontamentoLote(
     producoes: createdProducoes,
   };
 }
+
 
