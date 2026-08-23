@@ -110,6 +110,7 @@ export const producaoRoutes: FastifyPluginAsync = async (fastify) => {
           data: resultado,
         });
       } catch (err: any) {
+        console.error('[apontamento-lote] ERROR DETALHADO:', err);
         return reply.status(400).send({
           success: false,
           message: err.message || 'Erro ao registrar apontamento de lote.',

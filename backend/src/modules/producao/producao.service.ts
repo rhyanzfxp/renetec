@@ -95,8 +95,12 @@ export async function apontarLoteTecnico(
   dados: any
 ) {
   const { osService } = await import('../os/os.service.js');
-  const tiposEquipMap = Object.fromEntries(osService.getTiposEquipamento().map((e) => [e.id, e]));
-  const clientesMap = Object.fromEntries(osService.getClientes().map((c) => [c.id, c]));
+  const [tipos, clientes] = await Promise.all([
+    osService.getTiposEquipamento(),
+    osService.getClientes(),
+  ]);
+  const tiposEquipMap = Object.fromEntries(tipos.map((e) => [e.id, e]));
+  const clientesMap = Object.fromEntries(clientes.map((c) => [c.id, c]));
   const clienteInfo = clientesMap[dados.clienteId || 'cli-01'];
 
   const resultado = await repo.criarApontamentoLote(

@@ -1,4 +1,5 @@
 import { prisma, isDatabaseReady } from '../../database/prisma.js';
+import { ensureUsuarioDbId, getTecnicoAliasIds, isValidUuid } from '../../database/db-utils.js';
 import { CreateOsInput } from './os.schema.js';
 import { StatusOS, PrioridadeOS } from '@prisma/client';
 
@@ -37,11 +38,6 @@ export interface OsListItem {
   createdAt: string;
 }
 
-// Armazenamento em memória limpo para ambiente de produção
-export let mockOsList: OsListItem[] = [];
-
-let nextOsNumber = 1001;
-
 export class OsRepository {
   async list(filters: {
     search?: string;
@@ -51,14 +47,28 @@ export class OsRepository {
     page: number;
     limit: number;
   }): Promise<{ items: OsListItem[]; total: number }> {
-    if (isDatabaseReady()) {
-      try {
-        const where: any = {};
+    if (!isDatabaseReady()) {
+      return { items: [], total: 0 };
+    }
+
+    try {
+      const where: any = {};
       if (filters.status && filters.status !== 'TODOS') {
         where.status = filters.status;
       }
       if (filters.clienteId) {
         where.clienteId = filters.clienteId;
+      }
+      if (filters.tecnicoId) {
+        const aliasIds = await getTecnicoAliasIds(filters.tecnicoId);
+        where.itens = {
+          some: {
+            OR: [
+              { tecnicoAlocadoId: { in: aliasIds } },
+              { tecnicoAlocado: { nome: { contains: filters.tecnicoId.replace(/usr-|colab-/g, ''), mode: 'insensitive' } } },
+            ],
+          },
+        };
       }
       if (filters.search) {
         const num = parseInt(filters.search);
@@ -86,83 +96,52 @@ export class OsRepository {
         take: filters.limit,
       });
 
-        if (records.length > 0) {
-          const items = records.map((r) => ({
-            id: r.id,
-            numeroOS: r.numeroOS,
-            dataEntrada: r.dataEntrada.toISOString(),
-            prioridade: r.prioridade,
-            status: r.status,
-            valorOrcamento: r.valorOrcamento ? Number(r.valorOrcamento) : null,
-            observacoes: r.observacoes,
-            cliente: {
-              id: r.cliente.id,
-              nomeRazaoSocial: r.cliente.nomeRazaoSocial,
-              contatoTelefone: r.cliente.contatoTelefone,
-              email: r.cliente.email,
-            },
-            itens: r.itens.map((it) => ({
-              id: it.id,
-              tipoEquipamento: {
-                id: it.tipoEquipamento.id,
-                nome: it.tipoEquipamento.nome,
-                marca: it.tipoEquipamento.marca,
-                modelo: it.tipoEquipamento.modelo,
-              },
-              quantidade: it.quantidade,
-              defeitoRelatado: it.defeitoRelatado,
-              statusItem: it.statusItem,
-              tecnicoAlocado: it.tecnicoAlocado
-                ? { id: it.tecnicoAlocado.id, nome: it.tecnicoAlocado.nome }
-                : null,
-            })),
-            createdAt: r.createdAt.toISOString(),
-          }));
+      const items: OsListItem[] = records.map((r) => ({
+        id: r.id,
+        numeroOS: r.numeroOS,
+        dataEntrada: r.dataEntrada.toISOString(),
+        prioridade: r.prioridade,
+        status: r.status,
+        valorOrcamento: r.valorOrcamento ? Number(r.valorOrcamento) : null,
+        observacoes: r.observacoes,
+        cliente: {
+          id: r.cliente.id,
+          nomeRazaoSocial: r.cliente.nomeRazaoSocial,
+          contatoTelefone: r.cliente.contatoTelefone,
+          email: r.cliente.email,
+        },
+        itens: r.itens.map((it) => ({
+          id: it.id,
+          tipoEquipamento: {
+            id: it.tipoEquipamento.id,
+            nome: it.tipoEquipamento.nome,
+            marca: it.tipoEquipamento.marca,
+            modelo: it.tipoEquipamento.modelo,
+          },
+          quantidade: it.quantidade,
+          defeitoRelatado: it.defeitoRelatado,
+          statusItem: it.statusItem,
+          tecnicoAlocado: it.tecnicoAlocado
+            ? { id: it.tecnicoAlocado.id, nome: it.tecnicoAlocado.nome }
+            : null,
+        })),
+        createdAt: r.createdAt.toISOString(),
+      }));
 
-          return { items, total };
-        }
-      } catch {
-        // Fallback
-      }
+      return { items, total };
+    } catch (err) {
+      console.error('[OsRepository.list] Erro ao buscar OSs no Supabase:', err);
+      return { items: [], total: 0 };
     }
-
-    // Filtragem no mock
-    let filtered = [...mockOsList];
-
-    if (filters.status && filters.status !== 'TODOS') {
-      filtered = filtered.filter((os) => os.status === filters.status);
-    }
-
-    if (filters.tecnicoId) {
-      filtered = filtered.filter((os) =>
-        os.itens.some((it) => it.tecnicoAlocado?.id === filters.tecnicoId)
-      );
-    }
-
-    if (filters.search) {
-      const q = filters.search.toLowerCase();
-      filtered = filtered.filter(
-        (os) =>
-          os.numeroOS.toString().includes(q) ||
-          os.cliente.nomeRazaoSocial.toLowerCase().includes(q) ||
-          os.itens.some((it) => it.tipoEquipamento.nome.toLowerCase().includes(q))
-      );
-    }
-
-    const total = filtered.length;
-    const items = filtered.slice(
-      (filters.page - 1) * filters.limit,
-      filters.page * filters.limit
-    );
-
-    return { items, total };
   }
 
   async findById(id: string): Promise<OsListItem | null> {
-    if (isDatabaseReady()) {
-      try {
-        const r = await prisma.ordemServico.findUnique({
-        where: { id },
+    if (!isDatabaseReady()) return null;
+
+    try {
+      const num = parseInt(id);
+      const r = await prisma.ordemServico.findFirst({
+        where: isNaN(num) ? { id } : { OR: [{ id }, { numeroOS: num }] },
         include: {
           cliente: true,
           itens: {
@@ -174,147 +153,246 @@ export class OsRepository {
         },
       });
 
-      if (r) {
-        return {
-          id: r.id,
-          numeroOS: r.numeroOS,
-          dataEntrada: r.dataEntrada.toISOString(),
-          prioridade: r.prioridade,
-          status: r.status,
-          valorOrcamento: r.valorOrcamento ? Number(r.valorOrcamento) : null,
-          observacoes: r.observacoes,
-          cliente: {
-            id: r.cliente.id,
-            nomeRazaoSocial: r.cliente.nomeRazaoSocial,
-            contatoTelefone: r.cliente.contatoTelefone,
-            email: r.cliente.email,
-          },
-          itens: r.itens.map((it) => ({
-            id: it.id,
-            tipoEquipamento: {
-              id: it.tipoEquipamento.id,
-              nome: it.tipoEquipamento.nome,
-              marca: it.tipoEquipamento.marca,
-              modelo: it.tipoEquipamento.modelo,
-            },
-            quantidade: it.quantidade,
-            defeitoRelatado: it.defeitoRelatado,
-            statusItem: it.statusItem,
-            tecnicoAlocado: it.tecnicoAlocado
-              ? { id: it.tecnicoAlocado.id, nome: it.tecnicoAlocado.nome }
-              : null,
-          })),
-          createdAt: r.createdAt.toISOString(),
-        };
-      }
-    } catch {
-      // Fallback
-    }
-  }
+      if (!r) return null;
 
-    const item = mockOsList.find((os) => os.id === id || os.numeroOS.toString() === id);
-    return item || null;
+      return {
+        id: r.id,
+        numeroOS: r.numeroOS,
+        dataEntrada: r.dataEntrada.toISOString(),
+        prioridade: r.prioridade,
+        status: r.status,
+        valorOrcamento: r.valorOrcamento ? Number(r.valorOrcamento) : null,
+        observacoes: r.observacoes,
+        cliente: {
+          id: r.cliente.id,
+          nomeRazaoSocial: r.cliente.nomeRazaoSocial,
+          contatoTelefone: r.cliente.contatoTelefone,
+          email: r.cliente.email,
+        },
+        itens: r.itens.map((it) => ({
+          id: it.id,
+          tipoEquipamento: {
+            id: it.tipoEquipamento.id,
+            nome: it.tipoEquipamento.nome,
+            marca: it.tipoEquipamento.marca,
+            modelo: it.tipoEquipamento.modelo,
+          },
+          quantidade: it.quantidade,
+          defeitoRelatado: it.defeitoRelatado,
+          statusItem: it.statusItem,
+          tecnicoAlocado: it.tecnicoAlocado
+            ? { id: it.tecnicoAlocado.id, nome: it.tecnicoAlocado.nome }
+            : null,
+        })),
+        createdAt: r.createdAt.toISOString(),
+      };
+    } catch (err) {
+      console.error('[OsRepository.findById] Erro ao buscar OS por ID no Supabase:', err);
+      return null;
+    }
   }
 
   async create(data: CreateOsInput, clientesMap: any, tiposEquipMap: any, tecnicosMap: any): Promise<OsListItem> {
-    const newNumero = data.numeroOS ? Number(data.numeroOS) : nextOsNumber++;
-    if (data.numeroOS && Number(data.numeroOS) >= nextOsNumber) {
-      nextOsNumber = Number(data.numeroOS) + 1;
-    }
-    const cliente = clientesMap[data.clienteId || 'cli-01'] || {
-      id: data.clienteId || 'cli-01',
-      nomeRazaoSocial: 'MARANET Telecomunicações',
-      contatoTelefone: '(98) 98765-4321',
-      email: 'operacoes@maranet.com.br',
-    };
-
+    const dataRegistro = data.dataEntrada ? new Date(data.dataEntrada) : new Date();
     const initialStatus = (data.status as StatusOS) || 'RECEBIDO';
-    const dataRegistro = data.dataEntrada ? new Date(data.dataEntrada).toISOString() : new Date().toISOString();
 
-    const newOs: OsListItem = {
-      id: `os-${newNumero}-${Date.now()}`,
-      numeroOS: newNumero,
-      dataEntrada: dataRegistro,
-      prioridade: (data.prioridade as PrioridadeOS) || 'MEDIA',
-      status: initialStatus,
-      valorOrcamento: data.valorOrcamento || null,
-      observacoes: data.observacoes || null,
-      cliente,
-      itens: data.itens.map((it, idx) => {
-        const eq = tiposEquipMap[it.tipoEquipamentoId] || {
-          id: it.tipoEquipamentoId,
-          nome: 'Equipamento Renetec',
-          marca: 'Geral',
-          modelo: 'Padrão',
-        };
-        const tec = it.tecnicoAlocadoId ? tecnicosMap[it.tecnicoAlocadoId] : null;
-        return {
-          id: `item-${newNumero}-${idx + 1}-${Date.now()}`,
-          tipoEquipamento: eq,
-          quantidade: it.quantidade,
-          tipoCategoria: it.tipoCategoria || 'REPARADO',
-          defeitoRelatado: it.defeitoRelatado || 'Manutenção técnica realizada',
-          servicoRealizado: it.servicoRealizado || null,
-          statusItem: initialStatus,
-          tecnicoAlocado: tec ? { id: tec.id, nome: tec.nome } : null,
-        };
-      }),
-      createdAt: new Date().toISOString(),
-    };
+    // 1. Resolver Cliente no banco
+    let clienteDb = await prisma.cliente.findFirst({
+      where: isValidUuid(data.clienteId)
+        ? { OR: [{ id: data.clienteId }, { nomeRazaoSocial: { contains: 'MARANET', mode: 'insensitive' } }] }
+        : { nomeRazaoSocial: { contains: 'MARANET', mode: 'insensitive' } },
+    });
 
-    if (isDatabaseReady()) {
-      try {
-        await prisma.ordemServico.create({
+    if (!clienteDb) {
+      const cliInfo = clientesMap[data.clienteId || 'cli-01'] || {
+        nomeRazaoSocial: 'MARANET Telecomunicações',
+        documento: '12.345.678/0001-90',
+        contatoTelefone: '(98) 98765-4321',
+        email: 'operacoes@maranet.com.br',
+      };
+      clienteDb = await prisma.cliente.create({
+        data: {
+          nomeRazaoSocial: cliInfo.nomeRazaoSocial,
+          documento: cliInfo.documento || null,
+          contatoTelefone: cliInfo.contatoTelefone || null,
+          email: cliInfo.email || null,
+        },
+      });
+    }
+
+    // 2. Resolver Tipos de Equipamento no banco
+    const tiposDbMap: Record<string, string> = {};
+    for (const it of data.itens) {
+      if (tiposDbMap[it.tipoEquipamentoId]) continue;
+      const equipInfo = tiposEquipMap[it.tipoEquipamentoId] || { nome: 'Equipamento Renetec', marca: 'Geral', modelo: 'Padrão' };
+      let tipoDb = await prisma.tipoEquipamento.findFirst({
+        where: isValidUuid(it.tipoEquipamentoId)
+          ? {
+              OR: [
+                { id: it.tipoEquipamentoId },
+                { nome: { contains: equipInfo.nome.split('/')[0].trim(), mode: 'insensitive' } },
+              ],
+            }
+          : { nome: { contains: equipInfo.nome.split('/')[0].trim(), mode: 'insensitive' } },
+      });
+      if (!tipoDb) {
+        tipoDb = await prisma.tipoEquipamento.create({
           data: {
-            numeroOS: newNumero,
-            clienteId: data.clienteId || 'cli-01',
-            prioridade: data.prioridade || 'MEDIA',
-            status: initialStatus,
-            valorOrcamento: data.valorOrcamento,
-            observacoes: data.observacoes,
-            itens: {
-              create: data.itens.map((it) => ({
-                tipoEquipamentoId: it.tipoEquipamentoId,
-                quantidade: it.quantidade,
-                defeitoRelatado: it.defeitoRelatado,
-                statusItem: initialStatus,
-                tecnicoAlocadoId: it.tecnicoAlocadoId,
-              })),
-            },
+            nome: equipInfo.nome,
+            marca: equipInfo.marca || 'Geral',
+            modelo: equipInfo.modelo || 'Padrão',
+            tempoEstimadoMinutos: equipInfo.tempoEstimadoMinutos || 45,
           },
         });
-      } catch {
-        // Gravação no mock
+      }
+      tiposDbMap[it.tipoEquipamentoId] = tipoDb.id;
+    }
+
+    // 3. Resolver Técnicos no banco
+    const tecnicosDbMap: Record<string, string | null> = {};
+    for (const it of data.itens) {
+      if (it.tecnicoAlocadoId && !tecnicosDbMap[it.tecnicoAlocadoId]) {
+        const tecInfo = tecnicosMap[it.tecnicoAlocadoId];
+        tecnicosDbMap[it.tecnicoAlocadoId] = await ensureUsuarioDbId(
+          it.tecnicoAlocadoId || tecInfo?.nome,
+          'TECNICO'
+        );
       }
     }
 
-    mockOsList.unshift(newOs);
-    return newOs;
+    // 4. Criar OS no banco
+    const osDb = await prisma.ordemServico.create({
+      data: {
+        ...(data.numeroOS ? { numeroOS: Number(data.numeroOS) } : {}),
+        clienteId: clienteDb.id,
+        prioridade: (data.prioridade as PrioridadeOS) || 'MEDIA',
+        status: initialStatus,
+        dataEntrada: dataRegistro,
+        valorOrcamento: data.valorOrcamento || null,
+        observacoes: data.observacoes || null,
+        itens: {
+          create: data.itens.map((it) => ({
+            tipoEquipamentoId: tiposDbMap[it.tipoEquipamentoId],
+            quantidade: it.quantidade,
+            defeitoRelatado: it.defeitoRelatado || 'Manutenção técnica realizada',
+            statusItem: initialStatus,
+            tecnicoAlocadoId: it.tecnicoAlocadoId ? tecnicosDbMap[it.tecnicoAlocadoId] : null,
+          })),
+        },
+      },
+      include: {
+        cliente: true,
+        itens: {
+          include: {
+            tipoEquipamento: true,
+            tecnicoAlocado: true,
+          },
+        },
+      },
+    });
+
+    return {
+      id: osDb.id,
+      numeroOS: osDb.numeroOS,
+      dataEntrada: osDb.dataEntrada.toISOString(),
+      prioridade: osDb.prioridade,
+      status: osDb.status,
+      valorOrcamento: osDb.valorOrcamento ? Number(osDb.valorOrcamento) : null,
+      observacoes: osDb.observacoes,
+      cliente: {
+        id: osDb.cliente.id,
+        nomeRazaoSocial: osDb.cliente.nomeRazaoSocial,
+        contatoTelefone: osDb.cliente.contatoTelefone,
+        email: osDb.cliente.email,
+      },
+      itens: osDb.itens.map((it) => ({
+        id: it.id,
+        tipoEquipamento: {
+          id: it.tipoEquipamento.id,
+          nome: it.tipoEquipamento.nome,
+          marca: it.tipoEquipamento.marca,
+          modelo: it.tipoEquipamento.modelo,
+        },
+        quantidade: it.quantidade,
+        defeitoRelatado: it.defeitoRelatado,
+        statusItem: it.statusItem,
+        tecnicoAlocado: it.tecnicoAlocado
+          ? { id: it.tecnicoAlocado.id, nome: it.tecnicoAlocado.nome }
+          : null,
+      })),
+      createdAt: osDb.createdAt.toISOString(),
+    };
   }
 
   async updateStatus(id: string, newStatus: StatusOS, observacao?: string): Promise<OsListItem | null> {
-    if (isDatabaseReady()) {
-      try {
-        await prisma.ordemServico.update({
-          where: { id },
-          data: { status: newStatus },
-        });
-      } catch {
-        // Mock update
-      }
-    }
+    if (!isDatabaseReady()) return null;
 
-    const item = mockOsList.find((os) => os.id === id || os.numeroOS.toString() === id);
-    if (item) {
-      item.status = newStatus;
-      item.itens.forEach((it) => {
-        it.statusItem = newStatus;
+    try {
+      const num = parseInt(id);
+      const osExistente = await prisma.ordemServico.findFirst({
+        where: isNaN(num) ? { id } : { OR: [{ id }, { numeroOS: num }] },
       });
-      return item;
+
+      if (!osExistente) return null;
+
+      const r = await prisma.ordemServico.update({
+        where: { id: osExistente.id },
+        data: {
+          status: newStatus,
+          itens: {
+            updateMany: {
+              where: {},
+              data: { statusItem: newStatus },
+            },
+          },
+        },
+        include: {
+          cliente: true,
+          itens: {
+            include: {
+              tipoEquipamento: true,
+              tecnicoAlocado: true,
+            },
+          },
+        },
+      });
+
+      return {
+        id: r.id,
+        numeroOS: r.numeroOS,
+        dataEntrada: r.dataEntrada.toISOString(),
+        prioridade: r.prioridade,
+        status: r.status,
+        valorOrcamento: r.valorOrcamento ? Number(r.valorOrcamento) : null,
+        observacoes: r.observacoes,
+        cliente: {
+          id: r.cliente.id,
+          nomeRazaoSocial: r.cliente.nomeRazaoSocial,
+          contatoTelefone: r.cliente.contatoTelefone,
+          email: r.cliente.email,
+        },
+        itens: r.itens.map((it) => ({
+          id: it.id,
+          tipoEquipamento: {
+            id: it.tipoEquipamento.id,
+            nome: it.tipoEquipamento.nome,
+            marca: it.tipoEquipamento.marca,
+            modelo: it.tipoEquipamento.modelo,
+          },
+          quantidade: it.quantidade,
+          defeitoRelatado: it.defeitoRelatado,
+          statusItem: it.statusItem,
+          tecnicoAlocado: it.tecnicoAlocado
+            ? { id: it.tecnicoAlocado.id, nome: it.tecnicoAlocado.nome }
+            : null,
+        })),
+        createdAt: r.createdAt.toISOString(),
+      };
+    } catch (err) {
+      console.error('[OsRepository.updateStatus] Erro ao atualizar status no Supabase:', err);
+      return null;
     }
-    return null;
   }
 }
-
 
 export const osRepository = new OsRepository();

@@ -1,4 +1,5 @@
 import { prisma, isDatabaseReady } from '../../database/prisma.js';
+import { ensureUsuarioDbId } from '../../database/db-utils.js';
 
 export type AuditAcao =
   | 'OS_CRIADA'
@@ -28,43 +29,51 @@ export interface AuditLogRecord {
   criadoEm: Date;
 }
 
-// Mock em memória para desenvolvimento
-const mockLogs: AuditLogRecord[] = [];
-
 // ─── Registrar evento de auditoria ───────────────────────────────────────────
 export async function registrarAuditLog(dados: Omit<AuditLogRecord, 'id' | 'criadoEm'>) {
-  const log: AuditLogRecord = {
-    ...dados,
-    id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-    criadoEm: new Date(),
-  };
-
-  // Adiciona no mock em memória SEMPRE (fallback e desenvolvimento)
-  mockLogs.unshift(log);
-  if (mockLogs.length > 500) mockLogs.pop(); // Limitar buffer
-
-  // Tentar persistir no banco (silencioso se falhar)
   if (isDatabaseReady()) {
     try {
-      await prisma.auditLog.create({
+      const usuarioDbId = dados.usuarioId ? await ensureUsuarioDbId(dados.usuarioId) : null;
+
+      const log = await prisma.auditoriaLog.create({
         data: {
+          usuarioId: usuarioDbId,
+          entidade: dados.entidade || 'geral',
+          registroId: dados.entidadeId || '0',
           acao: dados.acao,
-          usuarioId: dados.usuarioId,
-          usuarioNome: dados.usuarioNome,
-          usuarioPerfil: dados.usuarioPerfil,
-          entidade: dados.entidade,
-          entidadeId: dados.entidadeId,
-          descricao: dados.descricao,
-          detalhes: dados.detalhes ? JSON.stringify(dados.detalhes) : null,
-          ip: dados.ip,
+          dadosNovos: {
+            descricao: dados.descricao,
+            usuarioNome: dados.usuarioNome,
+            usuarioPerfil: dados.usuarioPerfil,
+            ...(dados.detalhes || {}),
+          },
+          ipAddress: dados.ip || null,
         },
       });
-    } catch {
-      // Falha silenciosa — log já está em memória
+
+      return {
+        id: log.id.toString(),
+        acao: dados.acao,
+        usuarioId: dados.usuarioId,
+        usuarioNome: dados.usuarioNome,
+        usuarioPerfil: dados.usuarioPerfil,
+        entidade: dados.entidade,
+        entidadeId: dados.entidadeId,
+        descricao: dados.descricao,
+        detalhes: dados.detalhes,
+        ip: dados.ip,
+        criadoEm: log.createdAt,
+      };
+    } catch (err) {
+      console.error('[registrarAuditLog] Erro ao gravar log de auditoria no Supabase:', err);
     }
   }
 
-  return log;
+  return {
+    id: `log-${Date.now()}`,
+    ...dados,
+    criadoEm: new Date(),
+  };
 }
 
 // ─── Buscar histórico de auditoria com filtros ────────────────────────────────
@@ -78,50 +87,47 @@ export async function getAuditLogs(filtros: {
   const page = filtros.page || 1;
   const limit = filtros.limit || 50;
 
-  if (isDatabaseReady()) {
-    try {
-      const where: any = {};
-      if (filtros.acao) where.acao = filtros.acao;
-      if (filtros.usuarioId) where.usuarioId = filtros.usuarioId;
-      if (filtros.entidade) where.entidade = filtros.entidade;
-
-      const [logs, total] = await Promise.all([
-        prisma.auditLog.findMany({
-          where,
-          orderBy: { criadoEm: 'desc' },
-          skip: (page - 1) * limit,
-          take: limit,
-        }),
-        prisma.auditLog.count({ where }),
-      ]);
-
-      return {
-        data: logs.map((l) => ({
-          ...l,
-          detalhes: l.detalhes ? JSON.parse(l.detalhes as string) : null,
-        })),
-        total,
-        page,
-        totalPages: Math.ceil(total / limit),
-      };
-    } catch {
-      // Fallback para mock
-    }
+  if (!isDatabaseReady()) {
+    return { data: [], total: 0, page, totalPages: 0 };
   }
 
-  // Filtrar mock em memória
-  let resultado = [...mockLogs];
-  if (filtros.acao) resultado = resultado.filter((l) => l.acao === filtros.acao);
-  if (filtros.usuarioId) resultado = resultado.filter((l) => l.usuarioId === filtros.usuarioId);
-  if (filtros.entidade) resultado = resultado.filter((l) => l.entidade === filtros.entidade);
+  try {
+    const where: any = {};
+    if (filtros.acao) where.acao = filtros.acao;
+    if (filtros.usuarioId) where.usuarioId = filtros.usuarioId;
+    if (filtros.entidade) where.entidade = filtros.entidade;
 
-  const total = resultado.length;
-  const paginado = resultado.slice((page - 1) * limit, page * limit);
+    const [logs, total] = await Promise.all([
+      prisma.auditoriaLog.findMany({
+        where,
+        include: { usuario: { select: { id: true, nome: true, perfil: true } } },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.auditoriaLog.count({ where }),
+    ]);
 
-  return {
-    data: paginado,
-    total,
-    page,
-    totalPages: Math.ceil(total / limit),
-  };
+    return {
+      data: logs.map((l) => ({
+        id: l.id.toString(),
+        acao: l.acao as AuditAcao,
+        usuarioId: l.usuarioId,
+        usuarioNome: l.usuario?.nome || null,
+        usuarioPerfil: l.usuario?.perfil || null,
+        entidade: l.entidade,
+        entidadeId: l.registroId,
+        descricao: (l.dadosNovos as any)?.descricao || `${l.acao} em ${l.entidade}`,
+        detalhes: l.dadosNovos as Record<string, unknown> | null,
+        ip: l.ipAddress,
+        criadoEm: l.createdAt,
+      })),
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
+  } catch (err) {
+    console.error('[getAuditLogs] Erro ao consultar logs de auditoria no Supabase:', err);
+    return { data: [], total: 0, page, totalPages: 0 };
+  }
 }

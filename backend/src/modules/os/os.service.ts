@@ -1,13 +1,34 @@
-import { osRepository, OsListItem } from './os.repository.js';
+import { osRepository } from './os.repository.js';
 import { CreateOsInput } from './os.schema.js';
 import { StatusOS } from '@prisma/client';
+import { prisma, isDatabaseReady } from '../../database/prisma.js';
 import { TABELA_PONTUACAO_OFICIAL } from '../meta/meta.repository.js';
 import { realtimeService } from '../realtime/realtime.service.js';
 import { log } from '../auditoria/auditoria.service.js';
 
 export class OsService {
   // Lista de clientes oficiais da Renetec
-  getClientes() {
+  async getClientes() {
+    if (isDatabaseReady()) {
+      try {
+        const clientes = await prisma.cliente.findMany({
+          where: { ativo: true },
+          orderBy: { nomeRazaoSocial: 'asc' },
+        });
+        if (clientes.length > 0) {
+          return clientes.map((c) => ({
+            id: c.id,
+            nomeRazaoSocial: c.nomeRazaoSocial,
+            documento: c.documento || '',
+            contatoTelefone: c.contatoTelefone,
+            email: c.email,
+          }));
+        }
+      } catch {
+        // fallback
+      }
+    }
+
     return [
       { id: 'cli-01', nomeRazaoSocial: 'MARANET Telecomunicações', documento: '12.345.678/0001-90' },
       { id: 'cli-02', nomeRazaoSocial: 'Solar Power Brasil Ltda', documento: '98.765.432/0001-10' },
@@ -16,7 +37,34 @@ export class OsService {
   }
 
   // Lista de tipos de equipamentos com pontuação oficial
-  getTiposEquipamento() {
+  async getTiposEquipamento() {
+    if (isDatabaseReady()) {
+      try {
+        const tipos = await prisma.tipoEquipamento.findMany({
+          where: { ativo: true },
+          orderBy: { nome: 'asc' },
+        });
+        if (tipos.length > 0) {
+          return tipos.map((t) => {
+            const matched = TABELA_PONTUACAO_OFICIAL.find((p) =>
+              t.nome.toLowerCase().includes(p.equipamentoServico.toLowerCase().split('/')[0].trim())
+            );
+            const pontos = matched ? matched.pontos : 1.5;
+            return {
+              id: t.id,
+              nome: t.nome,
+              marca: t.marca || 'Renetec Telecom / Geral',
+              modelo: t.modelo || 'Padrão',
+              tempoEstimadoMinutos: t.tempoEstimadoMinutos || Math.round(pontos * 30),
+              pontos,
+            };
+          });
+        }
+      } catch {
+        // fallback
+      }
+    }
+
     return TABELA_PONTUACAO_OFICIAL.map((t) => ({
       id: t.id,
       nome: t.equipamentoServico,
@@ -28,7 +76,26 @@ export class OsService {
   }
 
   // Lista de técnicos da equipe oficial Renetec
-  getTecnicos() {
+  async getTecnicos() {
+    if (isDatabaseReady()) {
+      try {
+        const tecnicos = await prisma.usuario.findMany({
+          where: { ativo: true },
+          orderBy: { nome: 'asc' },
+        });
+        if (tecnicos.length > 0) {
+          return tecnicos.map((u) => ({
+            id: u.id,
+            nome: u.nome,
+            email: u.email,
+            funcao: u.perfil === 'QUALIDADE' ? 'Qualidade/Testes' : (u.perfil === 'ADMIN' ? 'Atendimento/Comercial' : 'Produção'),
+          }));
+        }
+      } catch {
+        // fallback
+      }
+    }
+
     return [
       { id: 'colab-samuel', nome: 'Samuel', email: 'samuel@renetec.com.br', funcao: 'Produção' },
       { id: 'colab-joao', nome: 'João', email: 'joao@renetec.com.br', funcao: 'Produção' },
@@ -58,9 +125,15 @@ export class OsService {
   }
 
   async create(data: CreateOsInput, usuarioId: string) {
-    const clientesMap = Object.fromEntries(this.getClientes().map((c) => [c.id, c]));
-    const tiposEquipMap = Object.fromEntries(this.getTiposEquipamento().map((e) => [e.id, e]));
-    const tecnicosMap = Object.fromEntries(this.getTecnicos().map((t) => [t.id, t]));
+    const [clientes, tipos, tecnicos] = await Promise.all([
+      this.getClientes(),
+      this.getTiposEquipamento(),
+      this.getTecnicos(),
+    ]);
+
+    const clientesMap = Object.fromEntries(clientes.map((c) => [c.id, c]));
+    const tiposEquipMap = Object.fromEntries(tipos.map((e) => [e.id, e]));
+    const tecnicosMap = Object.fromEntries(tecnicos.map((t) => [t.id, t]));
 
     const newOs = await osRepository.create(data, clientesMap, tiposEquipMap, tecnicosMap);
     
@@ -96,7 +169,7 @@ export class OsService {
     }
 
     log({
-      acao: 'OS_STATUS_ATUALIZADO',
+      acao: 'OS_STATUS_ALTERADO',
       usuarioId,
       entidade: 'OrdemServico',
       entidadeId: id,
@@ -109,4 +182,3 @@ export class OsService {
 }
 
 export const osService = new OsService();
-

@@ -9,7 +9,7 @@ export async function osRoutes(app: FastifyInstance) {
   app.get('/clientes', { preHandler: [authenticate] }, async (request, reply) => {
     return {
       success: true,
-      data: osService.getClientes(),
+      data: await osService.getClientes(),
     };
   });
 
@@ -17,7 +17,7 @@ export async function osRoutes(app: FastifyInstance) {
   app.get('/tipos-equipamento', { preHandler: [authenticate] }, async (request, reply) => {
     return {
       success: true,
-      data: osService.getTiposEquipamento(),
+      data: await osService.getTiposEquipamento(),
     };
   });
 
@@ -25,7 +25,7 @@ export async function osRoutes(app: FastifyInstance) {
   app.get('/tecnicos', { preHandler: [authenticate] }, async (request, reply) => {
     return {
       success: true,
-      data: osService.getTecnicos(),
+      data: await osService.getTecnicos(),
     };
   });
 

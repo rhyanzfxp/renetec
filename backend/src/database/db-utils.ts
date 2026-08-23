@@ -1,5 +1,10 @@
 import { prisma, isDatabaseReady } from './prisma.js';
 
+export function isValidUuid(id?: string | null): boolean {
+  if (!id || typeof id !== 'string') return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+}
+
 export const USUARIOS_CONHECIDOS = [
   { id: 'usr-admin-01', tecId: 'colab-admin', nome: 'Administrador Renetec', email: 'admin@renetec.com.br', perfil: 'ADMIN' },
   { id: 'usr-tecnico-01', tecId: 'colab-joao', nome: 'João', email: 'joao@renetec.com.br', perfil: 'TECNICO' },
@@ -30,25 +35,25 @@ export async function getTecnicoAliasIds(tecnicoIdOrNome: string): Promise<strin
 
   if (isDatabaseReady()) {
     try {
-      const dbUsers = await prisma.usuario.findMany({
-        where: matched
-          ? {
-              OR: [
-                { email: matched.email },
-                { nome: { contains: matched.nome, mode: 'insensitive' } },
-                { id: tecnicoIdOrNome },
-              ],
-            }
-          : {
-              OR: [
-                { id: tecnicoIdOrNome },
-                { nome: { contains: tecnicoIdOrNome, mode: 'insensitive' } },
-              ],
-            },
-        select: { id: true },
-      });
-      for (const u of dbUsers) {
-        ids.add(u.id);
+      const orConditions: any[] = [];
+      if (isValidUuid(tecnicoIdOrNome)) {
+        orConditions.push({ id: tecnicoIdOrNome });
+      }
+      if (matched) {
+        orConditions.push({ email: matched.email });
+        orConditions.push({ nome: { contains: matched.nome, mode: 'insensitive' } });
+      } else if (tecnicoIdOrNome) {
+        orConditions.push({ nome: { contains: tecnicoIdOrNome.replace(/usr-|colab-/g, ''), mode: 'insensitive' } });
+      }
+
+      if (orConditions.length > 0) {
+        const dbUsers = await prisma.usuario.findMany({
+          where: { OR: orConditions },
+          select: { id: true },
+        });
+        for (const u of dbUsers) {
+          ids.add(u.id);
+        }
       }
     } catch {
       // ignore
@@ -69,9 +74,11 @@ export async function ensureUsuarioDbId(
 
   try {
     if (tecnicoIdOrNome) {
-      // 1. Tenta achar pelo ID exato
-      const byId = await prisma.usuario.findUnique({ where: { id: tecnicoIdOrNome } });
-      if (byId) return byId.id;
+      // 1. Tenta achar pelo ID exato se for UUID válido
+      if (isValidUuid(tecnicoIdOrNome)) {
+        const byId = await prisma.usuario.findUnique({ where: { id: tecnicoIdOrNome } });
+        if (byId) return byId.id;
+      }
 
       // 2. Tenta achar pelos usuários conhecidos
       const norm = tecnicoIdOrNome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -97,6 +104,11 @@ export async function ensureUsuarioDbId(
           },
         });
         return created.id;
+      } else {
+        const byName = await prisma.usuario.findFirst({
+          where: { nome: { contains: tecnicoIdOrNome.replace(/usr-|colab-/g, ''), mode: 'insensitive' } },
+        });
+        if (byName) return byName.id;
       }
     }
 

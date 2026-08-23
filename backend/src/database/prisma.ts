@@ -21,6 +21,8 @@ export async function checkDatabaseConnection(): Promise<boolean> {
     await Promise.race([connectPromise, timeoutPromise]);
     if (!isDbAvailable) {
       console.log('✅ Conexão com banco PostgreSQL/Supabase ativa e persistência habilitada.');
+      // Auto-inicializa a base de dados
+      import('./seed-auto.js').then((m) => m.ensureDatabaseSeeded()).catch(() => {});
     }
     isDbAvailable = true;
     return true;

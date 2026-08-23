@@ -119,17 +119,16 @@ function isTecnicoMatch(tId1?: string | null, tNome1?: string | null, tId2?: str
 
   // Match exato por ID
   if (tId1 && tId2 && tId1.toLowerCase() === tId2.toLowerCase()) return true;
-  // Match parcial de ID (ex: colab-joao contém joao)
   if (tId1 && tId2 && (tId1.includes(tId2) || tId2.includes(tId1))) return true;
 
-  // Match por nome
+  // Match por nome normalizado
   if (tNome1 && tNome2) {
-    const n1 = tNome1.toLowerCase().trim();
-    const n2 = tNome2.toLowerCase().trim();
+    const n1 = tNome1.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    const n2 = tNome2.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
     if (n1.includes(n2) || n2.includes(n1)) return true;
   }
 
-  // ID do tipo "colab-joao" vs nome "João"
+  // ID vs Nome normalizado
   if (tId1 && tNome2) {
     const idNorm = tId1.toLowerCase().replace(/[^a-z]/g, '');
     const nomeNorm = tNome2.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
@@ -143,7 +142,6 @@ function isTecnicoMatch(tId1?: string | null, tNome1?: string | null, tId2?: str
 
   return false;
 }
-
 
 // ─── Agregação para a TV da Fábrica ──────────────────────────────────────────
 export async function getTvFabricaData(): Promise<TvFabricaData> {
@@ -189,7 +187,7 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
       statusQualidadeLabel: metasData.statusQualidadeLabel,
     };
   } catch {
-    // fallback
+    // fallback seguro
   }
 
   // 2. Colaboradores / Bancadas Base
@@ -220,6 +218,7 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
             },
             tecnico: true,
           },
+          orderBy: { dataInicio: 'desc' },
         }),
         prisma.producao.findMany({
           where: {
@@ -258,7 +257,7 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
         return {
           id: it.id,
           numeroOS: it.ordemServico?.numeroOS || 0,
-          clienteNome: it.ordemServico?.cliente?.nomeRazaoSocial || 'MARANET',
+          clienteNome: it.ordemServico?.cliente?.nomeRazaoSocial || 'MARANET Telecomunicações',
           equipamentoNome: it.tipoEquipamento?.nome || 'Equipamento',
           quantidade: it.quantidade,
           pontosTotais: Number((it.quantidade * ptsUnit).toFixed(1)),
@@ -266,81 +265,10 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
           status: it.statusItem,
         };
       });
-    } catch {
-      // fallback
+    } catch (err) {
+      console.error('[getTvFabricaData] Erro ao consultar dados no Supabase:', err);
     }
   }
-
-  // Fallback em memória (mock) se DB vazio ou sem produção ativa
-  const dbTemAtivas = producoesAtivasList.length > 0;
-  if (!dbTemAtivas) {
-    const { mockProducoes, mockFilaItens } = await import('../producao/producao.repository.js');
-    const { mockOsList } = await import('../os/os.repository.js');
-    const { mockTestes } = await import('../qualidade/teste.repository.js');
-
-    // Hidratar produções mock com campo tecnico para isTecnicoMatch funcionar
-    const hydrateMock = (p: any) => {
-      const itemOS = p.itemOrdemServico as any;
-      const tAlocado = itemOS?.tecnicoAlocado;
-      return {
-        ...p,
-        tecnico: tAlocado ? { id: tAlocado.id, nome: tAlocado.nome } : null,
-        // Garante que tecnicoId esteja presente
-        tecnicoId: p.tecnicoId || tAlocado?.id || null,
-      };
-    };
-
-    const mockAtivas = mockProducoes.filter((p) => p.status === 'EM_ANDAMENTO').map(hydrateMock);
-    const mockFinalizadas = mockProducoes.filter((p) => p.status === 'FINALIZADO').map(hydrateMock);
-
-    // Mescla com DB: DB prevalece se tiver, mock complementa
-    if (mockAtivas.length > 0) {
-      producoesAtivasList = [...producoesAtivasList, ...mockAtivas.filter(
-        (m) => !producoesAtivasList.some((d) => d.id === m.id)
-      )];
-    }
-    if (mockFinalizadas.length > 0) {
-      producoesFinalizadasHoje = [...producoesFinalizadasHoje, ...mockFinalizadas.filter(
-        (m) => !producoesFinalizadasHoje.some((d) => d.id === m.id)
-      )];
-    }
-    if (testesHojeList.length === 0) testesHojeList = mockTestes;
-
-    // Fila prioritária a partir do mock
-    const itensFila = mockFilaItens.filter((it) =>
-      ['AGUARDANDO_PRODUCAO', 'RECEBIDO'].includes(it.statusItem)
-    );
-
-    for (const os of mockOsList) {
-      if (['AGUARDANDO_PRODUCAO', 'RECEBIDO'].includes(os.status)) {
-        for (const it of os.itens) {
-          if (['AGUARDANDO_PRODUCAO', 'RECEBIDO'].includes(it.statusItem)) {
-            if (!itensFila.some((f) => f.id === it.id)) {
-              itensFila.push({ ...it, ordemServico: os });
-            }
-          }
-        }
-      }
-    }
-
-    if (filaPrioritariaList.length === 0) {
-      filaPrioritariaList = itensFila.slice(0, 5).map((it) => {
-        const eqNome = it.tipoEquipamento?.nome || 'Equipamento';
-        const ptsUnit = getPontosUnitarios(eqNome);
-        return {
-          id: it.id,
-          numeroOS: it.ordemServico?.numeroOS || 1000,
-          clienteNome: it.ordemServico?.cliente?.nomeRazaoSocial || 'MARANET Telecomunicações',
-          equipamentoNome: eqNome,
-          quantidade: it.quantidade,
-          pontosTotais: Number((it.quantidade * ptsUnit).toFixed(1)),
-          prioridade: it.ordemServico?.prioridade || 'MEDIA',
-          status: it.statusItem,
-        };
-      });
-    }
-  }
-
 
   // Montar bancadas ao vivo
   const bancadas: BancadaStatus[] = baseBancadas.map((b) => {
@@ -455,4 +383,3 @@ export async function getGerencialData(periodo: string = 'mes_atual'): Promise<G
     producaoHistoricoDias: [],
   };
 }
-
