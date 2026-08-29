@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { dashboardApiService } from './dashboard.service';
 import type { GerencialResponse } from './dashboard.types';
+import { useRealtime } from '../realtime/RealtimeContext';
 import { KpiCard } from '../../components/ui/KpiCard';
 import { Button } from '../../components/ui/Button';
 import {
@@ -18,10 +19,10 @@ export const DashboardGerencialPage: React.FC = () => {
   const [data, setData] = useState<GerencialResponse | null>(null);
   const [periodo, setPeriodo] = useState<string>('mes_atual');
   const [isLoading, setIsLoading] = useState(true);
+  const { subscribe } = useRealtime();
 
   const loadData = useCallback(async () => {
     try {
-      setIsLoading(true);
       const res = await dashboardApiService.getGerencial(periodo);
       setData(res);
     } catch {
@@ -33,7 +34,18 @@ export const DashboardGerencialPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
+    // Inscrição em eventos em tempo real (atualiza sem necessidade de F5)
+    const unsubscribe = subscribe('*', () => {
+      loadData();
+    });
+
+    const interval = setInterval(loadData, 30000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
+  }, [loadData, subscribe]);
 
   if (isLoading || !data) {
     return (

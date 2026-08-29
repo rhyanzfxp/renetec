@@ -80,6 +80,7 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
       await qualidadeApiService.realizarTeste({
         producaoId,
         itemOrdemServicoId: item.id,
+        tecnicoResponsavelId: item.tecnicoAlocadoId || item.tecnicoAlocado?.id || (item.producoes?.[0] as any)?.tecnicoId || undefined,
         quantidadeTestada: qtdLote,
         quantidadeAprovada: Number(aprovadas),
         quantidadeReprovada: Number(reprovadas),

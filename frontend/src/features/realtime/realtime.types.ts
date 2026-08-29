@@ -10,6 +10,7 @@ export type RealtimeEventType =
   | 'retrabalho:iniciado'
   | 'retrabalho:concluido'
   | 'meta:atualizada'
+  | 'dashboard:atualizado'
   | 'sistema:ping';
 
 

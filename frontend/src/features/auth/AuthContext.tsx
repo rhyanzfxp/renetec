@@ -16,19 +16,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Recupera dados persistidos no navegador
     const storedToken = localStorage.getItem('@renetec:token');
     const storedUser = localStorage.getItem('@renetec:user');
 
     if (storedToken && storedUser) {
       try {
+        const parsedUser = JSON.parse(storedUser);
+        // Otimisticamente hidrata o estado para não piscar a tela
         setToken(storedToken);
-        setUser(JSON.parse(storedUser));
-      } catch (err) {
+        setUser(parsedUser);
+
+        // Valida o token com o servidor em background
+        api
+          .get('/auth/me', {
+            headers: { Authorization: `Bearer ${storedToken}` },
+          })
+          .then((res) => {
+            if (res.data?.success && res.data?.data) {
+              // Atualiza dados do usuário com a versão fresca do servidor
+              const freshUser = res.data.data;
+              setUser(freshUser);
+              localStorage.setItem('@renetec:user', JSON.stringify(freshUser));
+            } else {
+              // Resposta inesperada – limpa sessão
+              setUser(null);
+              setToken(null);
+              localStorage.removeItem('@renetec:token');
+              localStorage.removeItem('@renetec:user');
+            }
+          })
+          .catch(() => {
+            // Token inválido ou expirado – força logout
+            setUser(null);
+            setToken(null);
+            localStorage.removeItem('@renetec:token');
+            localStorage.removeItem('@renetec:user');
+          });
+      } catch {
         localStorage.removeItem('@renetec:token');
         localStorage.removeItem('@renetec:user');
       }
     }
+
     setIsLoading(false);
   }, []);
 

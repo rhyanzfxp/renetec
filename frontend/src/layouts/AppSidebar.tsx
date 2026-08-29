@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   ClipboardList, 
   Wrench, 
@@ -13,6 +13,9 @@ import {
 
 import { clsx } from 'clsx';
 import { useAuth } from '../features/auth/AuthContext';
+import { useRealtime } from '../features/realtime/RealtimeContext';
+import { metaApiService } from '../features/metas/meta.service';
+import type { MetaAtualData } from '../features/metas/meta.types';
 import type { NavSection } from '../types/auth';
 
 export type { NavSection };
@@ -32,6 +35,28 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
 }) => {
   const { user } = useAuth();
   const perfil = user?.perfil || 'TECNICO';
+  const { subscribe } = useRealtime();
+
+  const [metaData, setMetaData] = useState<MetaAtualData | null>(null);
+
+  const loadMeta = useCallback(async () => {
+    try {
+      const data = await metaApiService.getMetaAtual();
+      if (data) {
+        setMetaData(data);
+      }
+    } catch {
+      // Falha silenciosa para não interferir na navegação
+    }
+  }, []);
+
+  useEffect(() => {
+    loadMeta();
+    const unsubscribe = subscribe('*', () => {
+      loadMeta();
+    });
+    return () => unsubscribe();
+  }, [loadMeta, subscribe]);
 
   // Itens de navegação baseados no perfil do usuário
   const navItems = {
@@ -62,6 +87,8 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   };
 
   const currentItems = navItems[perfil] || navItems.TECNICO;
+
+  const pctAlvo = metaData ? Math.min(100, Math.max(0, metaData.percentualAlvo)) : 0;
 
   return (
     <>
@@ -120,20 +147,25 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           })}
         </div>
 
-        {/* Mini Widget da Meta Coletiva Fixado no Rodapé da Sidebar */}
+        {/* Mini Widget da Meta Coletiva Dinâmico no Rodapé da Sidebar */}
         <div className="p-3 border-t border-surface-border bg-surface-base/40 m-2 rounded-xl border">
           <div className="flex items-center justify-between text-xs">
             <span className="font-semibold text-gray-300 flex items-center gap-1.5">
               <Target className="w-3.5 h-3.5 text-amber-400" /> Meta Alvo
             </span>
-            <span className="font-bold text-emerald-400 tabular-nums">19.0%</span>
+            <span className="font-bold text-emerald-400 tabular-nums">
+              {metaData ? `${metaData.percentualAlvo}%` : '0.0%'}
+            </span>
           </div>
           <div className="w-full bg-surface-elevated rounded-full h-1.5 mt-2 overflow-hidden">
-            <div className="bg-emerald-500 h-1.5 rounded-full w-[19%] transition-all duration-500"></div>
+            <div
+              className="bg-emerald-500 h-1.5 rounded-full transition-all duration-500"
+              style={{ width: `${pctAlvo}%` }}
+            />
           </div>
           <div className="flex justify-between items-center text-[11px] text-gray-400 mt-1.5 tabular-nums">
-            <span>57 Pontos</span>
-            <span>Alvo: 300 pts</span>
+            <span>{metaData ? `${metaData.pontosRealizados} pts` : '0 pts'}</span>
+            <span>Alvo: {metaData?.metaAlvo ?? 300} pts</span>
           </div>
         </div>
       </aside>

@@ -16,6 +16,7 @@ export interface FilaTesteItem {
   defeitoRelatado: string | null;
   servicoRealizado?: string | null;
   statusItem: StatusOS;
+  tecnicoAlocadoId?: string | null;
   tecnicoAlocado?: {
     id: string;
     nome: string;
@@ -55,6 +56,7 @@ export interface FilaTesteItem {
 export interface RealizarTestePayload {
   producaoId: string;
   itemOrdemServicoId: string;
+  tecnicoResponsavelId?: string;
   quantidadeTestada: number;
   quantidadeAprovada: number;
   quantidadeReprovada: number;
