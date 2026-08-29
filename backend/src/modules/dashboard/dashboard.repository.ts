@@ -360,8 +360,8 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
       status: ativa ? 'EM_PRODUCAO' : 'DISPONIVEL',
       producaoAtiva: producaoAtivaPayload,
       pontosHoje: Number(ptsHoje.toFixed(1)),
-      quantidadeTestadaHoje,
-      quantidadeAprovadaHoje,
+      quantidadeTestadaHoje: qtdTestadaHoje,
+      quantidadeAprovadaHoje: qtdAprovadaHoje,
       retrabalhoHoje,
       taxaQualidadeHoje,
     };
