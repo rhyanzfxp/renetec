@@ -79,7 +79,6 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
     ],
     QUALIDADE: [
       { id: 'fila_testes' as NavSection, label: 'Fila de Testes (Inspeção)', icon: <CheckCircle className="w-4 h-4" /> },
-      { id: 'retrabalho' as NavSection, label: 'Retrabalhos Pendentes', icon: <History className="w-4 h-4" /> },
       { id: 'dashboard' as NavSection, label: 'Indicadores Gerenciais', icon: <BarChart2 className="w-4 h-4" /> },
       { id: 'metas' as NavSection, label: 'Acompanhamento de Metas', icon: <Target className="w-4 h-4" /> },
       { id: 'tv_fabrica' as NavSection, label: 'TV Chão de Fábrica', icon: <Tv className="w-4 h-4 text-amber-400" /> },
