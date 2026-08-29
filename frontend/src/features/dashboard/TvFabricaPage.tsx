@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { dashboardApiService } from './dashboard.service';
 import type { TvFabricaResponse } from './dashboard.types';
 import { useRealtime } from '../realtime/RealtimeContext';
-import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Button } from '../../components/ui/Button';
 import {
   Tv,
@@ -11,7 +10,6 @@ import {
   Flame,
   Clock,
   Wrench,
-  AlertTriangle,
   Zap,
   TrendingUp,
   ShieldCheck,
@@ -257,7 +255,7 @@ export const TvFabricaPage: React.FC = () => {
               <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                 <Wrench className="w-4 h-4 text-brand-400" /> Bancadas Técnicas Ao Vivo ({data.bancadas.length})
               </h3>
-              <span className="text-[11px] text-gray-400 font-medium">Equipe Renetec</span>
+              <span className="text-[11px] text-gray-400 font-medium">Pontos somente de peças aprovadas no CQ</span>
             </div>
 
             <div className="space-y-3">
@@ -303,55 +301,36 @@ export const TvFabricaPage: React.FC = () => {
                       <div className="flex items-center justify-between font-semibold">
                         <span className="text-brand-400 tabular-nums">OS #{b.producaoAtiva.numeroOS}</span>
                         <span className="text-amber-400 tabular-nums font-bold flex items-center gap-1 font-mono">
-                          <Clock className="w-3 h-3" /> {b.producaoAtiva.tempoDecorridoMinutos} min decorridos
+                          <Clock className="w-3 h-3" /> {b.producaoAtiva.tempoDecorridoMinutos} min
                         </span>
                       </div>
                       <p className="text-white font-medium line-clamp-1">
-                        {b.producaoAtiva.equipamentoNome} ({b.producaoAtiva.quantidade} un • {b.producaoAtiva.pontosTotais} pts)
+                        {b.producaoAtiva.equipamentoNome} ({b.producaoAtiva.quantidade} un)
                       </p>
                       <p className="text-[11px] text-gray-400 line-clamp-1">
-                        Cliente: {b.producaoAtiva.clienteNome}
+                        {b.producaoAtiva.clienteNome}
                       </p>
                     </div>
-                  ) : (
-                    <p className="mt-2 text-xs text-gray-500 italic">
-                      Bancada pronta para assumir o próximo lote da fila.
-                    </p>
-                  )}
+                  ) : null}
 
-                  <div className="mt-2 flex justify-between items-center text-[11px] text-gray-400 pt-1.5 border-t border-surface-border/40">
-                    <span>Pontos Hoje:</span>
-                    <span className="font-bold text-amber-300 tabular-nums">{b.pontosHoje ?? b.produzidosHoje} pts</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Lotes Prioritários na Fila */}
-          <div className="p-4 rounded-2xl bg-surface-card border border-surface-border space-y-3">
-            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> Próximos Lotes Prioritários ({data.filaPrioritaria.length})
-            </h4>
-
-            <div className="space-y-2">
-              {data.filaPrioritaria.map((item) => (
-                <div
-                  key={item.id}
-                  className="p-2.5 rounded-lg bg-surface-elevated/60 border border-surface-border flex items-center justify-between text-xs"
-                >
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-white tabular-nums">OS #{item.numeroOS}</span>
-                      <StatusBadge prioridade={item.prioridade} size="sm" />
+                  {/* Indicadores de qualidade e pontos */}
+                  <div className="mt-2 grid grid-cols-4 gap-1.5 pt-1.5 border-t border-surface-border/40">
+                    <div className="text-center">
+                      <p className="text-[10px] text-gray-500">Pts Hoje</p>
+                      <p className="text-xs font-black text-amber-300 tabular-nums">{b.pontosHoje ?? 0}</p>
                     </div>
-                    <p className="text-gray-300 font-medium line-clamp-1">{item.equipamentoNome}</p>
-                  </div>
-
-                  <div className="text-right">
-                    <span className="text-amber-400 font-bold tabular-nums">
-                      {item.quantidade} un ({item.pontosTotais ?? item.quantidade} pts)
-                    </span>
+                    <div className="text-center">
+                      <p className="text-[10px] text-gray-500">Testados</p>
+                      <p className="text-xs font-bold text-gray-200 tabular-nums">{(b as any).quantidadeTestadaHoje ?? 0}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[10px] text-gray-500">Aprovados</p>
+                      <p className="text-xs font-bold text-emerald-400 tabular-nums">{(b as any).quantidadeAprovadaHoje ?? 0}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[10px] text-gray-500">Retrabalho</p>
+                      <p className="text-xs font-bold text-red-400 tabular-nums">{(b as any).retrabalhoHoje ?? 0}</p>
+                    </div>
                   </div>
                 </div>
               ))}

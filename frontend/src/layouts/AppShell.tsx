@@ -5,7 +5,7 @@ import { MobileNav } from './MobileNav';
 import type { NavSection } from '../types/auth';
 import { useAuth } from '../features/auth/AuthContext';
 import { StatusBadge } from '../components/ui/StatusBadge';
-import { KpiCard } from '../components/ui/KpiCard';
+
 import { OsListPage } from '../features/os/OsListPage';
 import { ProducaoPage } from '../features/producao/ProducaoPage';
 import { QualidadePage } from '../features/qualidade/QualidadePage';
@@ -14,7 +14,7 @@ import { MetasPage } from '../features/metas/MetasPage';
 import { TvFabricaPage } from '../features/dashboard/TvFabricaPage';
 import { DashboardGerencialPage } from '../features/dashboard/DashboardGerencialPage';
 import { AuditoriaPage } from '../features/auditoria/AuditoriaPage';
-import { Play, CheckCircle2, AlertTriangle, Target } from 'lucide-react';
+
 
 
 export const AppShell: React.FC = () => {
@@ -88,43 +88,6 @@ export const AppShell: React.FC = () => {
               <p className="text-xs sm:text-sm text-gray-400 mt-1">{getSectionSubtitle()}</p>
             </div>
           </div>
-
-          {/* Grid de KPIs Semânticos (Exibido na visão de Ordens de Serviço) */}
-          {(activeSection === 'ordens_servico' || activeSection === 'minhas_os') && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              <KpiCard
-                label="Meta Coletiva (Alvo)"
-                value={57}
-                unit="/ 300 pts"
-                subtext="19.0% da Meta Alvo"
-                variant="success"
-                icon={<Target className="w-4 h-4" />}
-              />
-              <KpiCard
-                label="Aguardando Teste"
-                value={32}
-                unit="unidades"
-                subtext="Na mesa de CQ"
-                variant="info"
-                icon={<CheckCircle2 className="w-4 h-4" />}
-              />
-              <KpiCard
-                label="Em Retrabalho"
-                value={4}
-                unit="unidades"
-                subtext="Defeitos identificados no teste"
-                variant="warning"
-                icon={<AlertTriangle className="w-4 h-4" />}
-              />
-              <KpiCard
-                label="Eficiência de Qualidade"
-                value="97.2%"
-                subtext="Taxa de primeira aprovação"
-                variant="default"
-                icon={<Play className="w-4 h-4" />}
-              />
-            </div>
-          )}
 
           {/* Renderização Condicional de Módulo */}
           {activeSection === 'tv_fabrica' ? (

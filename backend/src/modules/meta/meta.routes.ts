@@ -105,4 +105,31 @@ export const metaRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
   );
+
+  // ─── POST /metas/resetar ───────────────────────────────────────────────────
+  // Reset administrativo de metas e produções do mês (somente ADMIN)
+  fastify.post(
+    '/metas/resetar',
+    { preHandler: [authenticate, authorize(['ADMIN'])] },
+    async (request, reply) => {
+      const { mesReferencia, anoReferencia, resetarTudo } = (request.body || {}) as {
+        mesReferencia?: number;
+        anoReferencia?: number;
+        resetarTudo?: boolean;
+      };
+
+      const resultado = await service.resetarMetas(
+        mesReferencia,
+        anoReferencia,
+        resetarTudo,
+        request.user?.id
+      );
+
+      return reply.send({
+        success: true,
+        message: resultado.message || 'Metas e produções resetadas com sucesso.',
+        data: resultado,
+      });
+    }
+  );
 };

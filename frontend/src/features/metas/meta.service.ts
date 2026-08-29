@@ -52,4 +52,13 @@ export const metaApiService = {
     );
     return response.data?.data;
   },
+
+  // Reset administrativo de metas e produções do mês (somente ADMIN)
+  async resetarMetas(mesReferencia?: number, anoReferencia?: number, resetarTudo = false) {
+    const response = await api.post<{ success: boolean; message: string; data: unknown }>(
+      '/metas/resetar',
+      { mesReferencia, anoReferencia, resetarTudo }
+    );
+    return response.data;
+  },
 };

@@ -234,3 +234,20 @@ export async function getTabelaPontuacao() {
 export async function getGuiaComoUsar() {
   return repo.getGuiaComoUsar();
 }
+
+export async function resetarMetas(mes?: number, ano?: number, resetarTudo?: boolean, usuarioId?: string) {
+  const res = await repo.resetarMetasProducao(mes, ano, resetarTudo);
+  realtimeService.broadcast('meta:atualizada', { resetado: true });
+  realtimeService.broadcast('producao:finalizada', { resetado: true });
+  realtimeService.broadcast('qualidade:aprovado', { resetado: true });
+
+  log({
+    usuarioId,
+    acao: 'META_ATUALIZADA',
+    entidade: 'MetaConfig',
+    descricao: `Metas e registros de produção resetados pelo Administrador (Mês ${mes || 'Atual'}/${ano || 'Atual'}).`,
+    detalhes: { mes, ano, resetarTudo },
+  }).catch(() => {});
+
+  return res;
+}

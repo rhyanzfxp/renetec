@@ -30,6 +30,7 @@ import {
   ShieldCheck,
   CheckCircle2,
   HelpCircle,
+  RotateCcw,
 } from 'lucide-react';
 
 export const MetasPage: React.FC = () => {
@@ -41,6 +42,8 @@ export const MetasPage: React.FC = () => {
   const [guiaComoUsar, setGuiaComoUsar] = useState<GuiaComoUsarItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Estados do Simulador de Bônus
@@ -135,6 +138,25 @@ export const MetasPage: React.FC = () => {
       setErrorMessage('Erro ao alterar status da meta individual.');
     } finally {
       setIsUpdatingBonus(false);
+    }
+  };
+
+  const handleReset = async (resetarTudo: boolean) => {
+    try {
+      setIsResetting(true);
+      setIsResetConfirmOpen(false);
+      await metaApiService.resetarMetas(
+        data?.mesReferencia,
+        data?.anoReferencia,
+        resetarTudo
+      );
+      await loadData();
+      setBonusFeedback('Metas e produções resetadas com sucesso!');
+      setTimeout(() => setBonusFeedback(null), 4000);
+    } catch {
+      setErrorMessage('Erro ao resetar metas. Verifique o console.');
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -386,6 +408,64 @@ export const MetasPage: React.FC = () => {
           >
             <BookOpen className="w-4 h-4" /> Como Usar (Guia Operacional)
           </button>
+
+          {/* Separador e botão de reset */}
+          <div className="flex-1" />
+          <button
+            type="button"
+            onClick={() => setIsResetConfirmOpen(true)}
+            disabled={isResetting}
+            className="ml-auto px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 text-red-400 hover:text-red-300 hover:bg-red-950/30 border border-red-800/30 hover:border-red-700/50 transition-all disabled:opacity-50"
+            title="Limpar produções e metas de teste do período"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Resetar
+          </button>
+        </div>
+      )}
+
+      {/* ─── MODAL DE CONFIRMAÇÃO DE RESET ────────────────────────────── */}
+      {isResetConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="relative w-full max-w-md mx-4 bg-surface-card border border-red-800/50 rounded-2xl shadow-2xl p-6 space-y-4 animate-fadeIn">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-red-950/60 border border-red-700/50 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-6 h-6 text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Resetar Metas e Produções</h3>
+                <p className="text-xs text-gray-400 mt-1">
+                  Esta ação é irreversível e apagará os registros de produção, testes e retrabalhos do banco de dados.
+                  Use apenas para testes ou fechamento mensal.
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2 pt-2">
+              <button
+                type="button"
+                onClick={() => handleReset(false)}
+                className="w-full px-4 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-sm transition-colors flex items-center justify-center gap-2"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Resetar Mês Atual ({data?.nomeMes || 'Atual'}/{data?.anoReferencia})
+              </button>
+              <button
+                type="button"
+                onClick={() => handleReset(true)}
+                className="w-full px-4 py-3 rounded-xl bg-red-700 hover:bg-red-600 text-white font-bold text-sm transition-colors flex items-center justify-center gap-2"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Resetar TODOS os Dados (Completo)
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsResetConfirmOpen(false)}
+                className="w-full px-4 py-2 rounded-xl bg-surface-elevated hover:bg-surface-base text-gray-300 text-sm transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

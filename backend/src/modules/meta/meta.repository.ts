@@ -122,7 +122,7 @@ function getPontosUnitarios(nome?: string): number {
   return 1.5;
 }
 
-// ─── Busca a agregação de pontos realizados no mês corrente ──────────────────
+// ─── Busca a agregação de pontos realizados no mês corrente (APENAS APROVADOS NO CQ) ──
 export async function getProducaoPontosMes(mes: number, ano: number) {
   let pontosTotais = 0;
   let faturamentoLancado = 0;
@@ -135,35 +135,19 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
       const inicioMes = new Date(ano, mes - 1, 1);
       const fimMes = new Date(ano, mes, 0, 23, 59, 59, 999);
 
-      const [producoes, testes, retrabalhos] = await Promise.all([
-        prisma.producao.findMany({
-          where: {
-            OR: [
-              { dataInicio: { gte: inicioMes, lte: fimMes } },
-              { dataFim: { gte: inicioMes, lte: fimMes } },
-            ],
-            status: 'FINALIZADO',
-          },
-          include: {
-            tecnico: { select: { id: true, nome: true } },
-            itemOrdemServico: {
-              include: {
-                tipoEquipamento: true,
-                ordemServico: true,
-                tecnicoAlocado: { select: { id: true, nome: true } },
-              },
-            },
-          },
-        }),
+      const [testes, retrabalhos, producoes] = await Promise.all([
         prisma.teste.findMany({
           where: { dataTeste: { gte: inicioMes, lte: fimMes } },
           include: {
             inspetor: { select: { id: true, nome: true } },
             producao: {
               include: {
+                tecnico: { select: { id: true, nome: true } },
                 itemOrdemServico: {
                   include: {
                     tipoEquipamento: true,
+                    ordemServico: true,
+                    tecnicoAlocado: { select: { id: true, nome: true } },
                   },
                 },
               },
@@ -173,39 +157,50 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
         prisma.retrabalho.count({
           where: { dataInicio: { gte: inicioMes, lte: fimMes } },
         }),
+        prisma.producao.findMany({
+          where: {
+            OR: [
+              { dataInicio: { gte: inicioMes, lte: fimMes } },
+              { dataFim: { gte: inicioMes, lte: fimMes } },
+            ],
+            status: 'FINALIZADO',
+          },
+        }),
       ]);
 
       totalRetrabalho = retrabalhos;
+      totalLancamentos = producoes.length;
 
-      if (producoes.length > 0 || testes.length > 0) {
-        let pts = 0;
+      if (testes.length > 0) {
+        let ptsProducaoAprovada = 0;
         let fat = 0;
         const colaboradoresMapPorNome: Record<string, number> = {};
 
-        // 1. Pontos de Produção em Bancada (Samuel, João, Joás)
-        for (const p of producoes) {
-          const eqNome = p.itemOrdemServico?.tipoEquipamento?.nome || '';
-          const ptsUnit = getPontosUnitarios(eqNome);
-          const pontosProd = (p.quantidadeProduzida || 1) * ptsUnit;
-          pts += pontosProd;
-          fat += Number((p.itemOrdemServico?.ordemServico as any)?.valorOrcamento || 0);
-
-          const tecNome = p.tecnico?.nome || (p.itemOrdemServico as any)?.tecnicoAlocado?.nome || 'desconhecido';
-          colaboradoresMapPorNome[tecNome] = (colaboradoresMapPorNome[tecNome] || 0) + pontosProd;
-        }
-
-        // 2. Pontos de Inspeção e Controle de Qualidade (Rhyan / Qualidade)
         for (const t of testes) {
           const eqNome = t.producao?.itemOrdemServico?.tipoEquipamento?.nome || '';
           const ptsUnit = getPontosUnitarios(eqNome);
-          const pontosTeste = (t.quantidadeAprovada || t.quantidadeTestada || 1) * ptsUnit;
+          const qtdAprovada = t.quantidadeAprovada || 0;
+
+          // 1. O técnico que executou a produção só pontua se as peças foram APROVADAS no CQ
+          if (qtdAprovada > 0) {
+            const pontosTecnico = qtdAprovada * ptsUnit;
+            ptsProducaoAprovada += pontosTecnico;
+
+            const tecNome = t.producao?.tecnico?.nome || (t.producao?.itemOrdemServico as any)?.tecnicoAlocado?.nome || 'desconhecido';
+            colaboradoresMapPorNome[tecNome] = (colaboradoresMapPorNome[tecNome] || 0) + pontosTecnico;
+
+            const valorOS = Number((t.producao?.itemOrdemServico?.ordemServico as any)?.valorOrcamento || 0);
+            fat += valorOS;
+          }
+
+          // 2. Pontos de Inspeção do Testador (Rhyan / Qualidade)
+          const pontosInspetor = (t.quantidadeAprovada || t.quantidadeTestada || 1) * ptsUnit;
           const inspNome = t.inspetor?.nome || 'Rhyan';
-          colaboradoresMapPorNome[inspNome] = (colaboradoresMapPorNome[inspNome] || 0) + pontosTeste;
+          colaboradoresMapPorNome[inspNome] = (colaboradoresMapPorNome[inspNome] || 0) + pontosInspetor;
         }
 
-        pontosTotais = Number(pts.toFixed(1));
+        pontosTotais = Number(ptsProducaoAprovada.toFixed(1));
         faturamentoLancado = fat;
-        totalLancamentos = producoes.length;
 
         colaboradores = COLABORADORES_BASE.map((c) => {
           const primNome = c.nome.split(' ')[0].toLowerCase();
@@ -216,7 +211,7 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
           return {
             ...c,
             pontosRealizados: Number(pontos.toFixed(1)),
-            percentualTotal: pts > 0 ? Number(((pontos / pts) * 100).toFixed(1)) : 0,
+            percentualTotal: ptsProducaoAprovada > 0 ? Number(((pontos / ptsProducaoAprovada) * 100).toFixed(1)) : 0,
             metaIndividualCumprida: inMemoryMetaIndividualStatus[c.id] !== undefined
               ? inMemoryMetaIndividualStatus[c.id]
               : true,
@@ -238,6 +233,57 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
     taxaRetrabalho,
     colaboradores,
   };
+}
+
+// ─── Reset Administrativo de Metas e Dados de Produção ────────────────────────
+export async function resetarMetasProducao(mes?: number, ano?: number, resetarTudo: boolean = false) {
+  const m = mes || new Date().getMonth() + 1;
+  const a = ano || new Date().getFullYear();
+  const inicioMes = new Date(a, m - 1, 1);
+  const fimMes = new Date(a, m, 0, 23, 59, 59, 999);
+
+  inMemoryFaturamentoRecebido = 0;
+  inMemoryMetaIndividualStatus = {
+    'colab-samuel': true,
+    'colab-joao': true,
+    'colab-joas': true,
+    'colab-rhyan': true,
+    'colab-luana': true,
+  };
+
+  if (isDatabaseReady()) {
+    try {
+      if (resetarTudo) {
+        await prisma.retrabalho.deleteMany({});
+        await prisma.teste.deleteMany({});
+        await prisma.producao.deleteMany({});
+        await prisma.historicoStatus.deleteMany({});
+        await prisma.itemOrdemServico.deleteMany({});
+        await prisma.ordemServico.deleteMany({});
+      } else {
+        await prisma.retrabalho.deleteMany({
+          where: { dataInicio: { gte: inicioMes, lte: fimMes } },
+        });
+        await prisma.teste.deleteMany({
+          where: { dataTeste: { gte: inicioMes, lte: fimMes } },
+        });
+        await prisma.producao.deleteMany({
+          where: {
+            OR: [
+              { dataInicio: { gte: inicioMes, lte: fimMes } },
+              { dataFim: { gte: inicioMes, lte: fimMes } },
+            ],
+          },
+        });
+      }
+      return { success: true, message: 'Metas e dados de produção do período resetados com sucesso.' };
+    } catch (err) {
+      console.error('[resetarMetasProducao] Erro ao resetar dados:', err);
+      throw err;
+    }
+  }
+
+  return { success: true, message: 'Estado em memória resetado com sucesso.' };
 }
 
 // ─── Busca ou cria a configuração de metas do mês ─────────────────────────────

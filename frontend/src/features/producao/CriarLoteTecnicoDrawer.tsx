@@ -14,7 +14,10 @@ import {
   Calendar,
   Layers,
   Sparkles,
-  Play
+  Play,
+  Zap,
+  Timer,
+  CheckCircle2
 } from 'lucide-react';
 
 interface EquipamentoLinha {
@@ -39,9 +42,12 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
   const [tiposEquipamento, setTiposEquipamento] = useState<TipoEquipamentoOption[]>([]);
   const [clientes, setClientes] = useState<ClienteOption[]>([]);
 
+  // Modo de Apontamento: Check-in Direto para Teste vs Iniciar Cronômetro na Bancada
+  const [modoOperacao, setModoOperacao] = useState<'CHECKIN' | 'CRONOMETRO'>('CHECKIN');
+
   // Cabeçalho da OS
-  const [numeroOS, setNumeroOS] = useState<string>('1920');
-  const [clienteId, setClienteId] = useState<string>('cli-01');
+  const [numeroOS, setNumeroOS] = useState<string>('');
+  const [clienteId, setClienteId] = useState<string>('');
   const [dataRegistro, setDataRegistro] = useState<string>(() => {
     const hoje = new Date();
     const ano = hoje.getFullYear();
@@ -59,33 +65,37 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
   const [observacoes, setObservacoes] = useState<string>('');
 
   // Linhas dinâmicas de equipamentos
-  const [itens, setItens] = useState<EquipamentoLinha[]>([
-    {
-      tipoEquipamentoId: 'pt-02', // ONT / Roteador Giga
-      quantidade: 12,
-      tipoCategoria: 'REPARADO',
-      servicoRealizado: 'Substituição de capacitor e ressolda do circuito de alimentação',
-    },
-    {
-      tipoEquipamentoId: 'pt-06', // CCR / Mimosas
-      quantidade: 2,
-      tipoCategoria: 'REPARADO',
-      servicoRealizado: 'Regravação de firmware e substituição de transceptor óptico',
-    },
-  ]);
+  const [itens, setItens] = useState<EquipamentoLinha[]>([]);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Carregar opções do sistema
+  // Carregar opções do sistema e reiniciar formulário
   useEffect(() => {
     if (isOpen) {
+      // Reiniciar form ao abrir
+      setNumeroOS('');
+      setObservacoes('');
+      setPrioridade('MEDIA');
+      setModoOperacao('CHECKIN');
+      setItens([]);
+      setError(null);
       Promise.all([osApiService.getTiposEquipamento(), osApiService.getClientes()])
         .then(([equipamentos, clientesList]) => {
           setTiposEquipamento(equipamentos);
           setClientes(clientesList);
-          if (clientesList.length > 0 && !clienteId) {
+          // Auto-selecionar primeiro cliente disponível
+          if (clientesList.length > 0) {
             setClienteId(clientesList[0].id);
+          }
+          // Auto-adicionar primeira linha de item
+          if (equipamentos.length > 0) {
+            setItens([{
+              tipoEquipamentoId: equipamentos[0].id,
+              quantidade: 1,
+              tipoCategoria: 'REPARADO',
+              servicoRealizado: '',
+            }]);
           }
         })
         .catch(() => {});
@@ -135,8 +145,8 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
   }, 0);
 
   const handleSubmit = async (enviarDiretoTeste: boolean) => {
-    if (!numeroOS.trim()) {
-      setError('Informe o número da OS (ex: 1920).');
+    if (!numeroOS.trim() || !parseInt(numeroOS.replace(/\D/g, ''))) {
+      setError('Informe o número da OS.');
       return;
     }
 
@@ -160,9 +170,11 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
         timestampISO = new Date().toISOString();
       }
 
+      const numParsed = parseInt(numeroOS.replace(/\D/g, ''));
+
       const payload = {
-        numeroOS: parseInt(numeroOS.replace(/\D/g, '')) || 1920,
-        clienteId: clienteId || 'cli-01',
+        numeroOS: numParsed,
+        clienteId: clienteId || (clientes[0]?.id || 'cli-01'),
         dataEntrada: timestampISO,
         prioridade,
         observacoes: observacoes.trim() || undefined,
@@ -191,52 +203,117 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
     <Drawer
       isOpen={isOpen}
       onClose={onClose}
-      title="Novo Apontamento de Lote / Minha OS"
-      subtitle={`Técnico: ${user?.nome || 'Operador'} — Registre a produção e despache diretamente`}
+      title="Apontamento de Lote / Minha OS"
+      subtitle={`Técnico: ${user?.nome || 'Operador'} — Escolha o modo de operação e preencha os dados`}
       width="max-w-2xl"
       footer={
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
           <div className="flex items-center gap-2 text-xs text-gray-300">
             <span className="font-bold text-white tabular-nums">{totalEquipamentos} un</span> no lote
             <span className="text-gray-500">•</span>
-            <span className="text-amber-400 font-bold tabular-nums">~{pontuacaoEstimada.toFixed(1)} pts</span>
+            <span className="text-amber-400 font-bold tabular-nums">~{pontuacaoEstimada.toFixed(1)} pts estimados</span>
           </div>
 
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={onClose} disabled={isLoading}>
               Cancelar
             </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => handleSubmit(false)}
-              disabled={isLoading}
-              leftIcon={<Play className="w-3.5 h-3.5" />}
-              title="Salva a OS na sua bancada para iniciar cronômetro individual"
-            >
-              Na Bancada
-            </Button>
-            <Button
-              variant="success"
-              size="sm"
-              onClick={() => handleSubmit(true)}
-              loading={isLoading}
-              leftIcon={<Send className="w-3.5 h-3.5" />}
-              className="shadow-glow-success font-bold"
-            >
-              Enviar Direto p/ Teste (CQ)
-            </Button>
+            {modoOperacao === 'CRONOMETRO' ? (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => handleSubmit(false)}
+                disabled={isLoading}
+                loading={isLoading}
+                leftIcon={<Play className="w-3.5 h-3.5" />}
+                className="shadow-glow-primary font-bold"
+              >
+                Iniciar Produção na Bancada (⏱️)
+              </Button>
+            ) : (
+              <Button
+                variant="success"
+                size="sm"
+                onClick={() => handleSubmit(true)}
+                disabled={isLoading}
+                loading={isLoading}
+                leftIcon={<Send className="w-3.5 h-3.5" />}
+                className="shadow-glow-success font-bold"
+              >
+                Confirmar Check-in & Despachar p/ Teste (⚡)
+              </Button>
+            )}
           </div>
         </div>
       }
     >
-      <form onSubmit={(e) => { e.preventDefault(); handleSubmit(true); }} className="space-y-5 text-sm">
+      <form onSubmit={(e) => { e.preventDefault(); handleSubmit(modoOperacao === 'CHECKIN'); }} className="space-y-5 text-sm">
         {error && (
           <div className="p-3.5 rounded-lg bg-red-950/40 border border-red-800/40 flex items-start gap-2.5 text-xs text-red-300">
             <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
             <span>{error}</span>
           </div>
         )}
+
+        {/* ─── SELETOR DE MODO: CRONÔMETRO VS CHECK-IN ───────────────────────── */}
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-gray-300 uppercase tracking-wider block">
+            Qual é a finalidade deste apontamento?
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Opção 1: Check-in direto */}
+            <button
+              type="button"
+              onClick={() => setModoOperacao('CHECKIN')}
+              className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                modoOperacao === 'CHECKIN'
+                  ? 'bg-emerald-950/40 border-emerald-500 shadow-glow-success ring-1 ring-emerald-500/50'
+                  : 'bg-surface-elevated/60 border-surface-border hover:border-surface-border/80 opacity-75 hover:opacity-100'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                    <Zap className="w-4 h-4" />
+                  </div>
+                  <span className="text-sm font-bold text-white">Apenas Check-in</span>
+                </div>
+                {modoOperacao === 'CHECKIN' && (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                )}
+              </div>
+              <p className="text-[11px] text-gray-300 mt-2">
+                Trabalho já foi finalizado. Salva nas <strong>Minhas OSs</strong> e despacha direto para o <strong>Testador (CQ)</strong>.
+              </p>
+            </button>
+
+            {/* Opção 2: Iniciar Cronômetro */}
+            <button
+              type="button"
+              onClick={() => setModoOperacao('CRONOMETRO')}
+              className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                modoOperacao === 'CRONOMETRO'
+                  ? 'bg-amber-950/40 border-amber-500 shadow-glow-primary ring-1 ring-amber-500/50'
+                  : 'bg-surface-elevated/60 border-surface-border hover:border-surface-border/80 opacity-75 hover:opacity-100'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                    <Timer className="w-4 h-4" />
+                  </div>
+                  <span className="text-sm font-bold text-white">Iniciar Produção</span>
+                </div>
+                {modoOperacao === 'CRONOMETRO' && (
+                  <CheckCircle2 className="w-5 h-5 text-amber-400" />
+                )}
+              </div>
+              <p className="text-[11px] text-gray-300 mt-2">
+                Vou executar este lote agora. Inicia o <strong>cronômetro ao vivo</strong> e exibe sua bancada em execução na TV.
+              </p>
+            </button>
+          </div>
+        </div>
 
         {/* ─── 1. CABEÇALHO DO APONTAMENTO (OS, DATA, HORÁRIO, CLIENTE) ──────── */}
         <div className="p-4 rounded-xl bg-surface-elevated/70 border border-surface-border space-y-3.5">

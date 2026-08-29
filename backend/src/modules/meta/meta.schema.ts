@@ -29,7 +29,15 @@ export type UpdateMetaConfigInput = z.infer<typeof UpdateMetaConfigSchema>;
 
 export const UpdateBonusSimulationSchema = z.object({
   faturamentoRecebido: z.number().min(0),
-  metaIndividualStatus: z.record(z.string(), z.boolean()).optional(), // { "colab-samuel": true, ... }
+  metaIndividualStatus: z.record(z.string(), z.boolean()).optional(),
 });
 
 export type UpdateBonusSimulationInput = z.infer<typeof UpdateBonusSimulationSchema>;
+
+export const ResetMetasSchema = z.object({
+  mesReferencia: z.number().int().min(1).max(12).optional(),
+  anoReferencia: z.number().int().min(2020).max(2050).optional(),
+  resetarTudo: z.boolean().optional(),
+});
+
+export type ResetMetasInput = z.infer<typeof ResetMetasSchema>;

@@ -313,27 +313,45 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
       };
     }
 
-    // 2. Calcular pontos produzidos/testados hoje por este técnico
+    // 2. Calcular indicadores e pontos produzidos/testados hoje por este colaborador
     let ptsHoje = 0;
+    let qtdTestadaHoje = 0;
+    let qtdAprovadaHoje = 0;
+    let retrabalhoHoje = 0;
+
     if (b.funcao.includes('Qualidade') || b.nome.toLowerCase().includes('rhyan')) {
       for (const t of testesHojeList) {
         const eqNome = (t as any).producao?.itemOrdemServico?.tipoEquipamento?.nome || '';
-        const qtd = t.quantidadeAprovada || t.quantidadeTestada || 1;
+        const qtdAprov = t.quantidadeAprovada || 0;
+        const qtdTest = t.quantidadeTestada || 1;
         const ptsUnit = getPontosUnitarios(eqNome);
-        ptsHoje += qtd * ptsUnit;
+        ptsHoje += (qtdAprov > 0 ? qtdAprov : qtdTest) * ptsUnit;
+        qtdTestadaHoje += qtdTest;
+        qtdAprovadaHoje += qtdAprov;
+        retrabalhoHoje += t.quantidadeReprovada || 0;
       }
     } else {
-      for (const fin of producoesFinalizadasHoje) {
-        const tId = fin.tecnicoId || fin.tecnico?.id;
-        const tNome = fin.tecnico?.nome;
+      for (const t of testesHojeList) {
+        const prod = (t as any).producao;
+        const tId = prod?.tecnicoId || prod?.tecnico?.id;
+        const tNome = prod?.tecnico?.nome || prod?.itemOrdemServico?.tecnicoAlocado?.nome;
         if (isTecnicoMatch(tId, tNome, b.id, b.nome) || isTecnicoMatch(tId, tNome, b.tecId, b.nome)) {
-          const eqNome = fin.itemOrdemServico?.tipoEquipamento?.nome || '';
-          const qtd = fin.quantidadeProduzida || 1;
+          const eqNome = prod?.itemOrdemServico?.tipoEquipamento?.nome || '';
+          const qtdAprov = t.quantidadeAprovada || 0;
           const ptsUnit = getPontosUnitarios(eqNome);
-          ptsHoje += qtd * ptsUnit;
+          if (qtdAprov > 0) {
+            ptsHoje += qtdAprov * ptsUnit;
+          }
+          qtdTestadaHoje += t.quantidadeTestada || 0;
+          qtdAprovadaHoje += qtdAprov;
+          retrabalhoHoje += t.quantidadeReprovada || 0;
         }
       }
     }
+
+    const taxaQualidadeHoje = qtdTestadaHoje > 0 
+      ? Number(((qtdAprovadaHoje / qtdTestadaHoje) * 100).toFixed(1)) 
+      : 100.0;
 
     return {
       tecnicoId: b.tecId,
@@ -342,6 +360,10 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
       status: ativa ? 'EM_PRODUCAO' : 'DISPONIVEL',
       producaoAtiva: producaoAtivaPayload,
       pontosHoje: Number(ptsHoje.toFixed(1)),
+      quantidadeTestadaHoje,
+      quantidadeAprovadaHoje,
+      retrabalhoHoje,
+      taxaQualidadeHoje,
     };
   });
 

@@ -18,17 +18,29 @@ export const ConfigMetaModal: React.FC<ConfigMetaModalProps> = ({
   currentData,
   onSuccess,
 }) => {
-  const [base, setBase] = useState(String(currentData.metaBase));
-  const [alvo, setAlvo] = useState(String(currentData.metaAlvo));
-  const [excelencia, setExcelencia] = useState(String(currentData.metaExcelencia));
-  const [isPiloto, setIsPiloto] = useState(currentData.isPeriodoPiloto);
+  const [base, setBase] = useState(String(currentData.metaBase || 250));
+  const [alvo, setAlvo] = useState(String(currentData.metaAlvo || 300));
+  const [excelencia, setExcelencia] = useState(String(currentData.metaExcelencia || 350));
+  const [isPiloto, setIsPiloto] = useState(Boolean(currentData.isPeriodoPiloto));
   const [pilotoMinima, setPilotoMinima] = useState('160');
   const [pilotoAlvo, setPilotoAlvo] = useState('190');
   const [pilotoExcelencia, setPilotoExcelencia] = useState('220');
-  const [retrabalhoMaximo, setRetrabalhoMaximo] = useState(String(currentData.limiteRetrabalhoPct));
-  const [fundoBonusPct, setFundoBonusPct] = useState(String(Number((currentData.percentualFundoBonus * 100).toFixed(1))));
+  const [retrabalhoMaximo, setRetrabalhoMaximo] = useState(String(currentData.limiteRetrabalhoPct || 5));
+  const [fundoBonusPct, setFundoBonusPct] = useState(String(Number(((currentData.percentualFundoBonus || 0.015) * 100).toFixed(1))));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (isOpen && currentData) {
+      setBase(String(currentData.metaBase || 250));
+      setAlvo(String(currentData.metaAlvo || 300));
+      setExcelencia(String(currentData.metaExcelencia || 350));
+      setIsPiloto(Boolean(currentData.isPeriodoPiloto));
+      setRetrabalhoMaximo(String(currentData.limiteRetrabalhoPct || 5));
+      setFundoBonusPct(String(Number(((currentData.percentualFundoBonus || 0.015) * 100).toFixed(1))));
+      setErrorMessage(null);
+    }
+  }, [isOpen, currentData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
