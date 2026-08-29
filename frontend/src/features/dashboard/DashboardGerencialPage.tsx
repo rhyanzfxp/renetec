@@ -9,7 +9,6 @@ import {
   DollarSign,
   Clock,
   ShieldCheck,
-  RotateCcw,
   Users,
   RefreshCw,
   Flame,
@@ -159,90 +158,6 @@ export const DashboardGerencialPage: React.FC = () => {
           variant="warning"
           icon={<Clock className="w-4 h-4" />}
         />
-      </div>
-
-      {/* ─── 3. DISTRIBUIÇÃO DE DEFEITOS & LEAD TIME POR EQUIPAMENTO ──────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Gráfico de Pareto de Defeitos */}
-        <div className="p-5 rounded-2xl bg-surface-card border border-surface-border space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <RotateCcw className="w-4 h-4 text-amber-400" /> Pareto de Não-Conformidades (CQ)
-              </h3>
-              <p className="text-xs text-gray-400 mt-0.5">
-                Principais causas de reprovação identificadas no período.
-              </p>
-            </div>
-            <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">
-              Taxa Retrabalho: {data.taxaRetrabalho}% (Dentro da meta)
-            </span>
-          </div>
-
-          <div className="space-y-3 pt-2">
-            {data.distribuicaoDefeitos.length === 0 || data.distribuicaoDefeitos.every((d) => d.quantidade === 0) ? (
-              <div className="p-6 rounded-xl bg-surface-base border border-surface-border text-center space-y-1 text-xs text-gray-400">
-                <ShieldCheck className="w-6 h-6 text-emerald-400 mx-auto" />
-                <p className="font-semibold text-gray-200">Nenhuma reprovação registrada no período.</p>
-                <p>Taxa de qualidade em 100% de conformidade com a meta.</p>
-              </div>
-            ) : (
-              data.distribuicaoDefeitos.map((def) => (
-                <div key={def.codigo} className="space-y-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-gray-200">
-                      <span className="text-amber-400 font-bold">{def.codigo}</span> — {def.motivo}
-                    </span>
-                    <span className="font-bold text-white tabular-nums">
-                      {def.quantidade} un ({def.percentual}%)
-                    </span>
-                  </div>
-                  <div className="h-2.5 w-full bg-surface-base rounded-full overflow-hidden border border-surface-border/50">
-                    <div
-                      className="h-full bg-gradient-to-r from-amber-500 to-red-500 rounded-full"
-                      style={{ width: `${def.percentual}%` }}
-                    />
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Lead Time Médio por Equipamento */}
-        <div className="p-5 rounded-2xl bg-surface-card border border-surface-border space-y-4">
-          <div>
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <Clock className="w-4 h-4 text-sky-400" /> Tabela de Equipamentos e Lead Time Médio
-            </h3>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Tempo médio despendido em bancada por tipo de produto e complexidade.
-            </p>
-          </div>
-
-          <div className="space-y-3 pt-2">
-            {data.leadTimePorEquipamento.map((eq) => (
-              <div key={eq.tipoEquipamentoNome} className="p-3 rounded-xl bg-surface-base border border-surface-border flex items-center justify-between text-xs">
-                <div>
-                  <h4 className="font-bold text-white flex items-center gap-2">
-                    {eq.tipoEquipamentoNome}
-                    {eq.pontosUnitarios && (
-                      <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 text-[10px] font-bold border border-amber-500/30">
-                        {eq.pontosUnitarios} pts
-                      </span>
-                    )}
-                  </h4>
-                  <p className="text-[11px] text-gray-400">{eq.quantidadeConcluida} unidades concluídas</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-base font-black text-sky-400 tabular-nums">
-                    {eq.tempoMedioMinutos} <span className="text-xs font-semibold text-gray-400">min</span>
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* ─── 4. RANKING DE PRODUTIVIDADE DOS TÉCNICOS ──────────────────────── */}

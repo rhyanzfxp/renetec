@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { metaApiService } from './meta.service';
 import type {
   MetaAtualData,
-  HistoricoMetaItem,
   TabelaPontuacaoItem,
   GuiaComoUsarItem,
 } from './meta.types';
@@ -19,7 +18,6 @@ import {
   Zap,
   Settings2,
   RefreshCw,
-  History,
   AlertTriangle,
   Award,
   DollarSign,
@@ -37,7 +35,6 @@ export const MetasPage: React.FC = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'bonus' | 'pontuacao' | 'guia'>('dashboard');
   const [data, setData] = useState<MetaAtualData | null>(null);
-  const [historico, setHistorico] = useState<HistoricoMetaItem[]>([]);
   const [tabelaPontuacao, setTabelaPontuacao] = useState<TabelaPontuacaoItem[]>([]);
   const [guiaComoUsar, setGuiaComoUsar] = useState<GuiaComoUsarItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -58,14 +55,12 @@ export const MetasPage: React.FC = () => {
   const loadData = useCallback(async () => {
     try {
       setErrorMessage(null);
-      const [metaData, histData, ptData, guiaData] = await Promise.all([
+      const [metaData, ptData, guiaData] = await Promise.all([
         metaApiService.getMetaAtual(),
-        metaApiService.getHistorico(),
         metaApiService.getTabelaPontuacao(),
         metaApiService.getGuiaComoUsar(),
       ]);
       setData(metaData);
-      setHistorico(histData);
       setTabelaPontuacao(ptData);
       setGuiaComoUsar(guiaData);
       // Pré-preenche apenas na primeira carga — jamais sobrescreve edições do usuário
@@ -916,77 +911,6 @@ export const MetasPage: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* ─── HISTÓRICO DE METAS DOS MESES ANTERIORES ────────────────────────── */}
-      <div className="p-5 rounded-2xl bg-surface-card border border-surface-border space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <History className="w-4 h-4 text-brand-400" /> Histórico de Metas e Cumprimento ({data.anoReferencia})
-            </h3>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Consolidado dos meses anteriores da fábrica Renetec.
-            </p>
-          </div>
-          <Button variant="ghost" size="sm" onClick={loadData} leftIcon={<RefreshCw className="w-3.5 h-3.5" />}>
-            Atualizar
-          </Button>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
-            <thead className="bg-surface-elevated/60 text-gray-400 font-semibold border-b border-surface-border">
-              <tr>
-                <th className="py-2.5 px-3">Mês / Ano</th>
-                <th className="py-2.5 px-3 text-right">Meta Base</th>
-                <th className="py-2.5 px-3 text-right">Meta Alvo</th>
-                <th className="py-2.5 px-3 text-right">Meta Excelência</th>
-                <th className="py-2.5 px-3 text-right">Pontos Realizados</th>
-                <th className="py-2.5 px-3 text-center">Status Atingido</th>
-                <th className="py-2.5 px-3 text-right">Bônus Rateado</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-surface-border">
-              {historico.map((h, i) => {
-                const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-                return (
-                  <tr key={i} className="hover:bg-surface-elevated/30 transition-colors">
-                    <td className="py-3 px-3 font-bold text-white">
-                      {meses[h.mes - 1]} / {h.ano}
-                    </td>
-                    <td className="py-3 px-3 text-right text-amber-300 font-medium tabular-nums">{h.metaBase} pts</td>
-                    <td className="py-3 px-3 text-right text-emerald-300 font-medium tabular-nums">{h.metaAlvo} pts</td>
-                    <td className="py-3 px-3 text-right text-yellow-400 font-bold tabular-nums">{h.metaExcelencia} pts</td>
-                    <td className="py-3 px-3 text-right font-black text-white tabular-nums">
-                      {h.pontosRealizados} pts
-                    </td>
-                    <td className="py-3 px-3 text-center">
-                      {h.atingido === 'META_EXCELENCIA' && (
-                        <span className="px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-300 font-bold border border-yellow-500/40">
-                          🏆 EXCELÊNCIA
-                        </span>
-                      )}
-                      {h.atingido === 'META_ALVO' && (
-                        <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40">
-                          🟢 ALVO
-                        </span>
-                      )}
-                      {h.atingido === 'META_BASE' && (
-                        <span className="px-2 py-0.5 rounded bg-amber-900/40 text-amber-300 font-bold border border-amber-600/40">
-                          🟡 BASE
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3 px-3 text-right font-bold text-emerald-400 tabular-nums">
-                      {formatBRL(h.bonusDistribuido)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
 
       {/* Modal de Configuração de Metas (Admin) */}
       <ConfigMetaModal
