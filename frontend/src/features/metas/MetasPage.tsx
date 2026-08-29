@@ -45,6 +45,7 @@ export const MetasPage: React.FC = () => {
 
   // Estados do Simulador de Bônus
   const [simuladorFaturamento, setSimuladorFaturamento] = useState<string>('');
+  const [cenarioSimulacao, setCenarioSimulacao] = useState<'ALVO' | 'EXCELENCIA' | 'BASE' | 'REAL'>('ALVO');
   const [isUpdatingBonus, setIsUpdatingBonus] = useState(false);
   const [bonusFeedback, setBonusFeedback] = useState<string | null>(null);
 
@@ -619,216 +620,304 @@ export const MetasPage: React.FC = () => {
       )}
 
       {/* ─── ABA 2: SIMULADOR E DISTRIBUIÇÃO DE BÔNUS (EXCLUSIVO ADMIN) ───── */}
-      {user?.perfil === 'ADMIN' && activeTab === 'bonus' && (
-        <div className="space-y-6 animate-fadeIn">
-          {/* Formulário de Simulação de Faturamento */}
-          <div className="p-5 rounded-2xl bg-surface-card border border-surface-border space-y-4 shadow-xl">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-base font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                  <Calculator className="w-5 h-5 text-emerald-400" /> Simulador e Gestão do Fundo de Bônus
-                </h3>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  Informe o faturamento recebido no mês para simular e ratear o fundo de 1,5% conforme as regras da planilha.
-                </p>
-              </div>
+      {user?.perfil === 'ADMIN' && activeTab === 'bonus' && (() => {
+        const numFaturamento = (() => {
+          if (!simuladorFaturamento) return data.faturamentoBaseCalculo || 0;
+          const cl = simuladorFaturamento.trim().replace(/^R\$\s?/, '').replace(/\./g, '').replace(',', '.');
+          const val = parseFloat(cl);
+          return isNaN(val) ? (data.faturamentoBaseCalculo || 0) : val;
+        })();
 
-              {bonusFeedback && (
-                <div className="px-3 py-1.5 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-xs text-emerald-300 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>{bonusFeedback}</span>
+        const fundoPotencialSimulado = Number((numFaturamento * 0.015).toFixed(2));
+        const multSimulado = cenarioSimulacao === 'ALVO'
+          ? 1.0
+          : cenarioSimulacao === 'EXCELENCIA'
+          ? 1.25
+          : cenarioSimulacao === 'BASE'
+          ? 0.5
+          : data.multiplicadorBonus;
+
+        const bonusFinalSimulado = Number((fundoPotencialSimulado * multSimulado).toFixed(2));
+        const parteColetivaSimulada = Number((bonusFinalSimulado * 0.70).toFixed(2));
+        const parteIndividualSimulada = Number((bonusFinalSimulado * 0.30).toFixed(2));
+
+        return (
+          <div className="space-y-6 animate-fadeIn">
+            {/* Formulário de Simulação de Faturamento */}
+            <div className="p-5 rounded-2xl bg-surface-card border border-surface-border space-y-4 shadow-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-base font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    <Calculator className="w-5 h-5 text-emerald-400" /> Simulador e Gestão do Fundo de Bônus
+                  </h3>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Informe o faturamento recebido e selecione o cenário de atingimento para simular o rateio do fundo (1,5%).
+                  </p>
                 </div>
-              )}
-            </div>
 
-            <form onSubmit={handleSimularFaturamento} className="flex flex-col sm:flex-row items-end gap-3 pt-2">
-              <div className="w-full sm:w-72 space-y-1">
-                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wide">
-                  Faturamento Recebido no Mês (R$)
+                {bonusFeedback && (
+                  <div className="px-3 py-1.5 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-xs text-emerald-300 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>{bonusFeedback}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Seletor de Cenário de Simulação */}
+              <div className="space-y-1.5 pt-1">
+                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                  Cenário de Atingimento da Meta para Simulação:
                 </label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={simuladorFaturamento}
-                  onChange={(e) => {
-                    // Aceita apenas números, ponto e vírgula — permite campo vazio
-                    const v = e.target.value.replace(/[^0-9.,]/g, '');
-                    setSimuladorFaturamento(v);
-                  }}
-                  placeholder="Ex: 220000.00"
-                  className="w-full bg-surface-base border border-surface-border rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500 font-bold tabular-nums"
-                  required
-                />
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCenarioSimulacao('ALVO')}
+                    className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all flex flex-col items-center justify-center gap-0.5 cursor-pointer ${
+                      cenarioSimulacao === 'ALVO'
+                        ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 shadow-glow-primary'
+                        : 'bg-surface-base border-surface-border text-gray-400 hover:text-white hover:bg-surface-elevated'
+                    }`}
+                  >
+                    <span>🎯 Meta Alvo (100%)</span>
+                    <span className="text-[10px] font-mono opacity-80">Multiplicador 1,0x</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCenarioSimulacao('EXCELENCIA')}
+                    className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all flex flex-col items-center justify-center gap-0.5 cursor-pointer ${
+                      cenarioSimulacao === 'EXCELENCIA'
+                        ? 'bg-yellow-500/20 border-yellow-400 text-yellow-300 shadow-glow-primary'
+                        : 'bg-surface-base border-surface-border text-gray-400 hover:text-white hover:bg-surface-elevated'
+                    }`}
+                  >
+                    <span>🏆 Excelência (110%+)</span>
+                    <span className="text-[10px] font-mono opacity-80">Multiplicador 1,25x</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCenarioSimulacao('BASE')}
+                    className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all flex flex-col items-center justify-center gap-0.5 cursor-pointer ${
+                      cenarioSimulacao === 'BASE'
+                        ? 'bg-amber-500/20 border-amber-400 text-amber-300 shadow-glow-primary'
+                        : 'bg-surface-base border-surface-border text-gray-400 hover:text-white hover:bg-surface-elevated'
+                    }`}
+                  >
+                    <span>🟡 Meta Base (90%)</span>
+                    <span className="text-[10px] font-mono opacity-80">Multiplicador 0,5x</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCenarioSimulacao('REAL')}
+                    className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all flex flex-col items-center justify-center gap-0.5 cursor-pointer ${
+                      cenarioSimulacao === 'REAL'
+                        ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-glow-primary'
+                        : 'bg-surface-base border-surface-border text-gray-400 hover:text-white hover:bg-surface-elevated'
+                    }`}
+                  >
+                    <span>📊 Real Atual ({data.percentualAlvo}%)</span>
+                    <span className="text-[10px] font-mono opacity-80">Multiplicador {data.multiplicadorBonus}x</span>
+                  </button>
+                </div>
               </div>
 
-              <Button
-                type="submit"
-                variant="primary"
-                size="md"
-                isLoading={isUpdatingBonus}
-                leftIcon={<DollarSign className="w-4 h-4" />}
-              >
-                Calcular Bônus
-              </Button>
-            </form>
-          </div>
+              <form onSubmit={handleSimularFaturamento} className="flex flex-col sm:flex-row items-end gap-3 pt-2">
+                <div className="w-full sm:w-80 space-y-1">
+                  <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wide">
+                    Faturamento Recebido no Mês (R$)
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={simuladorFaturamento}
+                    onChange={(e) => {
+                      const v = e.target.value.replace(/[^0-9.,]/g, '');
+                      setSimuladorFaturamento(v);
+                    }}
+                    placeholder="Ex: 3000000.00"
+                    className="w-full bg-surface-base border border-surface-border rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500 font-bold tabular-nums"
+                    required
+                  />
+                </div>
 
-          {/* Cards de Métricas do Bônus */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <div className="p-4 rounded-2xl bg-surface-card border border-surface-border space-y-1">
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                Fundo Potencial (1,5%)
-              </span>
-              <div className="text-2xl font-black text-white tabular-nums">
-                {formatBRL(data.fundoPotencial)}
-              </div>
-              <p className="text-[11px] text-gray-400">1,5% do faturamento recebido</p>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="md"
+                  isLoading={isUpdatingBonus}
+                  leftIcon={<DollarSign className="w-4 h-4" />}
+                >
+                  Salvar Faturamento
+                </Button>
+              </form>
             </div>
 
-            <div className="p-4 rounded-2xl bg-surface-card border border-surface-border space-y-1">
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                Multiplicador Atingido
-              </span>
-              <div className="text-2xl font-black text-amber-300 tabular-nums">
-                {data.multiplicadorBonus}x
+            {/* Cards de Métricas do Bônus Simulado */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              <div className="p-4 rounded-2xl bg-surface-card border border-surface-border space-y-1">
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                  Fundo Potencial (1,5%)
+                </span>
+                <div className="text-2xl font-black text-white tabular-nums">
+                  {formatBRL(fundoPotencialSimulado)}
+                </div>
+                <p className="text-[11px] text-gray-400">1,5% de {formatBRL(numFaturamento)}</p>
               </div>
-              <p className="text-[11px] text-gray-400">
-                {data.percentualAlvo}% da Meta Alvo ({data.metaAlvo} pts)
-              </p>
-            </div>
 
-            <div className="p-4 rounded-2xl bg-surface-card border border-surface-border space-y-1">
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                Parte Coletiva (70%)
-              </span>
-              <div className="text-2xl font-black text-sky-400 tabular-nums">
-                {formatBRL(data.parteColetivaTotal)}
-              </div>
-              <p className="text-[11px] text-gray-400">Distribuída a toda equipe</p>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-surface-card border border-surface-border space-y-1">
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                Parte Individual (30%)
-              </span>
-              <div className="text-2xl font-black text-emerald-400 tabular-nums">
-                {formatBRL(data.parteIndividualTotal)}
-              </div>
-              <p className="text-[11px] text-gray-400">Condicionada à meta individual</p>
-            </div>
-          </div>
-
-          {/* Tabela de Distribuição do Bônus por Colaborador */}
-          <div className="p-5 rounded-2xl bg-surface-card border border-surface-border space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-emerald-400" /> Distribuição de Bônus por Colaborador
-                </h3>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  Rateio proporcional aos pesos cadastrados na planilha Renetec.
+              <div className="p-4 rounded-2xl bg-surface-card border border-surface-border space-y-1">
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                  Multiplicador Simulado
+                </span>
+                <div className="text-2xl font-black text-amber-300 tabular-nums">
+                  {multSimulado}x
+                </div>
+                <p className="text-[11px] text-gray-400">
+                  Cenário: {cenarioSimulacao === 'ALVO' ? 'Meta Alvo (100%)' : cenarioSimulacao === 'EXCELENCIA' ? 'Excelência (110%+)' : cenarioSimulacao === 'BASE' ? 'Meta Base (90%)' : 'Real Atual'}
                 </p>
               </div>
-              <span className="text-xs text-gray-400 font-medium">
-                Bônus Final Total: <strong className="text-emerald-400">{formatBRL(data.bonusFinal)}</strong>
-              </span>
+
+              <div className="p-4 rounded-2xl bg-surface-card border border-surface-border space-y-1">
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                  Parte Coletiva (70%)
+                </span>
+                <div className="text-2xl font-black text-sky-400 tabular-nums">
+                  {formatBRL(parteColetivaSimulada)}
+                </div>
+                <p className="text-[11px] text-gray-400">70% do bônus final rateado</p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-surface-card border border-surface-border space-y-1">
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                  Parte Individual (30%)
+                </span>
+                <div className="text-2xl font-black text-emerald-400 tabular-nums">
+                  {formatBRL(parteIndividualSimulada)}
+                </div>
+                <p className="text-[11px] text-gray-400">30% condicionado à meta individual</p>
+              </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left">
-                <thead className="bg-surface-elevated/60 text-gray-400 font-semibold border-b border-surface-border">
-                  <tr>
-                    <th className="py-2.5 px-3">Pessoa</th>
-                    <th className="py-2.5 px-3">Função</th>
-                    <th className="py-2.5 px-3 text-center">Peso</th>
-                    <th className="py-2.5 px-3 text-right">Bônus Coletivo (70%)</th>
-                    <th className="py-2.5 px-3 text-right">Bônus Individual (30%)</th>
-                    <th className="py-2.5 px-3 text-right">Bônus Total</th>
-                    <th className="py-2.5 px-3 text-center">Meta Individual Cumprida?</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-surface-border">
-                  {data.equipe.map((c) => (
-                    <tr key={c.id} className="hover:bg-surface-elevated/30 transition-colors">
-                      <td className="py-3 px-3 font-bold text-white flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                        {c.nome}
-                      </td>
-                      <td className="py-3 px-3 text-gray-300">{c.funcao}</td>
-                      <td className="py-3 px-3 text-center font-semibold text-gray-300">
-                        {c.pesoBonusPercentual}%
-                      </td>
-                      <td className="py-3 px-3 text-right font-medium text-sky-300 tabular-nums">
-                        {formatBRL(c.bonusColetivo)}
-                      </td>
-                      <td className="py-3 px-3 text-right font-medium text-emerald-300 tabular-nums">
-                        {formatBRL(c.bonusIndividual)}
-                      </td>
-                      <td className="py-3 px-3 text-right font-black text-white tabular-nums text-sm">
-                        {formatBRL(c.bonusTotal)}
-                      </td>
-                      <td className="py-3 px-3 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleMetaIndividual(c.id, c.metaIndividualCumprida)}
-                          disabled={user?.perfil !== 'ADMIN'}
-                          className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
-                            c.metaIndividualCumprida
-                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
-                              : 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30'
-                          }`}
-                        >
-                          {c.metaIndividualCumprida ? '✓ Sim' : '✕ Não'}
-                        </button>
-                      </td>
+            {/* Tabela de Distribuição do Bônus por Colaborador */}
+            <div className="p-5 rounded-2xl bg-surface-card border border-surface-border space-y-4 shadow-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-emerald-400" /> Distribuição de Bônus por Colaborador
+                  </h3>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Rateio proporcional aos pesos oficiais cadastrados na planilha Renetec.
+                  </p>
+                </div>
+                <div className="px-3 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-gray-300">
+                  Bônus Final Simulado: <strong className="text-emerald-400 font-mono text-sm ml-1">{formatBRL(bonusFinalSimulado)}</strong>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-surface-elevated/60 text-gray-400 font-semibold border-b border-surface-border">
+                    <tr>
+                      <th className="py-2.5 px-3">Pessoa</th>
+                      <th className="py-2.5 px-3">Função</th>
+                      <th className="py-2.5 px-3 text-center">Peso</th>
+                      <th className="py-2.5 px-3 text-right">Bônus Coletivo (70%)</th>
+                      <th className="py-2.5 px-3 text-right">Bônus Individual (30%)</th>
+                      <th className="py-2.5 px-3 text-right font-bold text-white">Bônus Total</th>
+                      <th className="py-2.5 px-3 text-center">Meta Individual Cumprida?</th>
                     </tr>
-                  ))}
-                  <tr className="bg-surface-elevated/80 font-bold text-white border-t-2 border-surface-border">
-                    <td className="py-2.5 px-3">Total Distribuído</td>
-                    <td className="py-2.5 px-3 text-gray-400">—</td>
-                    <td className="py-2.5 px-3 text-center">100%</td>
-                    <td className="py-2.5 px-3 text-right text-sky-300 tabular-nums font-black">
-                      {formatBRL(data.parteColetivaTotal)}
-                    </td>
-                    <td className="py-2.5 px-3 text-right text-emerald-300 tabular-nums font-black">
-                      {formatBRL(data.parteIndividualTotal)}
-                    </td>
-                    <td className="py-2.5 px-3 text-right text-yellow-400 tabular-nums font-black text-sm">
-                      {formatBRL(data.bonusFinal)}
-                    </td>
-                    <td className="py-2.5 px-3 text-center text-gray-400">—</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+                  </thead>
+                  <tbody className="divide-y divide-surface-border">
+                    {data.equipe.map((c) => {
+                      const pesoFrac = c.pesoBonusPercentual / 100;
+                      const colColetivo = Number((parteColetivaSimulada * pesoFrac).toFixed(2));
+                      const colIndividual = c.metaIndividualCumprida ? Number((parteIndividualSimulada * pesoFrac).toFixed(2)) : 0;
+                      const colTotal = Number((colColetivo + colIndividual).toFixed(2));
 
-          {/* Regras do Multiplicador Explicadas */}
-          <div className="p-4 rounded-2xl bg-surface-elevated/40 border border-surface-border space-y-2 text-xs text-gray-300">
-            <h4 className="font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-              <HelpCircle className="w-4 h-4 text-brand-400" /> Tabela de Escalonamento do Multiplicador de Bônus:
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-1">
-              <div className="p-2.5 rounded-lg bg-surface-card border border-surface-border">
-                <span className="font-bold text-rose-400">Abaixo de 90%</span>
-                <p className="text-gray-400 mt-0.5">Multiplicador: <strong className="text-white">0x (0%)</strong></p>
+                      return (
+                        <tr key={c.id} className="hover:bg-surface-elevated/30 transition-colors">
+                          <td className="py-3 px-3 font-bold text-white flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                            {c.nome}
+                          </td>
+                          <td className="py-3 px-3 text-gray-300">{c.funcao}</td>
+                          <td className="py-3 px-3 text-center font-bold text-gray-200">
+                            {c.pesoBonusPercentual}%
+                          </td>
+                          <td className="py-3 px-3 text-right font-medium text-sky-300 tabular-nums font-mono">
+                            {formatBRL(colColetivo)}
+                          </td>
+                          <td className="py-3 px-3 text-right font-medium text-emerald-300 tabular-nums font-mono">
+                            {formatBRL(colIndividual)}
+                          </td>
+                          <td className="py-3 px-3 text-right font-black text-amber-300 tabular-nums text-sm font-mono">
+                            {formatBRL(colTotal)}
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleMetaIndividual(c.id, c.metaIndividualCumprida)}
+                              disabled={user?.perfil !== 'ADMIN'}
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
+                                c.metaIndividualCumprida
+                                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
+                                  : 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30'
+                              }`}
+                            >
+                              {c.metaIndividualCumprida ? '✓ Sim' : '✕ Não'}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    <tr className="bg-surface-elevated/80 font-bold text-white border-t-2 border-surface-border">
+                      <td className="py-2.5 px-3">Total Distribuído</td>
+                      <td className="py-2.5 px-3 text-gray-400">—</td>
+                      <td className="py-2.5 px-3 text-center font-bold">100%</td>
+                      <td className="py-2.5 px-3 text-right text-sky-300 tabular-nums font-black font-mono">
+                        {formatBRL(parteColetivaSimulada)}
+                      </td>
+                      <td className="py-2.5 px-3 text-right text-emerald-300 tabular-nums font-black font-mono">
+                        {formatBRL(parteIndividualSimulada)}
+                      </td>
+                      <td className="py-2.5 px-3 text-right text-amber-400 tabular-nums font-black text-sm font-mono">
+                        {formatBRL(bonusFinalSimulado)}
+                      </td>
+                      <td className="py-2.5 px-3 text-center text-gray-400">—</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
-              <div className="p-2.5 rounded-lg bg-surface-card border border-surface-border">
-                <span className="font-bold text-amber-400">90% a 99,9%</span>
-                <p className="text-gray-400 mt-0.5">Multiplicador: <strong className="text-white">0,5x (50%)</strong></p>
-              </div>
-              <div className="p-2.5 rounded-lg bg-surface-card border border-surface-border">
-                <span className="font-bold text-emerald-400">100% a 109,9%</span>
-                <p className="text-gray-400 mt-0.5">Multiplicador: <strong className="text-white">1,0x (100%)</strong></p>
-              </div>
-              <div className="p-2.5 rounded-lg bg-surface-card border border-surface-border">
-                <span className="font-bold text-yellow-400">A partir de 110%</span>
-                <p className="text-gray-400 mt-0.5">Multiplicador: <strong className="text-white">1,25x (125%)</strong></p>
+            </div>
+
+            {/* Regras do Multiplicador Explicadas */}
+            <div className="p-4 rounded-2xl bg-surface-elevated/40 border border-surface-border space-y-2 text-xs text-gray-300">
+              <h4 className="font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <HelpCircle className="w-4 h-4 text-brand-400" /> Tabela de Escalonamento do Multiplicador de Bônus Oficial:
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-1">
+                <div className="p-2.5 rounded-lg bg-surface-card border border-surface-border">
+                  <span className="font-bold text-rose-400">Abaixo de 90%</span>
+                  <p className="text-gray-400 mt-0.5">Multiplicador: <strong className="text-white">0x (0%)</strong></p>
+                </div>
+                <div className="p-2.5 rounded-lg bg-surface-card border border-surface-border">
+                  <span className="font-bold text-amber-400">90% a 99,9%</span>
+                  <p className="text-gray-400 mt-0.5">Multiplicador: <strong className="text-white">0,5x (50%)</strong></p>
+                </div>
+                <div className="p-2.5 rounded-lg bg-surface-card border border-surface-border">
+                  <span className="font-bold text-emerald-400">100% a 109,9%</span>
+                  <p className="text-gray-400 mt-0.5">Multiplicador: <strong className="text-white">1,0x (100%)</strong></p>
+                </div>
+                <div className="p-2.5 rounded-lg bg-surface-card border border-surface-border">
+                  <span className="font-bold text-yellow-400">A partir de 110%</span>
+                  <p className="text-gray-400 mt-0.5">Multiplicador: <strong className="text-white">1,25x (125%)</strong></p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ─── ABA 3: TABELA OFICIAL DE PONTUAÇÃO (EXCLUSIVO ADMIN) ─────────── */}
       {user?.perfil === 'ADMIN' && activeTab === 'pontuacao' && (
