@@ -1,5 +1,5 @@
-import React from 'react';
-import { LogOut, User as UserIcon, Menu } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { LogOut, User as UserIcon, Menu, Clock } from 'lucide-react';
 import { useAuth } from '../features/auth/AuthContext';
 import { StatusBadge } from '../components/ui/StatusBadge';
 
@@ -9,6 +9,19 @@ interface AppHeaderProps {
 
 export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar }) => {
   const { user, logout } = useAuth();
+  const [currentTime, setCurrentTime] = useState('');
+
+  useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      setCurrentTime(
+        now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      );
+    };
+    update();
+    const timer = setInterval(update, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <header className="h-16 border-b border-surface-border bg-surface-card/90 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between sticky top-0 z-40">
@@ -42,6 +55,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar }) => {
           </div>
         </div>
       </div>
+
+      {/* Centro: Relógio em tempo real */}
+      {currentTime && (
+        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-elevated border border-surface-border/60 select-none">
+          <Clock className="w-3.5 h-3.5 text-brand-400" />
+          <span className="text-sm font-bold tabular-nums text-white tracking-widest font-mono">
+            {currentTime}
+          </span>
+        </div>
+      )}
 
       {/* Lado Direito: Informações do Usuário e Logout */}
       <div className="flex items-center gap-3 sm:gap-4">
