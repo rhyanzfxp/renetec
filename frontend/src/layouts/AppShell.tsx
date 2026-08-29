@@ -26,6 +26,16 @@ export const AppShell: React.FC = () => {
     return 'dashboard';
   });
 
+  // Garante que a seção ativa respeita as permissões do perfil atual
+  React.useEffect(() => {
+    if (!user) return;
+    if (user.perfil === 'QUALIDADE' && (activeSection === 'producao' || activeSection === 'minhas_os' || activeSection === 'retrabalho')) {
+      setActiveSection('fila_testes');
+    } else if (user.perfil === 'TECNICO' && (activeSection === 'fila_testes' || activeSection === 'auditoria')) {
+      setActiveSection('producao');
+    }
+  }, [user?.perfil]);
+
   const getSectionTitle = () => {
     if (activeSection === 'tv_fabrica') return 'Painel de Chão de Fábrica (Modo TV)';
     if (activeSection === 'dashboard') return 'Dashboard Executivo & Gerencial';

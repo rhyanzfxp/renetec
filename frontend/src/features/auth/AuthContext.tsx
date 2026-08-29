@@ -21,10 +21,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (storedToken && storedUser) {
       try {
-        const parsedUser = JSON.parse(storedUser);
-        // Otimisticamente hidrata o estado para não piscar a tela
-        setToken(storedToken);
-        setUser(parsedUser);
+        const parsed = JSON.parse(storedUser);
+        const validUser: User = parsed?.user ? parsed.user : parsed;
+        if (validUser && validUser.id && validUser.perfil) {
+          setToken(storedToken);
+          setUser(validUser);
+        }
 
         // Valida o token com o servidor em background
         api
@@ -32,25 +34,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             headers: { Authorization: `Bearer ${storedToken}` },
           })
           .then((res) => {
-            if (res.data?.success && res.data?.data) {
-              // Atualiza dados do usuário com a versão fresca do servidor
-              const freshUser = res.data.data;
+            const freshUser = res.data?.data?.user || res.data?.data;
+            if (freshUser && freshUser.id && freshUser.perfil) {
               setUser(freshUser);
               localStorage.setItem('@renetec:user', JSON.stringify(freshUser));
-            } else {
-              // Resposta inesperada – limpa sessão
+            }
+          })
+          .catch((err) => {
+            // Apenas limpa a sessão se o token for explicitamente rejeitado pelo servidor (401 / 403)
+            // Se for oscilação de rede ou cold-start, preserva a sessão salva no navegador!
+            if (err?.response?.status === 401 || err?.response?.status === 403) {
               setUser(null);
               setToken(null);
               localStorage.removeItem('@renetec:token');
               localStorage.removeItem('@renetec:user');
             }
-          })
-          .catch(() => {
-            // Token inválido ou expirado – força logout
-            setUser(null);
-            setToken(null);
-            localStorage.removeItem('@renetec:token');
-            localStorage.removeItem('@renetec:user');
           });
       } catch {
         localStorage.removeItem('@renetec:token');
@@ -64,11 +62,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, senha: string) => {
     const response = await api.post('/auth/login', { email, senha });
     if (response.data?.success) {
-      const { user: userData, accessToken } = response.data.data;
-      setUser(userData);
-      setToken(accessToken);
-      localStorage.setItem('@renetec:token', accessToken);
-      localStorage.setItem('@renetec:user', JSON.stringify(userData));
+      const userData = response.data.data?.user || response.data.data;
+      const accessToken = response.data.data?.accessToken;
+      if (userData && accessToken) {
+        setUser(userData);
+        setToken(accessToken);
+        localStorage.setItem('@renetec:token', accessToken);
+        localStorage.setItem('@renetec:user', JSON.stringify(userData));
+      }
     }
   };
 

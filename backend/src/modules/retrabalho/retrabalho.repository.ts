@@ -60,11 +60,10 @@ export async function getRetrabalhosPendentes(tecnicoId?: string) {
     const where: any = {
       status: { in: ['PENDENTE', 'EM_EXECUCAO'] },
     };
-    if (tecnicoId) {
+    if (tecnicoId && aliasIds.length > 0) {
       where.OR = [
         { tecnicoResponsavelId: { in: aliasIds } },
-        { tecnicoResponsavelId: null },
-        { tecnicoResponsavel: { nome: { contains: tecnicoId.replace(/usr-|colab-/g, ''), mode: 'insensitive' } } },
+        { itemOrdemServico: { tecnicoAlocadoId: { in: aliasIds } } },
       ];
     }
 
@@ -75,6 +74,7 @@ export async function getRetrabalhosPendentes(tecnicoId?: string) {
         tecnicoResponsavel: { select: { id: true, nome: true } },
         itemOrdemServico: {
           include: {
+            tecnicoAlocado: { select: { id: true, nome: true } },
             ordemServico: {
               select: {
                 id: true,

@@ -19,45 +19,62 @@ export const USUARIOS_CONHECIDOS = [
  */
 export async function getTecnicoAliasIds(tecnicoIdOrNome: string): Promise<string[]> {
   const ids = new Set<string>();
-  if (tecnicoIdOrNome) ids.add(tecnicoIdOrNome);
-
-  const norm = (tecnicoIdOrNome || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-
-  const matched = USUARIOS_CONHECIDOS.find((u) => {
-    const nomeNorm = u.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    return u.id === tecnicoIdOrNome || u.tecId === tecnicoIdOrNome || norm.includes(nomeNorm) || (norm.length > 2 && nomeNorm.includes(norm));
-  });
-
-  if (matched) {
-    ids.add(matched.id);
-    if (matched.tecId) ids.add(matched.tecId);
-  }
+  if (!tecnicoIdOrNome) return [];
+  ids.add(tecnicoIdOrNome);
 
   if (isDatabaseReady()) {
     try {
-      const orConditions: any[] = [];
+      let dbUser = null;
       if (isValidUuid(tecnicoIdOrNome)) {
-        orConditions.push({ id: tecnicoIdOrNome });
+        dbUser = await prisma.usuario.findUnique({ where: { id: tecnicoIdOrNome } });
       }
-      if (matched) {
-        orConditions.push({ email: matched.email });
-        orConditions.push({ nome: { contains: matched.nome, mode: 'insensitive' } });
-      } else if (tecnicoIdOrNome) {
-        orConditions.push({ nome: { contains: tecnicoIdOrNome.replace(/usr-|colab-/g, ''), mode: 'insensitive' } });
+      if (!dbUser) {
+        const clean = tecnicoIdOrNome.replace(/usr-|colab-/g, '');
+        dbUser = await prisma.usuario.findFirst({
+          where: {
+            OR: [
+              { email: { contains: clean, mode: 'insensitive' } },
+              { nome: { contains: clean, mode: 'insensitive' } },
+            ],
+          },
+        });
       }
 
-      if (orConditions.length > 0) {
-        const dbUsers = await prisma.usuario.findMany({
-          where: { OR: orConditions },
-          select: { id: true },
+      if (dbUser) {
+        ids.add(dbUser.id);
+        const normDbNome = dbUser.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+        const matched = USUARIOS_CONHECIDOS.find((u) => {
+          const uNomeNorm = u.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+          return (
+            u.email.toLowerCase() === dbUser.email.toLowerCase() ||
+            normDbNome.includes(uNomeNorm) ||
+            uNomeNorm.includes(normDbNome)
+          );
         });
-        for (const u of dbUsers) {
-          ids.add(u.id);
+        if (matched) {
+          ids.add(matched.id);
+          if (matched.tecId) ids.add(matched.tecId);
         }
       }
     } catch {
       // ignore
     }
+  }
+
+  // Também checa USUARIOS_CONHECIDOS diretamente pelo parâmetro
+  const norm = tecnicoIdOrNome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const matched = USUARIOS_CONHECIDOS.find((u) => {
+    const nomeNorm = u.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return (
+      u.id === tecnicoIdOrNome ||
+      u.tecId === tecnicoIdOrNome ||
+      norm.includes(nomeNorm) ||
+      (norm.length > 2 && nomeNorm.includes(norm))
+    );
+  });
+  if (matched) {
+    ids.add(matched.id);
+    if (matched.tecId) ids.add(matched.tecId);
   }
 
   return Array.from(ids);
