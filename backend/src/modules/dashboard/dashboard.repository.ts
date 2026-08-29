@@ -121,24 +121,30 @@ function isTecnicoMatch(tId1?: string | null, tNome1?: string | null, tId2?: str
   if (tId1 && tId2 && tId1.toLowerCase() === tId2.toLowerCase()) return true;
   if (tId1 && tId2 && (tId1.includes(tId2) || tId2.includes(tId1))) return true;
 
+  // Normalização de primeiro nome
+  const getPrimeiroNome = (n?: string | null) => {
+    if (!n) return '';
+    return n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().split(/\s+/)[0];
+  };
+
+  const p1 = getPrimeiroNome(tNome1);
+  const p2 = getPrimeiroNome(tNome2);
+
+  // Match exato por primeiro nome (ex: "joao" === "joao", "joas" === "joas")
+  if (p1 && p2 && p1 === p2) return true;
+
   // Match por nome normalizado
   if (tNome1 && tNome2) {
     const n1 = tNome1.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
     const n2 = tNome2.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-    if (n1.includes(n2) || n2.includes(n1)) return true;
+    if (n1 === n2 || n1.includes(n2) || n2.includes(n1)) return true;
   }
 
-  // ID vs Nome normalizado
-  if (tId1 && tNome2) {
-    const idNorm = tId1.toLowerCase().replace(/[^a-z]/g, '');
-    const nomeNorm = tNome2.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
-    if (idNorm.includes(nomeNorm) || nomeNorm.includes(idNorm)) return true;
-  }
-  if (tId2 && tNome1) {
-    const idNorm = tId2.toLowerCase().replace(/[^a-z]/g, '');
-    const nomeNorm = tNome1.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
-    if (idNorm.includes(nomeNorm) || nomeNorm.includes(idNorm)) return true;
-  }
+  // ID vs Nome normalizado (ex: colab-joao vs João, usr-tecnico-01 vs João)
+  const normId1 = (tId1 || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const normId2 = (tId2 || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (p2 && normId1.includes(p2)) return true;
+  if (p1 && normId2.includes(p1)) return true;
 
   return false;
 }
@@ -214,6 +220,7 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
               include: {
                 ordemServico: { include: { cliente: true } },
                 tipoEquipamento: true,
+                tecnicoAlocado: true,
               },
             },
             tecnico: true,
@@ -227,7 +234,7 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
           },
           include: {
             itemOrdemServico: {
-              include: { tipoEquipamento: true },
+              include: { tipoEquipamento: true, tecnicoAlocado: true, ordemServico: { include: { cliente: true } } },
             },
             tecnico: true,
           },
@@ -237,6 +244,7 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
           include: {
             ordemServico: { include: { cliente: true } },
             tipoEquipamento: true,
+            tecnicoAlocado: true,
           },
           orderBy: [
             { ordemServico: { prioridade: 'desc' } },
@@ -250,9 +258,11 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
             inspetor: true,
             producao: {
               include: {
+                tecnico: true,
                 itemOrdemServico: {
                   include: {
                     tipoEquipamento: true,
+                    tecnicoAlocado: true,
                   },
                 },
               },
@@ -287,8 +297,14 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
     // 1. Procurar produção ativa para este técnico
     const ativa = producoesAtivasList.find((p) => {
       const tId = p.tecnicoId || p.tecnico?.id;
-      const tNome = p.tecnico?.nome;
-      return isTecnicoMatch(tId, tNome, b.id, b.nome) || isTecnicoMatch(tId, tNome, b.tecId, b.nome);
+      const tNome = p.tecnico?.nome || p.itemOrdemServico?.tecnicoAlocado?.nome;
+      const tecAlocId = p.itemOrdemServico?.tecnicoAlocadoId || p.itemOrdemServico?.tecnicoAlocado?.id;
+      return (
+        isTecnicoMatch(tId, tNome, b.id, b.nome) ||
+        isTecnicoMatch(tId, tNome, b.tecId, b.nome) ||
+        isTecnicoMatch(tecAlocId, tNome, b.id, b.nome) ||
+        isTecnicoMatch(tecAlocId, tNome, b.tecId, b.nome)
+      );
     });
 
     let producaoAtivaPayload: BancadaStatus['producaoAtiva'] = null;
@@ -321,21 +337,36 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
 
     if (b.funcao.includes('Qualidade') || b.nome.toLowerCase().includes('rhyan')) {
       for (const t of testesHojeList) {
-        const eqNome = (t as any).producao?.itemOrdemServico?.tipoEquipamento?.nome || '';
-        const qtdAprov = t.quantidadeAprovada || 0;
-        const qtdTest = t.quantidadeTestada || 1;
-        const ptsUnit = getPontosUnitarios(eqNome);
-        ptsHoje += (qtdAprov > 0 ? qtdAprov : qtdTest) * ptsUnit;
-        qtdTestadaHoje += qtdTest;
-        qtdAprovadaHoje += qtdAprov;
-        retrabalhoHoje += t.quantidadeReprovada || 0;
+        const inspId = t.inspetorId || t.inspetor?.id;
+        const inspNome = t.inspetor?.nome;
+        if (
+          isTecnicoMatch(inspId, inspNome, b.id, b.nome) ||
+          isTecnicoMatch(inspId, inspNome, b.tecId, b.nome) ||
+          !t.inspetor
+        ) {
+          const eqNome = (t as any).producao?.itemOrdemServico?.tipoEquipamento?.nome || '';
+          const qtdAprov = t.quantidadeAprovada || 0;
+          const qtdTest = t.quantidadeTestada || 1;
+          const ptsUnit = getPontosUnitarios(eqNome);
+          ptsHoje += (qtdAprov > 0 ? qtdAprov : qtdTest) * ptsUnit;
+          qtdTestadaHoje += qtdTest;
+          qtdAprovadaHoje += qtdAprov;
+          retrabalhoHoje += t.quantidadeReprovada || 0;
+        }
       }
     } else {
       for (const t of testesHojeList) {
         const prod = (t as any).producao;
         const tId = prod?.tecnicoId || prod?.tecnico?.id;
         const tNome = prod?.tecnico?.nome || prod?.itemOrdemServico?.tecnicoAlocado?.nome;
-        if (isTecnicoMatch(tId, tNome, b.id, b.nome) || isTecnicoMatch(tId, tNome, b.tecId, b.nome)) {
+        const tecAlocId = prod?.itemOrdemServico?.tecnicoAlocadoId || prod?.itemOrdemServico?.tecnicoAlocado?.id;
+
+        if (
+          isTecnicoMatch(tId, tNome, b.id, b.nome) ||
+          isTecnicoMatch(tId, tNome, b.tecId, b.nome) ||
+          isTecnicoMatch(tecAlocId, tNome, b.id, b.nome) ||
+          isTecnicoMatch(tecAlocId, tNome, b.tecId, b.nome)
+        ) {
           const eqNome = prod?.itemOrdemServico?.tipoEquipamento?.nome || '';
           const qtdAprov = t.quantidadeAprovada || 0;
           const ptsUnit = getPontosUnitarios(eqNome);

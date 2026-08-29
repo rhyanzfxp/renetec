@@ -9,7 +9,13 @@ export let isDbAvailable = false;
 let isChecking = false;
 
 export async function checkDatabaseConnection(): Promise<boolean> {
-  if (isChecking) return isDbAvailable;
+  if (isDbAvailable) return true;
+  if (isChecking) {
+    while (isChecking) {
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return isDbAvailable;
+  }
   isChecking = true;
   try {
     // Timeout de 6s para dar tempo ao Supabase de responder

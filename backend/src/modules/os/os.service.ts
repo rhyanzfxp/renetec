@@ -69,7 +69,7 @@ export class OsService {
       id: t.id,
       nome: t.equipamentoServico,
       marca: 'Renetec Telecom / Geral',
-      modelo: t.observacao,
+      modelo: t.observacoes,
       tempoEstimadoMinutos: Math.round(t.pontos * 30),
       pontos: t.pontos,
     }));

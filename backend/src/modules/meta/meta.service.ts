@@ -206,7 +206,7 @@ export async function updateMetaConfig(dados: UpdateMetaConfigInput) {
     acao: 'META_ATUALIZADA',
     entidade: 'MetaConfig',
     descricao: `Metas redefinidas → Base: ${config.metaBase}, Alvo: ${config.metaAlvo}, Excelência: ${config.metaExcelencia}.`,
-    detalhes: config,
+    detalhes: config as any,
   }).catch(() => {});
   return config;
 }

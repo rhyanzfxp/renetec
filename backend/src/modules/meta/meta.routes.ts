@@ -122,7 +122,7 @@ export const metaRoutes: FastifyPluginAsync = async (fastify) => {
         mesReferencia,
         anoReferencia,
         resetarTudo,
-        request.user?.id
+        (request.user as any)?.sub || (request.user as any)?.id
       );
 
       return reply.send({

@@ -113,7 +113,7 @@ export async function getFilaTestes() {
         tipoEquipamentoId: it.tipoEquipamentoId,
         quantidade: it.quantidade,
         defeitoRelatado: it.defeitoRelatado,
-        servicoRealizado: retRecente?.solucaoAplicada || prodRecente?.servicoRealizado || it.servicoRealizado || 'Reparo concluído',
+        servicoRealizado: retRecente?.solucaoAplicada || prodRecente?.servicoRealizado || 'Reparo concluído',
         statusItem: it.statusItem,
         tecnicoAlocadoId: it.tecnicoAlocadoId,
         tecnicoAlocado: it.tecnicoAlocado,
@@ -142,9 +142,19 @@ export async function realizarTeste(
   }
 
   const inspetorDbId = await ensureUsuarioDbId(inspetorId, 'QUALIDADE');
-  const tecnicoRespDbId = dados.tecnicoResponsavelId
+  let tecnicoRespDbId = dados.tecnicoResponsavelId
     ? await ensureUsuarioDbId(dados.tecnicoResponsavelId, 'TECNICO')
     : null;
+
+  if (!tecnicoRespDbId && dados.itemOrdemServicoId) {
+    const itemDb = await prisma.itemOrdemServico.findUnique({
+      where: { id: dados.itemOrdemServicoId },
+      select: { tecnicoAlocadoId: true },
+    });
+    if (itemDb?.tecnicoAlocadoId) {
+      tecnicoRespDbId = itemDb.tecnicoAlocadoId;
+    }
+  }
 
   const resultado = await prisma.$transaction(async (tx) => {
     // 0. Garantir que a produção existe no DB (ou buscar a mais recente)
@@ -206,7 +216,7 @@ export async function realizarTeste(
         const m = await tx.motivoReprovacao.findUnique({ where: { id: motivoId } });
         if (!m) {
           const firstM = await tx.motivoReprovacao.findFirst();
-          motivoId = firstM?.id || null;
+          motivoId = firstM?.id || undefined;
         }
       }
 
@@ -214,7 +224,7 @@ export async function realizarTeste(
         data: {
           testeId: teste.id,
           itemOrdemServicoId: dados.itemOrdemServicoId,
-          motivoReprovacaoId: motivoId,
+          motivoReprovacaoId: motivoId || undefined,
           tecnicoResponsavelId: tecnicoRespDbId,
           quantidadeRetrabalho: dados.quantidadeReprovada,
           detalhesDefeito: dados.detalhesDefeito || dados.observacao || 'Não conformidade detectada no CQ',

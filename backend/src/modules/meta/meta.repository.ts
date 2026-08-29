@@ -203,9 +203,9 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
         faturamentoLancado = fat;
 
         colaboradores = COLABORADORES_BASE.map((c) => {
-          const primNome = c.nome.split(' ')[0].toLowerCase();
+          const primNome = c.nome.split(' ')[0].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
           const pontos = Object.entries(colaboradoresMapPorNome).find(
-            ([n]) => n.toLowerCase().startsWith(primNome)
+            ([n]) => n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/)[0] === primNome
           )?.[1] || 0;
 
           return {

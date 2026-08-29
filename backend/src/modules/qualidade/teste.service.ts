@@ -45,7 +45,9 @@ export async function realizarTeste(inspetorId: string, dados: RealizarTesteInpu
       descricao: `Laudo de CQ: ${dados.quantidadeAprovada} aprovadas, ${dados.quantidadeReprovada} reprovadas (encaminhadas para retrabalho).`,
       detalhes: { quantidadeAprovada: dados.quantidadeAprovada, quantidadeReprovada: dados.quantidadeReprovada },
     }).catch(() => {});
-  } else {
+  }
+
+  if (dados.quantidadeAprovada > 0) {
     realtimeService.broadcast('qualidade:aprovado', { teste });
     realtimeService.broadcast('meta:atualizada', { aprovadas: dados.quantidadeAprovada });
     log({
@@ -53,10 +55,13 @@ export async function realizarTeste(inspetorId: string, dados: RealizarTesteInpu
       usuarioId: inspetorId,
       entidade: 'Teste',
       entidadeId: teste.id,
-      descricao: `Lote 100% aprovado no CQ: ${dados.quantidadeAprovada} unidades.`,
+      descricao: `Lote com peças aprovadas no CQ: ${dados.quantidadeAprovada} unidades.`,
       detalhes: { quantidadeAprovada: dados.quantidadeAprovada },
     }).catch(() => {});
   }
+
+  // Notificação geral para atualizar Dashboard Gerencial, TV da Fábrica e Metas em tempo real
+  realtimeService.broadcast('dashboard:atualizado', { testeId: teste.id });
 
   return teste;
 }
