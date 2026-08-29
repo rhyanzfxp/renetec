@@ -73,7 +73,10 @@ export const AppShell: React.FC = () => {
   return (
     <div className="min-h-screen bg-surface-base text-gray-100 flex flex-col antialiased">
       {/* Header Fixo */}
-      <AppHeader onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+      <AppHeader
+        onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+        isTvMode={activeSection === 'tv_fabrica'}
+      />
 
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar Contextual */}
@@ -85,19 +88,27 @@ export const AppShell: React.FC = () => {
         />
 
         {/* Área Central de Conteúdo */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 pb-20 lg:pb-8">
-          {/* Header da Seção Atual */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-surface-border/60 pb-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
-                  {getSectionTitle()}
-                </h1>
-                <StatusBadge perfil={user?.perfil} size="sm" />
+        <main
+          className={
+            activeSection === 'tv_fabrica'
+              ? 'flex-1 overflow-y-auto p-2 sm:p-4 lg:p-5 space-y-4 pb-16 lg:pb-6'
+              : 'flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 pb-20 lg:pb-8'
+          }
+        >
+          {/* Header da Seção Atual (Ocultado no modo TV para dar 100% de foco no painel) */}
+          {activeSection !== 'tv_fabrica' && (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-surface-border/60 pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+                    {getSectionTitle()}
+                  </h1>
+                  <StatusBadge perfil={user?.perfil} size="sm" />
+                </div>
+                <p className="text-xs sm:text-sm text-gray-400 mt-1">{getSectionSubtitle()}</p>
               </div>
-              <p className="text-xs sm:text-sm text-gray-400 mt-1">{getSectionSubtitle()}</p>
             </div>
-          </div>
+          )}
 
           {/* Renderização Condicional de Módulo */}
           {activeSection === 'tv_fabrica' ? (

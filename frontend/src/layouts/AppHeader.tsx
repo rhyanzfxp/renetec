@@ -5,9 +5,10 @@ import { StatusBadge } from '../components/ui/StatusBadge';
 
 interface AppHeaderProps {
   onToggleSidebar?: () => void;
+  isTvMode?: boolean;
 }
 
-export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar }) => {
+export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, isTvMode }) => {
   const { user, logout } = useAuth();
   const [currentTime, setCurrentTime] = useState('');
 
@@ -31,7 +32,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar }) => {
           <button
             type="button"
             onClick={onToggleSidebar}
-            className="lg:hidden p-2 rounded-lg text-gray-400 hover:text-white hover:bg-surface-elevated transition-colors"
+            title="Menu de Navegação"
+            className={`p-2 rounded-lg text-gray-400 hover:text-white hover:bg-surface-elevated transition-colors ${
+              isTvMode ? 'block' : 'lg:hidden'
+            }`}
           >
             <Menu className="w-5 h-5" />
           </button>

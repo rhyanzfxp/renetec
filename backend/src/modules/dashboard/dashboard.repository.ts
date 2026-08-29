@@ -196,15 +196,14 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
     console.error('[getTvFabricaData] Erro ao integrar metas:', err);
   }
 
-  // 2. Colaboradores / Bancadas Base
+  // 2. Colaboradores / Bancadas Oficiais da Fábrica
   const baseBancadas = [
+    { id: 'usr-tecnico-01', tecId: 'colab-joao', nome: 'João', funcao: 'Produção' },
     { id: 'usr-tecnico-03', tecId: 'colab-joas', nome: 'Joás', funcao: 'Produção' },
     { id: 'usr-tecnico-02', tecId: 'colab-samuel', nome: 'Samuel', funcao: 'Produção' },
-    { id: 'usr-tecnico-01', tecId: 'colab-joao', nome: 'João', funcao: 'Produção' },
     { id: 'usr-qualidade-01', tecId: 'colab-rhyan', nome: 'Rhyan', funcao: 'Qualidade/Testes' },
   ];
 
-  let dbUsersList: any[] = [];
   let producoesAtivasList: any[] = [];
   let producoesFinalizadasHoje: any[] = [];
   let filaPrioritariaList: any[] = [];
@@ -213,11 +212,7 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
   if (isDatabaseReady()) {
     try {
       const inicioDia = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), 0, 0, 0);
-      const [users, ativas, finalizadas, filaItens, testes] = await Promise.all([
-        prisma.usuario.findMany({
-          where: { ativo: true },
-          orderBy: [{ perfil: 'asc' }, { nome: 'asc' }],
-        }),
+      const [ativas, finalizadas, filaItens, testes] = await Promise.all([
         prisma.producao.findMany({
           where: { status: 'EM_ANDAMENTO' },
           include: {
@@ -276,7 +271,6 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
         }),
       ]);
 
-      dbUsersList = users;
       producoesAtivasList = ativas;
       producoesFinalizadasHoje = finalizadas;
       testesHojeList = testes;
@@ -298,26 +292,8 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
     }
   }
 
-  // Montar bancadas ao vivo garantindo usuários reais do banco
-  const bancadasSource = dbUsersList.length > 0
-    ? dbUsersList
-        .filter((u) => u.perfil === 'TECNICO' || u.perfil === 'QUALIDADE' || (u.perfil === 'ADMIN' && u.nome.toLowerCase().includes('admin')))
-        .map((u) => ({
-          id: u.id,
-          tecId: u.id,
-          nome: u.nome,
-          funcao: u.perfil === 'QUALIDADE' ? 'Qualidade/Testes' : u.perfil === 'ADMIN' ? 'Supervisão' : 'Produção',
-        }))
-    : baseBancadas;
-
-  const targetBancadas = [...bancadasSource];
-  for (const bb of baseBancadas) {
-    if (!targetBancadas.some((b) => isTecnicoMatch(b.id, b.nome, bb.id, bb.nome))) {
-      targetBancadas.push(bb);
-    }
-  }
-
-  const bancadas: BancadaStatus[] = targetBancadas.map((b) => {
+  // Bancadas técnicas oficiais (exclui contas de Admin e genéricas)
+  const bancadas: BancadaStatus[] = baseBancadas.map((b) => {
     // 1. Procurar produção ativa para este técnico
     const ativa = producoesAtivasList.find((p) => {
       const tId = p.tecnicoId || p.tecnico?.id;

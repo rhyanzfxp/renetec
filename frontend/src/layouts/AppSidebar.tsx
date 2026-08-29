@@ -91,10 +91,13 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
 
   return (
     <>
-      {/* Backdrop para mobile */}
+      {/* Backdrop para mobile ou quando em modo TV */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 lg:hidden"
+          className={clsx(
+            'fixed inset-0 bg-black/70 backdrop-blur-xs z-40',
+            activeSection === 'tv_fabrica' ? 'block' : 'lg:hidden'
+          )}
           onClick={onClose}
         />
       )}
@@ -102,8 +105,10 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       {/* Sidebar Container */}
       <aside
         className={clsx(
-          'fixed lg:static top-0 bottom-0 left-0 z-40 w-64 bg-surface-card border-r border-surface-border flex flex-col transition-transform duration-200 ease-in-out',
-          isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          'top-0 bottom-0 left-0 z-50 w-64 bg-surface-card border-r border-surface-border flex flex-col transition-transform duration-200 ease-in-out',
+          activeSection === 'tv_fabrica'
+            ? clsx('fixed', isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full')
+            : clsx('fixed lg:static', isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0')
         )}
       >
         {/* Navigation list */}
