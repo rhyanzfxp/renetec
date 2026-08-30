@@ -16,9 +16,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Sempre limpa a sessão ao abrir o site — usuário deve fazer login toda vez
-    localStorage.removeItem('@renetec:token');
-    localStorage.removeItem('@renetec:user');
+    // Usa sessionStorage: sessão dura enquanto a aba estiver aberta.
+    // F5 mantém o login, mas fechar o navegador/aba força novo login.
+    const storedToken = sessionStorage.getItem('@renetec:token');
+    const storedUser = sessionStorage.getItem('@renetec:user');
+
+    if (storedToken && storedUser) {
+      try {
+        const parsed = JSON.parse(storedUser);
+        const validUser: User = parsed?.user ? parsed.user : parsed;
+        if (validUser && validUser.id && validUser.perfil) {
+          setToken(storedToken);
+          setUser(validUser);
+        }
+
+        // Valida o token com o servidor em background
+        api
+          .get('/auth/me', {
+            headers: { Authorization: `Bearer ${storedToken}` },
+          })
+          .then((res) => {
+            const freshUser = res.data?.data?.user || res.data?.data;
+            if (freshUser && freshUser.id && freshUser.perfil) {
+              setUser(freshUser);
+              sessionStorage.setItem('@renetec:user', JSON.stringify(freshUser));
+            }
+          })
+          .catch((err) => {
+            // Limpa a sessão se o token for rejeitado pelo servidor (401 / 403)
+            if (err?.response?.status === 401 || err?.response?.status === 403) {
+              setUser(null);
+              setToken(null);
+              sessionStorage.removeItem('@renetec:token');
+              sessionStorage.removeItem('@renetec:user');
+            }
+          });
+      } catch {
+        sessionStorage.removeItem('@renetec:token');
+        sessionStorage.removeItem('@renetec:user');
+      }
+    }
+
     setIsLoading(false);
   }, []);
 
@@ -30,8 +68,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (userData && accessToken) {
         setUser(userData);
         setToken(accessToken);
-        localStorage.setItem('@renetec:token', accessToken);
-        localStorage.setItem('@renetec:user', JSON.stringify(userData));
+        sessionStorage.setItem('@renetec:token', accessToken);
+        sessionStorage.setItem('@renetec:user', JSON.stringify(userData));
       }
     }
   };
@@ -58,8 +96,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     setUser(null);
     setToken(null);
-    localStorage.removeItem('@renetec:token');
-    localStorage.removeItem('@renetec:user');
+    sessionStorage.removeItem('@renetec:token');
+    sessionStorage.removeItem('@renetec:user');
   };
 
   return (
