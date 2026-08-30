@@ -8,9 +8,9 @@ export const api = axios.create({
   },
 });
 
-// Interceptor para injetar JWT no header se estiver salvo no localStorage
+// Interceptor para injetar JWT no header se estiver salvo no sessionStorage
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('@renetec:token');
+  const token = sessionStorage.getItem('@renetec:token');
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -24,8 +24,8 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Se não for rota de login, limpa token inválido
       if (!error.config?.url?.includes('/auth/login')) {
-        localStorage.removeItem('@renetec:token');
-        localStorage.removeItem('@renetec:user');
+        sessionStorage.removeItem('@renetec:token');
+        sessionStorage.removeItem('@renetec:user');
       }
     }
     return Promise.reject(error);
