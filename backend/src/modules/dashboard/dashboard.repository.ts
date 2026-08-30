@@ -263,6 +263,13 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
                   include: {
                     tipoEquipamento: true,
                     tecnicoAlocado: true,
+                    retrabalhos: {
+                      orderBy: { dataFim: 'desc' },
+                      take: 1,
+                      include: {
+                        tecnicoResponsavel: true,
+                      },
+                    },
                   },
                 },
               },
@@ -330,6 +337,8 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
     }
 
     // 2. Calcular indicadores e pontos produzidos/testados hoje por este colaborador
+    // REGRA: Pontuação SÓ É CONTABILIZADA QUANDO APROVADO NO TESTE (ou aprovado após retrabalho).
+    // Testes reprovados (não conformes) geram 0 pontos.
     let ptsHoje = 0;
     let qtdTestadaHoje = 0;
     let qtdAprovadaHoje = 0;
@@ -348,7 +357,9 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
           const qtdAprov = t.quantidadeAprovada || 0;
           const qtdTest = t.quantidadeTestada || 1;
           const ptsUnit = getPontosUnitarios(eqNome);
-          ptsHoje += (qtdAprov > 0 ? qtdAprov : qtdTest) * ptsUnit;
+          if (qtdAprov > 0) {
+            ptsHoje += qtdAprov * ptsUnit;
+          }
           qtdTestadaHoje += qtdTest;
           qtdAprovadaHoje += qtdAprov;
           retrabalhoHoje += t.quantidadeReprovada || 0;
@@ -357,8 +368,12 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
     } else {
       for (const t of testesHojeList) {
         const prod = (t as any).producao;
-        const tId = prod?.tecnicoId || prod?.tecnico?.id;
-        const tNome = prod?.tecnico?.nome || prod?.itemOrdemServico?.tecnicoAlocado?.nome;
+        const ret = prod?.itemOrdemServico?.retrabalhos?.[0];
+        const retTecId = ret?.tecnicoResponsavelId || ret?.tecnicoResponsavel?.id;
+        const retTecNome = ret?.tecnicoResponsavel?.nome;
+
+        const tId = retTecId || prod?.tecnicoId || prod?.tecnico?.id;
+        const tNome = retTecNome || prod?.tecnico?.nome || prod?.itemOrdemServico?.tecnicoAlocado?.nome;
         const tecAlocId = prod?.itemOrdemServico?.tecnicoAlocadoId || prod?.itemOrdemServico?.tecnicoAlocado?.id;
 
         if (

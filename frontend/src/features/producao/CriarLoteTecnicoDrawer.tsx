@@ -252,8 +252,9 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
           <div className="flex items-center gap-2 text-xs text-gray-300">
             <span className="font-bold text-white tabular-nums">{totalEquipamentos} un</span> no lote
-            <span className="text-gray-500">•</span>
-            <span className="text-amber-400 font-bold tabular-nums">~{pontuacaoEstimada.toFixed(1)} pts estimados</span>
+            <span className="text-amber-400 font-bold tabular-nums" title="Pontuação creditada após aprovação no Controle de Qualidade">
+              ~{pontuacaoEstimada.toFixed(1)} pts (após aprovação CQ)
+            </span>
           </div>
 
           <div className="flex items-center gap-2">

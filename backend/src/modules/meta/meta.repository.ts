@@ -148,6 +148,13 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
                     tipoEquipamento: true,
                     ordemServico: true,
                     tecnicoAlocado: { select: { id: true, nome: true } },
+                    retrabalhos: {
+                      orderBy: { dataFim: 'desc' },
+                      take: 1,
+                      include: {
+                        tecnicoResponsavel: { select: { id: true, nome: true } },
+                      },
+                    },
                   },
                 },
               },
@@ -181,22 +188,31 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
           const ptsUnit = getPontosUnitarios(eqNome);
           const qtdAprovada = t.quantidadeAprovada || 0;
 
-          // 1. O técnico que executou a produção só pontua se as peças foram APROVADAS no CQ
+          // REGRA OFICIAL DE PONTUAÇÃO:
+          // 1. A pontuação SÓ É CONTABILIZADA quando a peça/lote for APROVADO no teste de CQ.
+          // 2. Se foi para retrabalho e DEPOIS for APROVADO no re-teste, contabiliza os pontos normalmente.
+          // 3. Se foi testado e REPROVOU (não deu certo), NÃO CONTABILIZA NENHUM PONTO.
           if (qtdAprovada > 0) {
-            const pontosTecnico = qtdAprovada * ptsUnit;
-            ptsProducaoAprovada += pontosTecnico;
+            const pontosLoteAprovado = qtdAprovada * ptsUnit;
+            ptsProducaoAprovada += pontosLoteAprovado;
 
-            const tecNome = t.producao?.tecnico?.nome || (t.producao?.itemOrdemServico as any)?.tecnicoAlocado?.nome || 'desconhecido';
-            colaboradoresMapPorNome[tecNome] = (colaboradoresMapPorNome[tecNome] || 0) + pontosTecnico;
+            // Se veio de retrabalho com técnico responsável definido, credita a ele; senão ao técnico da produção/alocado
+            const retrabalhoRecente = (t.producao?.itemOrdemServico as any)?.retrabalhos?.[0];
+            const tecNome =
+              retrabalhoRecente?.tecnicoResponsavel?.nome ||
+              t.producao?.tecnico?.nome ||
+              (t.producao?.itemOrdemServico as any)?.tecnicoAlocado?.nome ||
+              'desconhecido';
+
+            colaboradoresMapPorNome[tecNome] = (colaboradoresMapPorNome[tecNome] || 0) + pontosLoteAprovado;
 
             const valorOS = Number((t.producao?.itemOrdemServico?.ordemServico as any)?.valorOrcamento || 0);
             fat += valorOS;
-          }
 
-          // 2. Pontos de Inspeção do Testador (Rhyan / Qualidade)
-          const pontosInspetor = (t.quantidadeAprovada || t.quantidadeTestada || 1) * ptsUnit;
-          const inspNome = t.inspetor?.nome || 'Rhyan';
-          colaboradoresMapPorNome[inspNome] = (colaboradoresMapPorNome[inspNome] || 0) + pontosInspetor;
+            // Pontos de inspeção do testador no CQ (apenas sobre itens aprovados)
+            const inspNome = t.inspetor?.nome || 'Rhyan';
+            colaboradoresMapPorNome[inspNome] = (colaboradoresMapPorNome[inspNome] || 0) + pontosLoteAprovado;
+          }
         }
 
         pontosTotais = Number(ptsProducaoAprovada.toFixed(1));
