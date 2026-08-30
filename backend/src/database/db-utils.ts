@@ -6,12 +6,13 @@ export function isValidUuid(id?: string | null): boolean {
 }
 
 export const USUARIOS_CONHECIDOS = [
-  { id: 'usr-admin-01', tecId: 'colab-admin', nome: 'Administrador Renetec', email: 'admin@renetec.com.br', perfil: 'ADMIN' },
-  { id: 'usr-tecnico-01', tecId: 'colab-joao', nome: 'João', email: 'joao@renetec.com.br', perfil: 'TECNICO' },
-  { id: 'usr-tecnico-02', tecId: 'colab-samuel', nome: 'Samuel', email: 'samuel@renetec.com.br', perfil: 'TECNICO' },
-  { id: 'usr-tecnico-03', tecId: 'colab-joas', nome: 'Joás', email: 'joas@renetec.com.br', perfil: 'TECNICO' },
-  { id: 'usr-qualidade-01', tecId: 'colab-rhyan', nome: 'Rhyan', email: 'rhyan@renetec.com.br', perfil: 'QUALIDADE' },
-  { id: 'usr-admin-02', tecId: 'colab-luana', nome: 'Luana', email: 'luana@renetec.com.br', perfil: 'ADMIN' },
+  { id: 'usr-admin-01', tecId: 'colab-admin', nome: 'Administrador Renetec', email: 'admin@renetec.com.br', perfil: 'ADMIN' as const },
+  { id: 'usr-tecnico-01', tecId: 'colab-joao', nome: 'João', email: 'joao@renetec.com.br', perfil: 'TECNICO' as const },
+  { id: 'usr-tecnico-02', tecId: 'colab-samuel', nome: 'Samuel', email: 'samuel@renetec.com.br', perfil: 'TECNICO' as const },
+  { id: 'usr-tecnico-03', tecId: 'colab-joas', nome: 'Joás', email: 'joas@renetec.com.br', perfil: 'TECNICO' as const },
+  { id: 'usr-qualidade-01', tecId: 'colab-rhyan', nome: 'Rhyan', email: 'rhyan@renetec.com.br', perfil: 'QUALIDADE' as const },
+  { id: 'usr-admin-02', tecId: 'colab-luana', nome: 'Luana', email: 'luana@renetec.com.br', perfil: 'ADMIN' as const },
+  { id: 'usr-qualidade-02', tecId: 'colab-qualidade', nome: 'Controle de Qualidade', email: 'qualidade@renetec.com.br', perfil: 'QUALIDADE' as const },
 ];
 
 /**
