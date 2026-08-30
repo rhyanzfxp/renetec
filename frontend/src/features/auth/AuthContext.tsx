@@ -16,46 +16,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('@renetec:token');
-    const storedUser = localStorage.getItem('@renetec:user');
-
-    if (storedToken && storedUser) {
-      try {
-        const parsed = JSON.parse(storedUser);
-        const validUser: User = parsed?.user ? parsed.user : parsed;
-        if (validUser && validUser.id && validUser.perfil) {
-          setToken(storedToken);
-          setUser(validUser);
-        }
-
-        // Valida o token com o servidor em background
-        api
-          .get('/auth/me', {
-            headers: { Authorization: `Bearer ${storedToken}` },
-          })
-          .then((res) => {
-            const freshUser = res.data?.data?.user || res.data?.data;
-            if (freshUser && freshUser.id && freshUser.perfil) {
-              setUser(freshUser);
-              localStorage.setItem('@renetec:user', JSON.stringify(freshUser));
-            }
-          })
-          .catch((err) => {
-            // Apenas limpa a sessão se o token for explicitamente rejeitado pelo servidor (401 / 403)
-            // Se for oscilação de rede ou cold-start, preserva a sessão salva no navegador!
-            if (err?.response?.status === 401 || err?.response?.status === 403) {
-              setUser(null);
-              setToken(null);
-              localStorage.removeItem('@renetec:token');
-              localStorage.removeItem('@renetec:user');
-            }
-          });
-      } catch {
-        localStorage.removeItem('@renetec:token');
-        localStorage.removeItem('@renetec:user');
-      }
-    }
-
+    // Sempre limpa a sessão ao abrir o site — usuário deve fazer login toda vez
+    localStorage.removeItem('@renetec:token');
+    localStorage.removeItem('@renetec:user');
     setIsLoading(false);
   }, []);
 
