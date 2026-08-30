@@ -1,10 +1,16 @@
 import { osRepository } from './os.repository.js';
-import { CreateOsInput } from './os.schema.js';
+import { CreateOsInput, CreateClienteInput } from './os.schema.js';
 import { StatusOS } from '@prisma/client';
 import { prisma, isDatabaseReady } from '../../database/prisma.js';
 import { TABELA_PONTUACAO_OFICIAL } from '../meta/meta.repository.js';
 import { realtimeService } from '../realtime/realtime.service.js';
 import { log } from '../auditoria/auditoria.service.js';
+
+let fallbackClientes = [
+  { id: 'cli-01', nomeRazaoSocial: 'MARANET Telecomunicações', documento: '12.345.678/0001-90', contatoTelefone: '(98) 98765-4321', email: 'operacoes@maranet.com.br' },
+  { id: 'cli-02', nomeRazaoSocial: 'Solar Power Brasil Ltda', documento: '98.765.432/0001-10', contatoTelefone: '(11) 91234-5678', email: 'contato@solarpower.com.br' },
+  { id: 'cli-03', nomeRazaoSocial: 'Indústria Metalúrgica Horizonte S.A.', documento: '45.123.789/0001-55', contatoTelefone: '(31) 98888-7777', email: 'suprimentos@horizonte.ind.br' },
+];
 
 export class OsService {
   // Lista de clientes oficiais da Renetec
@@ -29,12 +35,103 @@ export class OsService {
       }
     }
 
-    return [
-      { id: 'cli-01', nomeRazaoSocial: 'MARANET Telecomunicações', documento: '12.345.678/0001-90' },
-      { id: 'cli-02', nomeRazaoSocial: 'Solar Power Brasil Ltda', documento: '98.765.432/0001-10' },
-      { id: 'cli-03', nomeRazaoSocial: 'Indústria Metalúrgica Horizonte S.A.', documento: '45.123.789/0001-55' },
-    ];
+    return fallbackClientes;
   }
+
+  // Cadastra um novo cliente / empresa no sistema
+  async createCliente(data: CreateClienteInput, usuarioId?: string) {
+    const nomeLimpo = data.nomeRazaoSocial.trim();
+    const docLimpo = data.documento?.trim() || null;
+    const telLimpo = data.contatoTelefone?.trim() || null;
+    const emailLimpo = data.email?.trim() || null;
+    const enderecoLimpo = data.endereco?.trim() || null;
+
+    let clienteRetorno: { id: string; nomeRazaoSocial: string; documento?: string | null; contatoTelefone?: string | null; email?: string | null };
+
+    if (isDatabaseReady()) {
+      try {
+        // Verifica se já existe por nome ou documento
+        const existing = await prisma.cliente.findFirst({
+          where: {
+            OR: [
+              { nomeRazaoSocial: { equals: nomeLimpo, mode: 'insensitive' } },
+              ...(docLimpo ? [{ documento: docLimpo }] : []),
+            ],
+          },
+        });
+
+        if (existing) {
+          clienteRetorno = {
+            id: existing.id,
+            nomeRazaoSocial: existing.nomeRazaoSocial,
+            documento: existing.documento || '',
+            contatoTelefone: existing.contatoTelefone,
+            email: existing.email,
+          };
+        } else {
+          const novo = await prisma.cliente.create({
+            data: {
+              nomeRazaoSocial: nomeLimpo,
+              documento: docLimpo,
+              contatoTelefone: telLimpo,
+              email: emailLimpo,
+              endereco: enderecoLimpo,
+              ativo: true,
+            },
+          });
+
+          clienteRetorno = {
+            id: novo.id,
+            nomeRazaoSocial: novo.nomeRazaoSocial,
+            documento: novo.documento || '',
+            contatoTelefone: novo.contatoTelefone,
+            email: novo.email,
+          };
+        }
+      } catch (err) {
+        console.error('[OsService.createCliente] Erro ao salvar no banco, usando fallback em memória:', err);
+        // Fallback em memória
+        const fallbackId = `cli-${Date.now()}`;
+        const novoFallback = {
+          id: fallbackId,
+          nomeRazaoSocial: nomeLimpo,
+          documento: docLimpo || '',
+          contatoTelefone: telLimpo || '',
+          email: emailLimpo || '',
+        };
+        fallbackClientes.push(novoFallback);
+        clienteRetorno = novoFallback;
+      }
+    } else {
+      const fallbackId = `cli-${Date.now()}`;
+      const novoFallback = {
+        id: fallbackId,
+        nomeRazaoSocial: nomeLimpo,
+        documento: docLimpo || '',
+        contatoTelefone: telLimpo || '',
+        email: emailLimpo || '',
+      };
+      fallbackClientes.push(novoFallback);
+      clienteRetorno = novoFallback;
+    }
+
+    // Notifica em tempo real
+    realtimeService.broadcast('cliente:criado', { cliente: clienteRetorno });
+
+    if (usuarioId) {
+      log({
+        acao: 'CLIENTE_CRIADO',
+        usuarioId,
+        entidade: 'Cliente',
+        entidadeId: clienteRetorno.id,
+        descricao: `Novo cliente/empresa cadastrado: ${clienteRetorno.nomeRazaoSocial}`,
+        detalhes: { cliente: clienteRetorno },
+      }).catch(() => {});
+    }
+
+    return clienteRetorno;
+  }
+
 
   // Lista de tipos de equipamentos com pontuação oficial
   async getTiposEquipamento() {

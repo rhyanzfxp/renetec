@@ -17,7 +17,8 @@ import {
   Play,
   Zap,
   Timer,
-  CheckCircle2
+  CheckCircle2,
+  Building2
 } from 'lucide-react';
 
 interface EquipamentoLinha {
@@ -41,6 +42,14 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
   const { user } = useAuth();
   const [tiposEquipamento, setTiposEquipamento] = useState<TipoEquipamentoOption[]>([]);
   const [clientes, setClientes] = useState<ClienteOption[]>([]);
+
+  // Cadastro rápido de nova empresa / cliente
+  const [isAddingCliente, setIsAddingCliente] = useState(false);
+  const [novoClienteNome, setNovoClienteNome] = useState('');
+  const [novoClienteDoc, setNovoClienteDoc] = useState('');
+  const [novoClienteTel, setNovoClienteTel] = useState('');
+  const [isSavingCliente, setIsSavingCliente] = useState(false);
+  const [clienteSuccessMsg, setClienteSuccessMsg] = useState<string | null>(null);
 
   // Modo de Apontamento: Check-in Direto para Teste vs Iniciar Cronômetro na Bancada
   const [modoOperacao, setModoOperacao] = useState<'CHECKIN' | 'CRONOMETRO'>('CHECKIN');
@@ -69,6 +78,39 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleSalvarNovoCliente = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!novoClienteNome.trim()) {
+      setError('Informe o nome ou razão social da nova empresa.');
+      return;
+    }
+    try {
+      setIsSavingCliente(true);
+      setError(null);
+      const novo = await osApiService.createCliente({
+        nomeRazaoSocial: novoClienteNome.trim(),
+        documento: novoClienteDoc.trim() || undefined,
+        contatoTelefone: novoClienteTel.trim() || undefined,
+      });
+
+      const updatedList = await osApiService.getClientes();
+      setClientes(updatedList);
+      setClienteId(novo.id);
+
+      setNovoClienteNome('');
+      setNovoClienteDoc('');
+      setNovoClienteTel('');
+      setIsAddingCliente(false);
+      setClienteSuccessMsg(`Empresa "${novo.nomeRazaoSocial}" cadastrada e selecionada!`);
+      setTimeout(() => setClienteSuccessMsg(null), 4000);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Erro ao cadastrar nova empresa.');
+    } finally {
+      setIsSavingCliente(false);
+    }
+  };
+
 
   // Carregar opções do sistema e reiniciar formulário
   useEffect(() => {
@@ -373,18 +415,111 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-300">Cliente / Empresa</label>
-              <select
-                value={clienteId}
-                onChange={(e) => setClienteId(e.target.value)}
-                className="w-full h-10 px-3 bg-[#12161f] border border-surface-border rounded-lg text-xs text-white focus:outline-none focus:border-brand-500"
-              >
-                {clientes.map((c) => (
-                  <option key={c.id} value={c.id} className="bg-[#181d26] text-white py-1">
-                    {c.nomeRazaoSocial}
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-gray-300 flex items-center gap-1">
+                  Cliente / Empresa <span className="text-brand-400">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAddingCliente(!isAddingCliente);
+                    setError(null);
+                  }}
+                  className="text-[11px] font-bold text-brand-400 hover:text-brand-300 flex items-center gap-1 hover:underline cursor-pointer transition-colors"
+                  title="Cadastrar uma nova empresa na lista"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  {isAddingCliente ? 'Fechar' : '+ Nova Empresa'}
+                </button>
+              </div>
+
+              {isAddingCliente ? (
+                <div className="p-3 bg-[#0d121c] border border-brand-500/50 rounded-xl space-y-2.5 shadow-glow-primary/20">
+                  <div className="flex items-center justify-between border-b border-surface-border/50 pb-1.5">
+                    <span className="text-xs font-bold text-brand-300 flex items-center gap-1">
+                      <Building2 className="w-3.5 h-3.5 text-brand-400" /> Nova Empresa
+                    </span>
+                    <span className="text-[10px] text-gray-400">Salva e seleciona</span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <input
+                      type="text"
+                      value={novoClienteNome}
+                      onChange={(e) => setNovoClienteNome(e.target.value)}
+                      placeholder="Razão Social / Nome *"
+                      className="w-full h-8 px-2.5 bg-[#181d26] border border-surface-border rounded-lg text-xs text-white placeholder-gray-500 focus:outline-none focus:border-brand-500"
+                      autoFocus
+                    />
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <input
+                        type="text"
+                        value={novoClienteDoc}
+                        onChange={(e) => setNovoClienteDoc(e.target.value)}
+                        placeholder="CNPJ / CPF (opcional)"
+                        className="w-full h-7 px-2 bg-[#181d26] border border-surface-border rounded-lg text-[11px] text-white placeholder-gray-500 focus:outline-none focus:border-brand-500"
+                      />
+                      <input
+                        type="text"
+                        value={novoClienteTel}
+                        onChange={(e) => setNovoClienteTel(e.target.value)}
+                        placeholder="Telefone (opcional)"
+                        className="w-full h-7 px-2 bg-[#181d26] border border-surface-border rounded-lg text-[11px] text-white placeholder-gray-500 focus:outline-none focus:border-brand-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingCliente(false)}
+                      className="px-2 py-0.5 text-[11px] text-gray-400 hover:text-white rounded transition-colors cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSalvarNovoCliente}
+                      disabled={isSavingCliente || !novoClienteNome.trim()}
+                      className="px-2.5 py-1 bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-[11px] font-bold text-white rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                    >
+                      {isSavingCliente ? (
+                        <div className="w-2.5 h-2.5 border border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="w-3 h-3" />
+                      )}
+                      Salvar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <select
+                  value={clienteId}
+                  onChange={(e) => {
+                    if (e.target.value === '__NOVA_EMPRESA__') {
+                      setIsAddingCliente(true);
+                    } else {
+                      setClienteId(e.target.value);
+                    }
+                  }}
+                  className="w-full h-10 px-3 bg-[#12161f] border border-surface-border rounded-lg text-xs text-white focus:outline-none focus:border-brand-500"
+                >
+                  {clientes.map((c) => (
+                    <option key={c.id} value={c.id} className="bg-[#181d26] text-white py-1">
+                      {c.nomeRazaoSocial}
+                    </option>
+                  ))}
+                  <option value="__NOVA_EMPRESA__" className="bg-brand-950 text-brand-300 font-bold py-1">
+                    + Cadastrar Nova Empresa...
                   </option>
-                ))}
-              </select>
+                </select>
+              )}
+
+              {clienteSuccessMsg && (
+                <p className="text-[10px] text-emerald-400 flex items-center gap-1 font-medium mt-1">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-400 flex-shrink-0" /> {clienteSuccessMsg}
+                </p>
+              )}
             </div>
 
             <div className="space-y-1">

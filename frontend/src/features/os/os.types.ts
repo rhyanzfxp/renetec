@@ -72,3 +72,13 @@ export interface CreateOsPayload {
     tecnicoAlocadoId?: string;
   }[];
 }
+
+export interface CreateClientePayload {
+  nomeRazaoSocial: string;
+  documento?: string;
+  contatoTelefone?: string;
+  email?: string;
+  endereco?: string;
+}
+
+

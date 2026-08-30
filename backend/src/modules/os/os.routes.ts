@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { createOsSchema, updateOsStatusSchema, queryOsSchema } from './os.schema.js';
+import { createOsSchema, updateOsStatusSchema, queryOsSchema, createClienteSchema } from './os.schema.js';
 import { osService } from './os.service.js';
 import { authenticate, authorize } from '../../middlewares/auth.middleware.js';
 import { StatusOS } from '@prisma/client';
@@ -12,6 +12,31 @@ export async function osRoutes(app: FastifyInstance) {
       data: await osService.getClientes(),
     };
   });
+
+  // Cadastro de Novo Cliente / Empresa
+  app.post('/clientes', { preHandler: [authenticate] }, async (request, reply) => {
+    const parseResult = createClienteSchema.safeParse(request.body);
+    if (!parseResult.success) {
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: 'DADOS_INVALIDOS',
+          message: 'Dados da empresa/cliente inválidos.',
+          details: parseResult.error.flatten().fieldErrors,
+        },
+      });
+    }
+
+    const user = request.user as { sub: string } | undefined;
+    const novoCliente = await osService.createCliente(parseResult.data, user?.sub);
+
+    return reply.status(201).send({
+      success: true,
+      data: novoCliente,
+      message: `Empresa/Cliente "${novoCliente.nomeRazaoSocial}" cadastrado com sucesso!`,
+    });
+  });
+
 
   // Lista de Tipos de Equipamento
   app.get('/tipos-equipamento', { preHandler: [authenticate] }, async (request, reply) => {

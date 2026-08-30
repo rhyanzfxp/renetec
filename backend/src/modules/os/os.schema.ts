@@ -61,3 +61,14 @@ export const queryOsSchema = z.object({
   clienteId: z.string().optional(),
 });
 
+export const createClienteSchema = z.object({
+  nomeRazaoSocial: z.string().min(2, 'Nome da empresa/cliente é obrigatório'),
+  documento: z.string().optional(),
+  contatoTelefone: z.string().optional(),
+  email: z.string().email('E-mail inválido').optional().or(z.literal('')),
+  endereco: z.string().optional(),
+});
+
+export type CreateClienteInput = z.infer<typeof createClienteSchema>;
+
+
