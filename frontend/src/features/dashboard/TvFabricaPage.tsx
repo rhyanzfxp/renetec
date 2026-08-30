@@ -109,7 +109,7 @@ export const TvFabricaPage: React.FC = () => {
           </div>
           <div>
             <h1 className="text-lg sm:text-2xl font-black text-white uppercase tracking-wider flex items-center gap-2.5">
-              <Tv className="w-6 h-6 text-amber-400" /> PAINEL DE CHÃO DE FÁBRICA — RENETEC
+              <Tv className="w-6 h-6 text-amber-400" /> PAINEL RENETEC
             </h1>
             <p className="text-xs text-gray-400 capitalize font-medium">{currentDate}</p>
           </div>

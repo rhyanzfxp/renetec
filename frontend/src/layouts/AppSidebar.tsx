@@ -62,9 +62,9 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   const navItems = {
     ADMIN: [
       { id: 'dashboard' as NavSection, label: 'Dashboard Gerencial', icon: <BarChart2 className="w-4 h-4" /> },
-      { id: 'tv_fabrica' as NavSection, label: 'TV Chão de Fábrica', icon: <Tv className="w-4 h-4 text-amber-400" /> },
+      { id: 'tv_fabrica' as NavSection, label: 'Painel Renetec', icon: <Tv className="w-4 h-4 text-amber-400" /> },
       { id: 'ordens_servico' as NavSection, label: 'Ordens de Serviço', icon: <ClipboardList className="w-4 h-4" /> },
-      { id: 'producao' as NavSection, label: 'Chão de Fábrica', icon: <Wrench className="w-4 h-4" /> },
+      { id: 'producao' as NavSection, label: 'Produção', icon: <Wrench className="w-4 h-4" /> },
       { id: 'fila_testes' as NavSection, label: 'Controle de Qualidade', icon: <CheckCircle className="w-4 h-4" /> },
       { id: 'retrabalho' as NavSection, label: 'Fila de Retrabalho', icon: <History className="w-4 h-4" /> },
       { id: 'metas' as NavSection, label: 'Metas e Produtividade', icon: <Target className="w-4 h-4" /> },
@@ -75,13 +75,13 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       { id: 'minhas_os' as NavSection, label: 'Minhas OS Disponíveis', icon: <ClipboardList className="w-4 h-4" /> },
       { id: 'retrabalho' as NavSection, label: 'Meus Retrabalhos', icon: <History className="w-4 h-4" /> },
       { id: 'metas' as NavSection, label: 'Meta Coletiva', icon: <Target className="w-4 h-4" /> },
-      { id: 'tv_fabrica' as NavSection, label: 'TV Chão de Fábrica', icon: <Tv className="w-4 h-4 text-amber-400" /> },
+      { id: 'tv_fabrica' as NavSection, label: 'Painel Renetec', icon: <Tv className="w-4 h-4 text-amber-400" /> },
     ],
     QUALIDADE: [
       { id: 'fila_testes' as NavSection, label: 'Fila de Testes (Inspeção)', icon: <CheckCircle className="w-4 h-4" /> },
       { id: 'dashboard' as NavSection, label: 'Indicadores Gerenciais', icon: <BarChart2 className="w-4 h-4" /> },
       { id: 'metas' as NavSection, label: 'Acompanhamento de Metas', icon: <Target className="w-4 h-4" /> },
-      { id: 'tv_fabrica' as NavSection, label: 'TV Chão de Fábrica', icon: <Tv className="w-4 h-4 text-amber-400" /> },
+      { id: 'tv_fabrica' as NavSection, label: 'Painel Renetec', icon: <Tv className="w-4 h-4 text-amber-400" /> },
     ],
   };
 

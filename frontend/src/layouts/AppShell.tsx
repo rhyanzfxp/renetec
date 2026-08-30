@@ -37,7 +37,7 @@ export const AppShell: React.FC = () => {
   }, [user?.perfil]);
 
   const getSectionTitle = () => {
-    if (activeSection === 'tv_fabrica') return 'Painel de Chão de Fábrica (Modo TV)';
+    if (activeSection === 'tv_fabrica') return 'Painel Renetec';
     if (activeSection === 'dashboard') return 'Dashboard Executivo & Gerencial';
     if (activeSection === 'producao') return 'Apontamento de Produção (Chão de Fábrica)';
     if (activeSection === 'minhas_os') return 'Minhas Ordens de Serviço';
