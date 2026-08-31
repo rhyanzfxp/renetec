@@ -101,6 +101,21 @@ export const QualidadePage: React.FC = () => {
   const currentFila = Array.isArray(fila) ? fila : [];
   const currentHistorico = Array.isArray(historico) ? historico : [];
 
+  const totalAprovadasHist = currentHistorico.reduce((acc, h) => acc + (h?.quantidadeAprovada || 0), 0);
+  const totalReprovadasHist = currentHistorico.reduce((acc, h) => acc + (h?.quantidadeReprovada || 0), 0);
+  const totalTestadasHist = currentHistorico.reduce(
+    (acc, h) => acc + (h?.quantidadeTestada || ((h?.quantidadeAprovada || 0) + (h?.quantidadeReprovada || 0)) || 0),
+    0
+  );
+
+  const fpyCalculado = totalTestadasHist > 0
+    ? `${((totalAprovadasHist / totalTestadasHist) * 100).toFixed(1)}%`
+    : '100.0%';
+
+  const indiceRetrabalhoCalculado = totalTestadasHist > 0
+    ? `${((totalReprovadasHist / totalTestadasHist) * 100).toFixed(1)}%`
+    : '0.0%';
+
   return (
     <div className="space-y-6">
       {errorMessage && (
@@ -127,7 +142,7 @@ export const QualidadePage: React.FC = () => {
         </div>
       )}
 
-      {/* ─── 1. CARDS DE KPI ESPECÍFICOS DO CQ ─────────────────────────────── */}
+      {/* ─── 1. CARDS DE KPI ESPECÍFICOS DO CQ (CALCULADOS EM TEMPO REAL) ────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <KpiCard
           label="Lotes na Mesa de CQ"
@@ -147,16 +162,16 @@ export const QualidadePage: React.FC = () => {
         />
         <KpiCard
           label="Taxa de Aprovação (FPY)"
-          value="98.1%"
-          subtext="Aprovados na 1ª passagem"
-          variant="success"
+          value={fpyCalculado}
+          subtext={totalTestadasHist > 0 ? `${totalAprovadasHist} de ${totalTestadasHist} un aprovadas` : 'Aprovados na 1ª passagem'}
+          variant={parseFloat(fpyCalculado) >= 90 ? 'success' : 'warning'}
           icon={<CheckCircle2 className="w-4 h-4" />}
         />
         <KpiCard
           label="Índice de Retrabalho"
-          value="1.9%"
-          subtext="Necessitou novo reparo"
-          variant="warning"
+          value={indiceRetrabalhoCalculado}
+          subtext={totalReprovadasHist > 0 ? `${totalReprovadasHist} un para retrabalho` : 'Nenhuma reprovação recente'}
+          variant={parseFloat(indiceRetrabalhoCalculado) > 0 ? 'warning' : 'default'}
           icon={<XCircle className="w-4 h-4" />}
         />
       </div>

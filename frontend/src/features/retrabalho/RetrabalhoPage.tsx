@@ -79,6 +79,13 @@ export const RetrabalhoPage: React.FC = () => {
 
   const pendentesCount = currentFila.filter((r) => r?.status === 'PENDENTE').length;
   const emExecucaoCount = currentFila.filter((r) => r?.status === 'EM_EXECUCAO').length;
+  const totalVolumeCorrecao = currentFila.reduce((acc, r) => acc + (r?.quantidadeRetrabalho || 0), 0);
+
+  const totalHistoricoConcluido = currentHistorico.length;
+  const totalGeralRetrabalho = totalHistoricoConcluido + currentFila.length;
+  const taxaResolucaoCalculada = totalGeralRetrabalho > 0
+    ? `${((totalHistoricoConcluido / totalGeralRetrabalho) * 100).toFixed(1)}%`
+    : '100.0%';
 
   return (
     <div className="space-y-6">
@@ -106,7 +113,7 @@ export const RetrabalhoPage: React.FC = () => {
         </div>
       )}
 
-      {/* ─── 1. KPIS ESPECÍFICOS DE RETRABALHO ─────────────────────────────── */}
+      {/* ─── 1. KPIS ESPECÍFICOS DE RETRABALHO (CALCULADOS EM TEMPO REAL) ─────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <KpiCard
           label="Retrabalhos Pendentes"
@@ -126,16 +133,16 @@ export const RetrabalhoPage: React.FC = () => {
         />
         <KpiCard
           label="Volume em Correção"
-          value={currentFila.reduce((acc, r) => acc + (r?.quantidadeRetrabalho || 0), 0)}
+          value={totalVolumeCorrecao}
           unit="unidades"
           subtext="Total de peças não-conformes"
-          variant="default"
+          variant={totalVolumeCorrecao > 0 ? 'warning' : 'default'}
           icon={<Wrench className="w-4 h-4" />}
         />
         <KpiCard
-          label="Resolução no 1º Retrabalho"
-          value="95.4%"
-          subtext="Aprovados no re-teste"
+          label="Taxa de Resolução"
+          value={taxaResolucaoCalculada}
+          subtext={totalGeralRetrabalho > 0 ? `${totalHistoricoConcluido} de ${totalGeralRetrabalho} re-inspecionados` : 'Sem pendências de conserto'}
           variant="success"
           icon={<RotateCcw className="w-4 h-4" />}
         />

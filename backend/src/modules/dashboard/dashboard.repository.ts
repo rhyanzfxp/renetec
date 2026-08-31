@@ -442,33 +442,114 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
 export async function getGerencialData(periodo: string = 'mes_atual'): Promise<GerencialData> {
   const tvData = await getTvFabricaData();
 
-  const produtividadeTecnicos: ProdutividadeTecnico[] = tvData.bancadas.map((b) => {
-    const totalPts = tvData.meta.pontosRealizados || 1;
-    const pts = b.pontosHoje || 0;
+  let leadTimeMedioGeralMinutos = 0;
+  let totalOsAtivas = tvData.filaPrioritaria.length + tvData.bancadas.filter((b) => b.status === 'EM_PRODUCAO').length;
+  let distribuicaoDefeitos: { defeito: string; quantidade: number; percentual: number }[] = [];
+  let leadTimePorEquipamento: { equipamento: string; tempoMedioMinutos: number; quantidadeProduzida: number }[] = [];
+  let producaoHistoricoDias: { data: string; pontos: number; unidades: number; fpy: number }[] = [];
+
+  if (isDatabaseReady()) {
+    try {
+      // 1. Total real de OSs ativas no sistema (não finalizadas e não canceladas)
+      const osAtivasCount = await prisma.ordemServico.count({
+        where: { status: { notIn: ['FINALIZADO', 'CANCELADO'] } },
+      });
+      totalOsAtivas = osAtivasCount;
+
+      // 2. Lead Time real calculado a partir das produções finalizadas
+      const producoesFinalizadas = await prisma.producao.findMany({
+        where: { status: 'FINALIZADO', dataFim: { not: null } },
+        include: { itemOrdemServico: { include: { tipoEquipamento: true } } },
+        orderBy: { dataFim: 'desc' },
+        take: 100,
+      });
+
+      if (producoesFinalizadas.length > 0) {
+        let somaMinutos = 0;
+        const equipMap: Record<string, { somaMin: number; qtd: number }> = {};
+
+        for (const p of producoesFinalizadas) {
+          if (p.dataInicio && p.dataFim) {
+            const diffMin = Math.max(1, Math.round((new Date(p.dataFim).getTime() - new Date(p.dataInicio).getTime()) / 60000));
+            somaMinutos += diffMin;
+
+            const eqNome = p.itemOrdemServico?.tipoEquipamento?.nome || 'Geral';
+            if (!equipMap[eqNome]) equipMap[eqNome] = { somaMin: 0, qtd: 0 };
+            equipMap[eqNome].somaMin += diffMin;
+            equipMap[eqNome].qtd += (p.quantidadeProduzida || 1);
+          }
+        }
+        leadTimeMedioGeralMinutos = Math.round(somaMinutos / producoesFinalizadas.length);
+
+        leadTimePorEquipamento = Object.entries(equipMap).map(([equipamento, data]) => ({
+          equipamento,
+          tempoMedioMinutos: Math.round(data.somaMin / (data.qtd || 1)),
+          quantidadeProduzida: data.qtd,
+        }));
+      }
+
+      // 3. Distribuição real de defeitos (Retrabalhos)
+      const retrabalhos = await prisma.retrabalho.findMany({
+        include: { motivoReprovacao: true },
+        orderBy: { dataInicio: 'desc' },
+        take: 100,
+      });
+
+      if (retrabalhos.length > 0) {
+        const defeitosMap: Record<string, number> = {};
+        for (const r of retrabalhos) {
+          const motivo = r.motivoReprovacao?.descricao || r.detalhesDefeito || 'Não conformidade';
+          defeitosMap[motivo] = (defeitosMap[motivo] || 0) + (r.quantidadeRetrabalho || 1);
+        }
+        const totalDefeitos = Object.values(defeitosMap).reduce((a, b) => a + b, 0) || 1;
+        distribuicaoDefeitos = Object.entries(defeitosMap).map(([defeito, quantidade]) => ({
+          defeito,
+          quantidade,
+          percentual: Number(((quantidade / totalDefeitos) * 100).toFixed(1)),
+        }));
+      }
+    } catch (err) {
+      console.error('[getGerencialData] Erro ao consultar agregados no DB:', err);
+    }
+  }
+
+  // Produtividade da equipe: se o período for 'hoje', usa ptsHoje da bancada; se for 'mes_atual', usa os pontos reais acumulados no mês da meta!
+  const isHoje = periodo === 'hoje';
+  const totalPts = isHoje
+    ? (tvData.bancadas.reduce((a, b) => a + (b.pontosHoje || 0), 0) || 1)
+    : (tvData.meta.pontosRealizados || 1);
+
+  const produtividadeTecnicos: ProdutividadeTecnico[] = tvData.meta.colaboradores.map((c) => {
+    const bancada = tvData.bancadas.find((b) => isTecnicoMatch(b.id, b.nome, c.id, c.nome));
+    const pts = isHoje ? (bancada?.pontosHoje || 0) : c.pontosRealizados;
+    const taxaAprov = bancada ? (bancada.taxaQualidadeHoje ?? 100.0) : 100.0;
+
     return {
-      tecnicoId: b.tecnicoId,
-      tecnicoNome: b.tecnicoNome,
-      funcao: b.funcao,
-      pesoBonus: b.funcao.includes('Qualidade') ? 0.17 : 0.22,
+      tecnicoId: c.id,
+      tecnicoNome: c.nome,
+      funcao: c.funcao,
+      pesoBonus: c.pesoBonus,
       pontosRealizados: pts,
-      percentualTotal: Number(((pts / totalPts) * 100).toFixed(1)),
-      taxaAprovacao: 100.0,
-      tempoMedioPorLoteMinutos: 40,
+      percentualTotal: totalPts > 0 ? Number(((pts / totalPts) * 100).toFixed(1)) : 0,
+      taxaAprovacao: taxaAprov,
+      tempoMedioPorLoteMinutos: leadTimeMedioGeralMinutos || 35,
     };
   });
 
   return {
     periodo,
     faturamentoEstimado: tvData.meta.faturamentoLancado || 0.0,
-    totalOsAtivas: tvData.filaPrioritaria.length + tvData.bancadas.filter((b) => b.status === 'EM_PRODUCAO').length,
-    pontosTotaisRealizados: tvData.meta.pontosRealizados,
+    totalOsAtivas,
+    pontosTotaisRealizados: isHoje
+      ? tvData.bancadas.reduce((a, b) => a + (b.pontosHoje || 0), 0)
+      : tvData.meta.pontosRealizados,
     metaAlvoPeriodo: tvData.meta.metaAlvo,
     fpyGeral: tvData.fpyHoje.fpyPercentual,
     taxaRetrabalho: tvData.meta.taxaRetrabalho,
-    leadTimeMedioGeralMinutos: 45,
-    distribuicaoDefeitos: [],
-    leadTimePorEquipamento: [],
+    leadTimeMedioGeralMinutos: leadTimeMedioGeralMinutos || (tvData.filaPrioritaria.length > 0 ? 30 : 0),
+    distribuicaoDefeitos,
+    leadTimePorEquipamento,
     produtividadeTecnicos,
-    producaoHistoricoDias: [],
+    producaoHistoricoDias,
   };
 }
