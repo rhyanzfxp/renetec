@@ -107,51 +107,57 @@ export async function getMinhasCaixas(tecnicoId: string) {
 
   try {
     const aliasIds = await getTecnicoAliasIds(tecnicoId);
+    const clean = tecnicoId.replace(/usr-|colab-/g, '');
 
-    const itens = await prisma.itemOrdemServico.findMany({
+    const producoes = await prisma.producao.findMany({
       where: {
         OR: [
-          { tecnicoAlocadoId: { in: aliasIds } },
-          { tecnicoAlocado: { nome: { in: aliasIds, mode: 'insensitive' } } },
-          {
-            producoes: {
-              some: {
-                OR: [
-                  { tecnicoId: { in: aliasIds } },
-                  { tecnico: { nome: { in: aliasIds, mode: 'insensitive' } } },
-                ],
-              },
-            },
-          },
+          { tecnicoId: { in: aliasIds } },
+          { tecnico: { nome: { contains: clean, mode: 'insensitive' } } },
+          { itemOrdemServico: { tecnicoAlocadoId: { in: aliasIds } } },
         ],
       },
       include: {
-        ordemServico: {
-          select: {
-            id: true,
-            numeroOS: true,
-            prioridade: true,
-            status: true,
-            dataEntrada: true,
-            observacoes: true,
-            cliente: { select: { id: true, nomeRazaoSocial: true } },
+        itemOrdemServico: {
+          include: {
+            ordemServico: {
+              select: {
+                id: true,
+                numeroOS: true,
+                prioridade: true,
+                status: true,
+                dataEntrada: true,
+                observacoes: true,
+                cliente: { select: { id: true, nomeRazaoSocial: true } },
+              },
+            },
+            tipoEquipamento: {
+              select: { id: true, nome: true, marca: true, modelo: true, tempoEstimadoMinutos: true, pontos: true },
+            },
           },
         },
-        tipoEquipamento: {
-          select: { id: true, nome: true, marca: true, modelo: true, tempoEstimadoMinutos: true, pontos: true },
-        },
-        producoes: {
-          select: { id: true, status: true, quantidadeProduzida: true, servicoRealizado: true, observacao: true, dataInicio: true, dataFim: true },
-          orderBy: { dataInicio: 'desc' },
-        },
       },
-      orderBy: [
-        { ordemServico: { dataEntrada: 'desc' } },
-      ],
+      orderBy: { dataInicio: 'desc' },
       take: 50,
     });
 
-    return itens || [];
+    const seenItemIds = new Set<string>();
+    const itens: any[] = [];
+
+    for (const prod of producoes) {
+      if (prod.itemOrdemServico && !seenItemIds.has(prod.itemOrdemServico.id)) {
+        seenItemIds.add(prod.itemOrdemServico.id);
+        itens.push({
+          ...prod.itemOrdemServico,
+          quantidade: prod.quantidadeProduzida || prod.itemOrdemServico.quantidade,
+          defeitoRelatado: prod.observacao || prod.servicoRealizado || prod.itemOrdemServico.defeitoRelatado,
+          producaoId: prod.id,
+          producaoStatus: prod.status,
+        });
+      }
+    }
+
+    return itens;
   } catch (err) {
     console.error('[getMinhasCaixas] Erro ao consultar caixas do técnico:', err);
     return [];

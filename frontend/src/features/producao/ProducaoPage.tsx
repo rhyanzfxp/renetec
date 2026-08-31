@@ -379,10 +379,21 @@ export const ProducaoPage: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="text-right flex items-center gap-3">
+                <div className="text-right flex items-center gap-2">
                   <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/30 text-[10px] font-semibold">
                     {h.quantidadeProduzida} un no CQ
                   </span>
+                  {h.itemOrdemServico && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleReabrirOS(h.itemOrdemServico as any)}
+                      className="text-[11px] h-7 px-2"
+                      title="Reabrir formulário para atualizar as quantidades reparadas desta OS"
+                    >
+                      ✏️ Reabrir OS
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}
