@@ -421,9 +421,16 @@ export async function criarApontamentoLote(
   for (const it of dados.itens) {
     const tipoDb = tiposDbMap[it.tipoEquipamentoId];
     const categoria = it.tipoCategoria || 'REPARADO';
-    const defeito = it.defeitoRelatado || (categoria === 'SEM_DEFEITO' ? 'Sem defeito aparente (Triagem)' : 'Manutenção corretiva');
-    const servico = it.servicoRealizado || (categoria === 'SEM_DEFEITO' ? 'Equipamento testado e aprovado em triagem (sem defeito)' : 'Reparo realizado na bancada');
+    
+    // Descrição informativa do lote/caixa
+    const infoCaixa = (it as any).quantidadeTotalCaixa
+      ? ` [Caixa: ${(it as any).quantidadeTotalCaixa} un | Reparadas: ${it.quantidade} un${(it as any).quantidadeSucata ? ` | Sucata: ${(it as any).quantidadeSucata} un` : ''}${(it as any).quantidadeRestante ? ` | Restantes: ${(it as any).quantidadeRestante} un` : ''}]`
+      : '';
 
+    const defeito = it.defeitoRelatado || (categoria === 'SEM_DEFEITO' ? `Sem defeito aparente (Triagem)${infoCaixa}` : `Manutenção corretiva${infoCaixa}`);
+    const servico = it.servicoRealizado || (categoria === 'SEM_DEFEITO' ? `Equipamento testado e aprovado em triagem (sem defeito)${infoCaixa}` : `Reparo realizado na bancada${infoCaixa}`);
+
+    // Cria o item da produção atual (unidades reparadas prontas para teste ou em andamento)
     const itemDb = await prisma.itemOrdemServico.create({
       data: {
         ordemServicoId: osDb.id,
@@ -442,7 +449,7 @@ export async function criarApontamentoLote(
 
     createdItens.push(itemDb);
 
-    // Criar registro de produção
+    // Criar registro de produção para o lote trabalhado
     const prodDb = await prisma.producao.create({
       data: {
         itemOrdemServicoId: itemDb.id,
@@ -452,13 +459,35 @@ export async function criarApontamentoLote(
         quantidadeProduzida: it.quantidade,
         servicoRealizado: servico,
         observacao: dados.enviarDiretoTeste
-          ? `Apontamento técnico direto pelo operador ${tecnicoNome}. Categoria: ${categoria}`
-          : `Em manutenção na bancada pelo técnico ${tecnicoNome}. Categoria: ${categoria}`,
+          ? `Apontamento técnico pelo operador ${tecnicoNome}. Categoria: ${categoria}${infoCaixa}`
+          : `Em manutenção na bancada pelo técnico ${tecnicoNome}. Categoria: ${categoria}${infoCaixa}`,
         status: dados.enviarDiretoTeste ? 'FINALIZADO' : 'EM_ANDAMENTO',
       },
     });
 
     createdProducoes.push(prodDb);
+
+    // Se houve envio ao teste de lote parcial e ainda restam unidades na caixa para reparar depois,
+    // cria automaticamente o saldo restante na bancada do técnico em AGUARDANDO_PRODUCAO
+    const qtdRestante = (it as any).quantidadeRestante;
+    if (dados.enviarDiretoTeste && qtdRestante && Number(qtdRestante) > 0) {
+      const itemRestanteDb = await prisma.itemOrdemServico.create({
+        data: {
+          ordemServicoId: osDb.id,
+          tipoEquipamentoId: tipoDb.id,
+          quantidade: Number(qtdRestante),
+          defeitoRelatado: `Saldo restante da caixa (${qtdRestante} un pendentes de conserto)`,
+          statusItem: 'AGUARDANDO_PRODUCAO',
+          tecnicoAlocadoId: tecnicoDbId,
+        },
+        include: {
+          tipoEquipamento: true,
+          tecnicoAlocado: { select: { id: true, nome: true } },
+          ordemServico: { include: { cliente: true } },
+        },
+      });
+      createdItens.push(itemRestanteDb);
+    }
   }
 
   const osRecord = {

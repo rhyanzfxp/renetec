@@ -18,10 +18,14 @@ export const FinalizarProducaoSchema = z.object({
   observacao: z.string().max(1000).optional(),
 });
 
-// Schema para Apontamento de Lote do Técnico (Ex: OS #1920 com 12 ONTs, 2 CCRs, 10 ONUs)
+// Schema para Apontamento de Lote do Técnico (Ex: Caixa com 50 unidades, 12 reparadas hoje, 2 sucata, 36 restantes)
 export const ApontamentoLoteItemSchema = z.object({
   tipoEquipamentoId: z.string().min(1, 'Tipo de equipamento é obrigatório'),
   quantidade: z.coerce.number().int().min(1, 'Quantidade mínima é 1'),
+  quantidadeTotalCaixa: z.coerce.number().int().min(1).optional(),
+  quantidadeReparada: z.coerce.number().int().min(0).optional(),
+  quantidadeSucata: z.coerce.number().int().min(0).optional(),
+  quantidadeRestante: z.coerce.number().int().min(0).optional(),
   tipoCategoria: z.enum(['REPARADO', 'SEM_DEFEITO', 'RETRABALHO']).default('REPARADO'),
   defeitoRelatado: z.string().optional(),
   servicoRealizado: z.string().optional(),
