@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, Mail, AlertCircle, ArrowRight } from 'lucide-react';
+import { Lock, Mail, AlertCircle, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -8,6 +8,7 @@ export const LoginPage: React.FC = () => {
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
+  const [showSenha, setShowSenha] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -78,11 +79,22 @@ export const LoginPage: React.FC = () => {
 
             <Input
               label="Senha"
-              type="password"
+              type={showSenha ? 'text' : 'password'}
               placeholder="••••••••"
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
               leftIcon={<Lock className="w-4 h-4" />}
+              rightAction={
+                <button
+                  type="button"
+                  onClick={() => setShowSenha(!showSenha)}
+                  className="text-gray-400 hover:text-gray-200 transition-colors p-1 rounded focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"
+                  title={showSenha ? 'Ocultar senha' : 'Exibir senha'}
+                  tabIndex={-1}
+                >
+                  {showSenha ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              }
               autoComplete="current-password"
               disabled={isLoading}
             />

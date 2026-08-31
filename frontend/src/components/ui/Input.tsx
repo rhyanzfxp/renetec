@@ -9,10 +9,11 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   helperText?: string;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  rightAction?: React.ReactNode;
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, hint, helperText, leftIcon, rightIcon, className, id, type, ...props }, ref) => {
+  ({ label, error, hint, helperText, leftIcon, rightIcon, rightAction, className, id, type, ...props }, ref) => {
     const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
 
     // ─── Campos numéricos: trocar type="number" por text+inputMode para permitir
@@ -49,7 +50,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
                 isNumeric && '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
                 'h-10 px-3',
                 leftIcon && 'pl-10',
-                rightIcon && 'pr-10',
+                (rightIcon || rightAction) && 'pr-10',
                 error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-surface-border'
               ),
               className
@@ -59,6 +60,11 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           {rightIcon && (
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-400">
               {rightIcon}
+            </div>
+          )}
+          {rightAction && (
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400">
+              {rightAction}
             </div>
           )}
         </div>
