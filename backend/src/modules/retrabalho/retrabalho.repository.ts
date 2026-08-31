@@ -61,9 +61,12 @@ export async function getRetrabalhosPendentes(tecnicoId?: string) {
       status: { in: ['PENDENTE', 'EM_EXECUCAO'] },
     };
     if (tecnicoId && aliasIds.length > 0) {
+      const cleanName = tecnicoId.replace(/usr-|colab-/g, '');
       where.OR = [
         { tecnicoResponsavelId: { in: aliasIds } },
+        { tecnicoResponsavel: { nome: { contains: cleanName, mode: 'insensitive' } } },
         { itemOrdemServico: { tecnicoAlocadoId: { in: aliasIds } } },
+        { itemOrdemServico: { tecnicoAlocado: { nome: { contains: cleanName, mode: 'insensitive' } } } },
       ];
     }
 
@@ -185,16 +188,29 @@ export async function concluirRetrabalho(
 }
 
 // ─── Histórico de retrabalhos concluídos ───────────────────────────────────────
-export async function getHistoricoRetrabalhos(page = 1, limit = 20) {
+export async function getHistoricoRetrabalhos(page = 1, limit = 20, tecnicoId?: string) {
   if (!isDatabaseReady()) {
     return { data: [], total: 0, page, totalPages: 0 };
   }
 
   try {
+    const aliasIds = tecnicoId ? await getTecnicoAliasIds(tecnicoId) : [];
     const skip = (page - 1) * limit;
+
+    const where: any = { status: 'CONCLUIDO' };
+    if (tecnicoId && aliasIds.length > 0) {
+      const cleanName = tecnicoId.replace(/usr-|colab-/g, '');
+      where.OR = [
+        { tecnicoResponsavelId: { in: aliasIds } },
+        { tecnicoResponsavel: { nome: { contains: cleanName, mode: 'insensitive' } } },
+        { itemOrdemServico: { tecnicoAlocadoId: { in: aliasIds } } },
+        { itemOrdemServico: { tecnicoAlocado: { nome: { contains: cleanName, mode: 'insensitive' } } } },
+      ];
+    }
+
     const [data, total] = await Promise.all([
       prisma.retrabalho.findMany({
-        where: { status: 'CONCLUIDO' },
+        where,
         include: {
           motivoReprovacao: true,
           tecnicoResponsavel: { select: { id: true, nome: true } },
@@ -209,7 +225,7 @@ export async function getHistoricoRetrabalhos(page = 1, limit = 20) {
         skip,
         take: limit,
       }),
-      prisma.retrabalho.count({ where: { status: 'CONCLUIDO' } }),
+      prisma.retrabalho.count({ where }),
     ]);
 
     return {

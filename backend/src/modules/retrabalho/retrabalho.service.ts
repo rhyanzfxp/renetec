@@ -45,6 +45,6 @@ export async function concluirRetrabalho(
 }
 
 
-export async function getHistoricoRetrabalhos(page: number, limit: number) {
-  return repo.getHistoricoRetrabalhos(page, limit);
+export async function getHistoricoRetrabalhos(page: number, limit: number, tecnicoId?: string) {
+  return repo.getHistoricoRetrabalhos(page, limit, tecnicoId);
 }

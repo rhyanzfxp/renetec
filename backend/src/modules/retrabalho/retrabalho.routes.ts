@@ -88,13 +88,15 @@ export const retrabalhoRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // ─── GET /retrabalho/historico ────────────────────────────────────────────
-  // Histórico de retrabalhos finalizados
+  // Histórico de retrabalhos finalizados (isolado para técnicos)
   fastify.get(
     '/retrabalho/historico',
     { preHandler: [authenticate] },
     async (request, reply) => {
       const { page = '1', limit = '20' } = request.query as { page?: string; limit?: string };
-      const resultado = await service.getHistoricoRetrabalhos(parseInt(page), parseInt(limit));
+      const user = request.user as UserJwtPayload;
+      const tecnicoId = user.perfil === 'TECNICO' ? user.sub : undefined;
+      const resultado = await service.getHistoricoRetrabalhos(parseInt(page), parseInt(limit), tecnicoId);
       return reply.send({
         success: true,
         data: resultado.data || [],

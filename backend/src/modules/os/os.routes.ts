@@ -59,9 +59,9 @@ export async function osRoutes(app: FastifyInstance) {
     const query = queryOsSchema.parse(request.query);
     const user = request.user as { sub: string; perfil: string };
 
-    // Se o usuário for técnico e não especificar filtro, pode filtrar por ele
+    // Se o usuário for técnico, isola estritamente para exibir apenas as OSs dele
     let filterTecnico = query.tecnicoId;
-    if (user.perfil === 'TECNICO' && request.url.includes('minhas=true')) {
+    if (user.perfil === 'TECNICO') {
       filterTecnico = user.sub;
     }
 
