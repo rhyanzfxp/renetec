@@ -63,6 +63,7 @@ export interface FinalizarProducaoPayload {
   quantidadeProduzida: number;
   servicoRealizado: string;
   observacao?: string;
+  enviarAoCQ?: boolean;
 }
 
 export interface ApontamentoLoteItemPayload {

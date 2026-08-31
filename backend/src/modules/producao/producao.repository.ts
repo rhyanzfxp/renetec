@@ -227,15 +227,23 @@ export async function finalizarProducao(
       },
     });
 
+    const enviarAoCQ = (dados as any).enviarAoCQ !== false;
+    const nextStatus = enviarAoCQ ? 'AGUARDANDO_TESTE' : 'EM_PRODUCAO';
+
     await tx.itemOrdemServico.update({
       where: { id: itemId },
-      data: { statusItem: 'AGUARDANDO_TESTE' },
+      data: { statusItem: nextStatus },
     });
 
-    if (todosAguardando) {
+    if (enviarAoCQ && todosAguardando) {
       await tx.ordemServico.update({
         where: { id: ordemServico.id },
         data: { status: 'AGUARDANDO_TESTE' },
+      });
+    } else if (!enviarAoCQ) {
+      await tx.ordemServico.update({
+        where: { id: ordemServico.id },
+        data: { status: 'EM_PRODUCAO' },
       });
     }
 
@@ -459,14 +467,14 @@ export async function criarApontamentoLote(
       data: {
         itemOrdemServicoId: itemDb.id,
         tecnicoId: tecnicoDbId,
-        dataInicio: dados.enviarDiretoTeste ? dataRegistro : agora,
-        dataFim: dados.enviarDiretoTeste ? agora : null,
+        dataInicio: dataRegistro,
+        dataFim: agora,
         quantidadeProduzida: it.quantidade,
         servicoRealizado: servico,
         observacao: dados.enviarDiretoTeste
-          ? `Apontamento técnico pelo operador ${tecnicoNome}. Categoria: ${categoria}${infoCaixa}`
-          : `Em manutenção na bancada pelo técnico ${tecnicoNome}. Categoria: ${categoria}${infoCaixa}`,
-        status: dados.enviarDiretoTeste ? 'FINALIZADO' : 'EM_ANDAMENTO',
+          ? `Apontamento técnico despachado ao CQ pelo operador ${tecnicoNome}. Categoria: ${categoria}${infoCaixa}`
+          : `Progresso de caixa salvo na bancada pelo técnico ${tecnicoNome}. Categoria: ${categoria}${infoCaixa}`,
+        status: 'FINALIZADO',
       },
     });
 

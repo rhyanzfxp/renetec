@@ -16,6 +16,7 @@ export const FinalizarProducaoSchema = z.object({
     .min(3, 'Descreva o serviço realizado')
     .max(2000),
   observacao: z.string().max(1000).optional(),
+  enviarAoCQ: z.boolean().default(true),
 });
 
 // Schema para Apontamento de Lote do Técnico (Ex: Caixa com 50 unidades, 12 reparadas hoje, 2 sucata, 36 restantes)

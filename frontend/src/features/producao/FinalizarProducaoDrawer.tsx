@@ -41,10 +41,9 @@ export const FinalizarProducaoDrawer: React.FC<FinalizarProducaoDrawerProps> = (
 
   if (!producao) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!servicoRealizado.trim() || servicoRealizado.trim().length < 5) {
-      setErrorMessage('Descreva o serviço realizado (mínimo de 5 caracteres).');
+  const handleFinalizar = async (enviarAoCQ: boolean) => {
+    if (!servicoRealizado.trim() || servicoRealizado.trim().length < 3) {
+      setErrorMessage('Descreva o serviço realizado.');
       return;
     }
 
@@ -61,13 +60,14 @@ export const FinalizarProducaoDrawer: React.FC<FinalizarProducaoDrawerProps> = (
         quantidadeProduzida: Number(quantidade),
         servicoRealizado: servicoRealizado.trim(),
         observacao: observacao.trim() || undefined,
+        enviarAoCQ,
       });
 
       onSuccess();
       onClose();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } }; message?: string };
-      setErrorMessage(e.response?.data?.message || 'Falha ao finalizar o lote de produção.');
+      setErrorMessage(e.response?.data?.message || 'Falha ao salvar lote de produção.');
     } finally {
       setIsSubmitting(false);
     }
@@ -79,26 +79,42 @@ export const FinalizarProducaoDrawer: React.FC<FinalizarProducaoDrawerProps> = (
     <Drawer
       isOpen={isOpen}
       onClose={onClose}
-      title="Concluir Produção e Enviar para Teste"
+      title="Concluir Produção de Bancada"
       subtitle={`OS #${item.ordemServico.numeroOS} — ${item.ordemServico.cliente.nomeRazaoSocial}`}
       footer={
-        <>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 w-full">
           <Button variant="outline" size="sm" onClick={onClose} disabled={isSubmitting}>
             Cancelar
           </Button>
-          <Button
-            variant="success"
-            size="sm"
-            onClick={handleSubmit}
-            loading={isSubmitting}
-            leftIcon={<CheckCircle2 className="w-4 h-4" />}
-          >
-            Finalizar e Enviar ao CQ
-          </Button>
-        </>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => handleFinalizar(false)}
+              disabled={isSubmitting}
+              loading={isSubmitting}
+              className="text-xs"
+              title="Salva as peças feitas e mantém o lote na sua bancada para continuar outro dia"
+            >
+              💾 Salvar na Bancada
+            </Button>
+            <Button
+              variant="success"
+              size="sm"
+              onClick={() => handleFinalizar(true)}
+              disabled={isSubmitting}
+              loading={isSubmitting}
+              leftIcon={<CheckCircle2 className="w-4 h-4" />}
+              className="text-xs font-bold shadow-glow-success"
+              title="Finaliza a caixa e envia as unidades para o CQ testar"
+            >
+              ⚡ Enviar ao CQ
+            </Button>
+          </div>
+        </div>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-5 text-sm">
+      <form onSubmit={(e) => e.preventDefault()} className="space-y-5 text-sm">
         {errorMessage && (
           <div className="p-3 rounded-lg bg-red-950/40 border border-red-800/40 flex items-start gap-2.5 text-xs text-red-300">
             <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
