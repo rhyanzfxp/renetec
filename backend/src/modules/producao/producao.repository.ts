@@ -112,19 +112,18 @@ export async function getMinhasCaixas(tecnicoId: string) {
       where: {
         OR: [
           { tecnicoAlocadoId: { in: aliasIds } },
-          { tecnicoAlocado: { nome: { contains: tecnicoId.replace(/usr-|colab-/g, ''), mode: 'insensitive' } } },
+          { tecnicoAlocado: { nome: { in: aliasIds, mode: 'insensitive' } } },
           {
             producoes: {
               some: {
                 OR: [
                   { tecnicoId: { in: aliasIds } },
-                  { tecnico: { nome: { contains: tecnicoId.replace(/usr-|colab-/g, ''), mode: 'insensitive' } } },
+                  { tecnico: { nome: { in: aliasIds, mode: 'insensitive' } } },
                 ],
               },
             },
           },
         ],
-        statusItem: { in: ['AGUARDANDO_PRODUCAO', 'RECEBIDO', 'EM_PRODUCAO', 'AGUARDANDO_TESTE'] },
       },
       include: {
         ordemServico: {

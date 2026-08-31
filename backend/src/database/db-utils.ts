@@ -23,11 +23,41 @@ export async function getTecnicoAliasIds(tecnicoIdOrNome: string): Promise<strin
   if (!tecnicoIdOrNome) return [];
   ids.add(tecnicoIdOrNome);
 
+  // 1. Identifica se é um usuário conhecido da equipe
+  const norm = tecnicoIdOrNome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  const matched = USUARIOS_CONHECIDOS.find((u) => {
+    const nomeNorm = u.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    return (
+      u.id === tecnicoIdOrNome ||
+      u.tecId === tecnicoIdOrNome ||
+      u.email.toLowerCase() === tecnicoIdOrNome.toLowerCase() ||
+      norm.includes(nomeNorm) ||
+      (norm.length > 2 && nomeNorm.includes(norm))
+    );
+  });
+
+  if (matched) {
+    ids.add(matched.id);
+    if (matched.tecId) ids.add(matched.tecId);
+    ids.add(matched.nome);
+  }
+
+  // 2. Busca o UUID real do usuário no banco de dados
   if (isDatabaseReady()) {
     try {
       let dbUser = null;
       if (isValidUuid(tecnicoIdOrNome)) {
         dbUser = await prisma.usuario.findUnique({ where: { id: tecnicoIdOrNome } });
+      }
+      if (!dbUser && matched) {
+        dbUser = await prisma.usuario.findFirst({
+          where: {
+            OR: [
+              { email: { equals: matched.email, mode: 'insensitive' } },
+              { nome: { contains: matched.nome, mode: 'insensitive' } },
+            ],
+          },
+        });
       }
       if (!dbUser) {
         const clean = tecnicoIdOrNome.replace(/usr-|colab-/g, '');
@@ -43,39 +73,11 @@ export async function getTecnicoAliasIds(tecnicoIdOrNome: string): Promise<strin
 
       if (dbUser) {
         ids.add(dbUser.id);
-        const normDbNome = dbUser.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-        const matched = USUARIOS_CONHECIDOS.find((u) => {
-          const uNomeNorm = u.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-          return (
-            u.email.toLowerCase() === dbUser.email.toLowerCase() ||
-            normDbNome.includes(uNomeNorm) ||
-            uNomeNorm.includes(normDbNome)
-          );
-        });
-        if (matched) {
-          ids.add(matched.id);
-          if (matched.tecId) ids.add(matched.tecId);
-        }
+        ids.add(dbUser.nome);
       }
     } catch {
       // ignore
     }
-  }
-
-  // Também checa USUARIOS_CONHECIDOS diretamente pelo parâmetro
-  const norm = tecnicoIdOrNome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  const matched = USUARIOS_CONHECIDOS.find((u) => {
-    const nomeNorm = u.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    return (
-      u.id === tecnicoIdOrNome ||
-      u.tecId === tecnicoIdOrNome ||
-      norm.includes(nomeNorm) ||
-      (norm.length > 2 && nomeNorm.includes(norm))
-    );
-  });
-  if (matched) {
-    ids.add(matched.id);
-    if (matched.tecId) ids.add(matched.tecId);
   }
 
   return Array.from(ids);
