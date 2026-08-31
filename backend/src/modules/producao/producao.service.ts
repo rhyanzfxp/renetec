@@ -9,6 +9,11 @@ export async function getMinhaFila(tecnicoId: string) {
   return repo.getMinhaFila(tecnicoId);
 }
 
+// ─── Todas as caixas / OSs do técnico (bancada, fila, teste) ──────────────────
+export async function getMinhasCaixas(tecnicoId: string) {
+  return repo.getMinhasCaixas(tecnicoId);
+}
+
 // ─── Produção ativa ───────────────────────────────────────────────────────────
 export async function getProducaoAtiva(tecnicoId: string) {
   return repo.getProducaoAtiva(tecnicoId);

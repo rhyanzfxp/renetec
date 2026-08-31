@@ -35,12 +35,14 @@ interface CriarLoteTecnicoDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  initialItem?: any;
 }
 
 export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
   isOpen,
   onClose,
   onSuccess,
+  initialItem,
 }) => {
   const { user } = useAuth();
   const [tiposEquipamento, setTiposEquipamento] = useState<TipoEquipamentoOption[]>([]);
@@ -112,33 +114,58 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      setNumeroOS('');
-      setObservacoes('');
-      setPrioridade('MEDIA');
-      setModoOperacao('DESPACHAR_CQ');
-      setItens([]);
       setError(null);
       Promise.all([osApiService.getTiposEquipamento(), osApiService.getClientes()])
         .then(([equipamentos, clientesList]) => {
           setTiposEquipamento(equipamentos);
           setClientes(clientesList);
-          if (clientesList.length > 0) {
-            setClienteId(clientesList[0].id);
-          }
-          if (equipamentos.length > 0) {
-            setItens([{
-              tipoEquipamentoId: equipamentos[0].id,
-              quantidadeTotalCaixa: 50,
-              quantidadeReparada: 12,
-              quantidadeSucata: 0,
-              tipoCategoria: 'REPARADO',
-              servicoRealizado: '',
-            }]);
+
+          if (initialItem) {
+            // Reabertura de OS existente para continuar apontamento
+            const os = initialItem.ordemServico || initialItem;
+            const equip = initialItem.tipoEquipamento;
+            setNumeroOS(String(os.numeroOS || ''));
+            setClienteId(os.cliente?.id || os.clienteId || (clientesList[0]?.id || ''));
+            setPrioridade(os.prioridade || 'MEDIA');
+            setObservacoes(os.observacoes || '');
+            setModoOperacao(initialItem.statusItem === 'EM_PRODUCAO' ? 'SALVAR_BANCADA' : 'DESPACHAR_CQ');
+
+            setItens([
+              {
+                tipoEquipamentoId: equip?.id || (equipamentos[0]?.id || 'pt-01'),
+                quantidadeTotalCaixa: 50,
+                quantidadeReparada: initialItem.quantidade || 12,
+                quantidadeSucata: 0,
+                tipoCategoria: 'REPARADO',
+                servicoRealizado: initialItem.defeitoRelatado || 'Reparo de bancada efetuado',
+              },
+            ]);
+          } else {
+            // Novo apontamento limpo
+            setNumeroOS('');
+            setObservacoes('');
+            setPrioridade('MEDIA');
+            setModoOperacao('DESPACHAR_CQ');
+            if (clientesList.length > 0) {
+              setClienteId(clientesList[0].id);
+            }
+            if (equipamentos.length > 0) {
+              setItens([
+                {
+                  tipoEquipamentoId: equipamentos[0].id,
+                  quantidadeTotalCaixa: 50,
+                  quantidadeReparada: 12,
+                  quantidadeSucata: 0,
+                  tipoCategoria: 'REPARADO',
+                  servicoRealizado: '',
+                },
+              ]);
+            }
           }
         })
         .catch(() => {});
     }
-  }, [isOpen]);
+  }, [isOpen, initialItem]);
 
   const handleAddItem = () => {
     const defaultId = tiposEquipamento[0]?.id || 'pt-01';

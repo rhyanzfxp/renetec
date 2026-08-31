@@ -23,6 +23,18 @@ export const producaoRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
+  // ─── GET /producao/minhas-caixas ──────────────────────────────────────────
+  // Retorna todas as caixas/OSs trabalhadas recentemente pelo técnico
+  fastify.get(
+    '/producao/minhas-caixas',
+    { preHandler: [authenticate, authorize(['TECNICO', 'ADMIN'])] },
+    async (request, reply) => {
+      const user = request.user as UserJwtPayload;
+      const caixas = await service.getMinhasCaixas(user.sub);
+      return reply.send({ success: true, data: caixas });
+    }
+  );
+
   // ─── GET /producao/ativa ──────────────────────────────────────────────────
   // Retorna a produção EM_ANDAMENTO do técnico logado (ou null)
   fastify.get(

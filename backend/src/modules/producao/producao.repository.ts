@@ -101,6 +101,64 @@ export async function getMinhaFila(tecnicoId: string) {
   }
 }
 
+// ─── Busca todas as caixas/OSs recentes do técnico (em bancada, fila ou aguardando teste) ───
+export async function getMinhasCaixas(tecnicoId: string) {
+  if (!isDatabaseReady()) return [];
+
+  try {
+    const aliasIds = await getTecnicoAliasIds(tecnicoId);
+
+    const itens = await prisma.itemOrdemServico.findMany({
+      where: {
+        OR: [
+          { tecnicoAlocadoId: { in: aliasIds } },
+          { tecnicoAlocado: { nome: { contains: tecnicoId.replace(/usr-|colab-/g, ''), mode: 'insensitive' } } },
+          {
+            producoes: {
+              some: {
+                OR: [
+                  { tecnicoId: { in: aliasIds } },
+                  { tecnico: { nome: { contains: tecnicoId.replace(/usr-|colab-/g, ''), mode: 'insensitive' } } },
+                ],
+              },
+            },
+          },
+        ],
+        statusItem: { in: ['AGUARDANDO_PRODUCAO', 'RECEBIDO', 'EM_PRODUCAO', 'AGUARDANDO_TESTE'] },
+      },
+      include: {
+        ordemServico: {
+          select: {
+            id: true,
+            numeroOS: true,
+            prioridade: true,
+            status: true,
+            dataEntrada: true,
+            observacoes: true,
+            cliente: { select: { id: true, nomeRazaoSocial: true } },
+          },
+        },
+        tipoEquipamento: {
+          select: { id: true, nome: true, marca: true, modelo: true, tempoEstimadoMinutos: true, pontos: true },
+        },
+        producoes: {
+          select: { id: true, status: true, quantidadeProduzida: true, servicoRealizado: true, observacao: true, dataInicio: true, dataFim: true },
+          orderBy: { dataInicio: 'desc' },
+        },
+      },
+      orderBy: [
+        { ordemServico: { dataEntrada: 'desc' } },
+      ],
+      take: 50,
+    });
+
+    return itens || [];
+  } catch (err) {
+    console.error('[getMinhasCaixas] Erro ao consultar caixas do técnico:', err);
+    return [];
+  }
+}
+
 // ─── Busca a produção ativa (EM_ANDAMENTO) do técnico ─────────────────────────
 export async function getProducaoAtiva(tecnicoId: string) {
   if (!isDatabaseReady()) return null;

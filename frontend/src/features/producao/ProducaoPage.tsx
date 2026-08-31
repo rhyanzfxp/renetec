@@ -7,46 +7,44 @@ import { Button } from '../../components/ui/Button';
 import { FinalizarProducaoDrawer } from './FinalizarProducaoDrawer';
 import { CriarLoteTecnicoDrawer } from './CriarLoteTecnicoDrawer';
 import {
-  Play,
   CheckCircle2,
   Clock,
   RefreshCw,
   Activity,
   History,
-  Timer,
   PlusCircle,
   Layers,
   AlertTriangle
 } from 'lucide-react';
 
 export const ProducaoPage: React.FC = () => {
-  const [fila, setFila] = useState<FilaItemData[]>([]);
+  const [caixas, setCaixas] = useState<FilaItemData[]>([]);
   const [producaoAtiva, setProducaoAtiva] = useState<ProducaoAtivaData | null>(null);
   const [historico, setHistorico] = useState<ProducaoHistoricoItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isStarting, setIsStarting] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCriarLoteOpen, setIsCriarLoteOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<any | null>(null);
   const [tempoDecorrido, setTempoDecorrido] = useState<string>('00:00:00');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Carrega os dados de produção
+  // Carrega todas as caixas e dados de produção do técnico
   const loadData = useCallback(async () => {
     try {
       setErrorMessage(null);
-      const [filaData, ativaData, histData] = await Promise.all([
-        producaoApiService.getMinhaFila(),
+      const [caixasData, ativaData, histData] = await Promise.all([
+        producaoApiService.getMinhasCaixas(),
         producaoApiService.getProducaoAtiva(),
-        producaoApiService.getHistorico(1, 5),
+        producaoApiService.getHistorico(1, 10),
       ]);
-      setFila(Array.isArray(filaData) ? filaData : []);
+      setCaixas(Array.isArray(caixasData) ? caixasData : []);
       setProducaoAtiva(ativaData || null);
       setHistorico(Array.isArray(histData?.data) ? histData.data : []);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } }; message?: string };
       setErrorMessage(e.response?.data?.message || 'Erro ao carregar dados do chão de fábrica.');
-      setFila([]);
+      setCaixas([]);
       setProducaoAtiva(null);
       setHistorico([]);
     } finally {
@@ -88,22 +86,7 @@ export const ProducaoPage: React.FC = () => {
 
   const [isDispatching, setIsDispatching] = useState<string | null>(null);
 
-  // Iniciar produção de um item
-  const handleIniciar = async (itemOrdemServicoId: string) => {
-    setIsStarting(true);
-    setErrorMessage(null);
-    try {
-      await producaoApiService.iniciarProducao(itemOrdemServicoId);
-      await loadData();
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } }; message?: string };
-      setErrorMessage(e.response?.data?.message || 'Falha ao iniciar produção.');
-    } finally {
-      setIsStarting(false);
-    }
-  };
-
-  // Despachar caixa/lote salvo direto para o CQ com 1 clique
+  // Despachar caixa/lote direto para o CQ com 1 clique
   const handleDespacharCQ = async (item: FilaItemData) => {
     try {
       setIsDispatching(item.id);
@@ -120,12 +103,14 @@ export const ProducaoPage: React.FC = () => {
     }
   };
 
-  const currentFila = Array.isArray(fila) ? fila : [];
-  const currentHistorico = Array.isArray(historico) ? historico : [];
+  // Reabrir OS para continuar apontamento de unidades
+  const handleReabrirOS = (item: FilaItemData) => {
+    setEditingItem(item);
+    setIsCriarLoteOpen(true);
+  };
 
-  // Separa as caixas salvas na bancada (EM_PRODUCAO) das novas OSs aguardando início
-  const caixasEmAndamento = currentFila.filter((item) => item.statusItem === 'EM_PRODUCAO');
-  const lotesAguardando = currentFila.filter((item) => item.statusItem !== 'EM_PRODUCAO');
+  const currentCaixas = Array.isArray(caixas) ? caixas : [];
+  const currentHistorico = Array.isArray(historico) ? historico : [];
 
   return (
     <div className="space-y-6">
@@ -161,14 +146,17 @@ export const ProducaoPage: React.FC = () => {
             Bancada de Produção & Reparo Técnico
           </h2>
           <p className="text-xs text-gray-400 mt-0.5">
-            Apontamento com cronômetro em tempo real ou registro direto de lotes para testes de qualidade.
+            Apontamento de caixas, relato de unidades reparadas e envio de lotes para testes de qualidade.
           </p>
         </div>
 
         <Button
           variant="primary"
           size="md"
-          onClick={() => setIsCriarLoteOpen(true)}
+          onClick={() => {
+            setEditingItem(null);
+            setIsCriarLoteOpen(true);
+          }}
           leftIcon={<PlusCircle className="w-4 h-4" />}
           className="shadow-glow-primary flex-shrink-0"
         >
@@ -189,7 +177,7 @@ export const ProducaoPage: React.FC = () => {
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
                 </span>
                 <span className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-                  <Activity className="w-4 h-4" /> Produção em Andamento na Bancada
+                  <Activity className="w-4 h-4" /> Cronômetro em Execução na Bancada
                 </span>
                 {producaoAtiva?.itemOrdemServico?.ordemServico?.prioridade && (
                   <StatusBadge prioridade={producaoAtiva.itemOrdemServico.ordemServico.prioridade} size="sm" />
@@ -232,61 +220,81 @@ export const ProducaoPage: React.FC = () => {
                 leftIcon={<CheckCircle2 className="w-5 h-5" />}
                 className="w-full sm:w-auto shadow-glow-success"
               >
-                Finalizar e Enviar ao CQ
+                Concluir Produção
               </Button>
             </div>
           </div>
         </div>
-      ) : (
-        <div className="p-4 rounded-xl bg-surface-card/60 border border-surface-border/70 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
-              <Timer className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-white">Nenhum lote com cronômetro ativo no momento</p>
-              <p className="text-xs text-gray-400">Você pode criar um novo apontamento no botão acima ou continuar suas caixas salvas abaixo.</p>
-            </div>
+      ) : null}
+
+      {/* ─── 2. MINHAS CAIXAS E ORDENS DE SERVIÇO NA BANCADA ────────────────── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <Layers className="w-4 h-4 text-sky-400" /> Minhas Caixas & Ordens de Serviço ({currentCaixas.length})
+            </h3>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Suas caixas em andamento na bancada ou encaminhadas para teste. Clique em <strong>"Reabrir OS / Continuar"</strong> para atualizar as peças de hoje.
+            </p>
           </div>
-          <Button variant="outline" size="sm" onClick={loadData} leftIcon={<RefreshCw className="w-3.5 h-3.5" />}>
+
+          <Button variant="ghost" size="sm" onClick={loadData} leftIcon={<RefreshCw className="w-3.5 h-3.5" />}>
             Atualizar
           </Button>
         </div>
-      )}
 
-      {/* ─── 2. CAIXAS E LOTES SALVOS NA BANCADA (EM PROGRESSO) ──────────────── */}
-      {caixasEmAndamento.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                📦 Caixas em Andamento na Minha Bancada ({caixasEmAndamento.length})
-              </h3>
-              <p className="text-xs text-gray-400 mt-0.5">
-                Caixas que você salvou o progresso para continuar reparando ou despachar ao testador quando estiverem prontas.
-              </p>
-            </div>
-          </div>
-
+        {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {caixasEmAndamento.map((item) => {
+            {[1, 2, 3].map((n) => (
+              <div key={n} className="h-44 rounded-xl bg-surface-card border border-surface-border animate-pulse p-4 space-y-3" />
+            ))}
+          </div>
+        ) : currentCaixas.length === 0 ? (
+          <div className="p-8 rounded-xl bg-surface-card border border-surface-border text-center space-y-2">
+            <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
+            <h4 className="text-sm font-bold text-white">Sua bancada está livre!</h4>
+            <p className="text-xs text-gray-400 max-w-sm mx-auto">
+              Clique em <strong>"Novo Apontamento / Minha OS"</strong> acima para registrar a caixa ou lote que você está trabalhando.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {currentCaixas.map((item) => {
               const os = item?.ordemServico;
               const equip = item?.tipoEquipamento;
+              const isNoCQ = item.statusItem === 'AGUARDANDO_TESTE';
+              const isEmBancada = item.statusItem === 'EM_PRODUCAO';
 
               return (
                 <div
                   key={item.id}
-                  className="p-4 rounded-xl bg-gradient-to-b from-amber-950/20 to-surface-card border-2 border-amber-500/40 hover:border-amber-400 transition-all duration-150 flex flex-col justify-between space-y-4 shadow-sm"
+                  className={`p-4 rounded-xl border transition-all duration-150 flex flex-col justify-between space-y-4 shadow-sm ${
+                    isEmBancada
+                      ? 'bg-gradient-to-b from-amber-950/20 to-surface-card border-amber-500/40 hover:border-amber-400'
+                      : isNoCQ
+                      ? 'bg-gradient-to-b from-sky-950/20 to-surface-card border-sky-500/40 hover:border-sky-400'
+                      : 'bg-surface-card border-surface-border hover:border-surface-muted'
+                  }`}
                 >
                   <div className="space-y-2.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-amber-300 tabular-nums flex items-center gap-1">
+                      <span className="text-xs font-bold text-white tabular-nums flex items-center gap-1">
                         📦 OS #{os?.numeroOS || '—'}
                       </span>
-                      <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold uppercase">
-                        Na Bancada
-                      </span>
+                      {isEmBancada ? (
+                        <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold uppercase">
+                          Na Bancada
+                        </span>
+                      ) : isNoCQ ? (
+                        <span className="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 text-[10px] font-bold uppercase">
+                          No Teste CQ
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded bg-gray-500/20 text-gray-300 border border-gray-500/30 text-[10px] font-bold uppercase">
+                          Aguardando
+                        </span>
+                      )}
                     </div>
 
                     <div>
@@ -304,7 +312,7 @@ export const ProducaoPage: React.FC = () => {
                     </div>
 
                     {item.defeitoRelatado && (
-                      <p className="text-xs text-amber-200/90 line-clamp-2 bg-amber-950/30 p-2 rounded border border-amber-800/30">
+                      <p className="text-xs text-gray-300 line-clamp-2 bg-surface-base/80 p-2 rounded border border-surface-border/50">
                         {item.defeitoRelatado}
                       </p>
                     )}
@@ -314,114 +322,31 @@ export const ProducaoPage: React.FC = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setIsCriarLoteOpen(true)}
+                      onClick={() => handleReabrirOS(item)}
                       className="text-xs"
-                      title="Adicionar mais reparos desta caixa"
+                      title="Reabrir formulário para atualizar as quantidades reparadas desta OS"
                     >
-                      Continuar
+                      ✏️ Reabrir OS
                     </Button>
-                    <Button
-                      variant="success"
-                      size="sm"
-                      onClick={() => handleDespacharCQ(item)}
-                      disabled={isDispatching === item.id}
-                      loading={isDispatching === item.id}
-                      className="text-xs font-bold shadow-glow-success"
-                      title="Enviar estas unidades prontas para teste no CQ"
-                    >
-                      Despachar CQ ⚡
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
-      {/* ─── 3. FILA DE ORDENS DE SERVIÇO AGUARDANDO INÍCIO ─────────────────── */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <Layers className="w-4 h-4 text-sky-400" /> Fila de Trabalho em Aberto ({lotesAguardando.length})
-            </h3>
-            <p className="text-xs text-gray-400 mt-0.5">Equipamentos alocados para sua bancada aguardando início de reparo.</p>
-          </div>
-
-          <Button variant="ghost" size="sm" onClick={loadData} leftIcon={<RefreshCw className="w-3.5 h-3.5" />}>
-            Atualizar Fila
-          </Button>
-        </div>
-
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3].map((n) => (
-              <div key={n} className="h-44 rounded-xl bg-surface-card border border-surface-border animate-pulse p-4 space-y-3" />
-            ))}
-          </div>
-        ) : lotesAguardando.length === 0 && caixasEmAndamento.length === 0 ? (
-          <div className="p-8 rounded-xl bg-surface-card border border-surface-border text-center space-y-2">
-            <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
-            <h4 className="text-sm font-bold text-white">Sua fila de bancada está livre!</h4>
-            <p className="text-xs text-gray-400 max-w-sm mx-auto">
-              Clique em <strong>"Novo Apontamento / Minha OS"</strong> acima para registrar o lote que você concluiu hoje.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {lotesAguardando.map((item) => {
-              const os = item?.ordemServico;
-              const equip = item?.tipoEquipamento;
-
-              return (
-                <div
-                  key={item.id}
-                  className="p-4 rounded-xl bg-surface-card border border-surface-border hover:border-surface-muted transition-all duration-150 flex flex-col justify-between space-y-4"
-                >
-                  <div className="space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-sky-400 tabular-nums">
-                        OS #{os?.numeroOS || '—'}
-                      </span>
-                      {os?.prioridade && <StatusBadge prioridade={os.prioridade} size="sm" />}
-                    </div>
-
-                    <div>
-                      <h4 className="text-sm font-bold text-white line-clamp-1">
-                        {equip?.nome || 'Equipamento'}
-                      </h4>
-                      <p className="text-xs text-gray-400 line-clamp-1">
-                        {os?.cliente?.nomeRazaoSocial || 'MARANET Telecomunicações'}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between text-xs text-gray-300 py-1.5 border-y border-surface-border/50">
-                      <span>Lote: <strong className="text-white tabular-nums">{item.quantidade} un</strong></span>
-                      <span className="flex items-center gap-1 text-gray-400">
-                        <Clock className="w-3 h-3 text-sky-400" />
-                        Estimado: <strong className="text-gray-200 tabular-nums">{equip?.tempoEstimadoMinutos || 40} min</strong>
-                      </span>
-                    </div>
-
-                    {item.defeitoRelatado && (
-                      <p className="text-xs text-gray-400 line-clamp-2 bg-surface-base/60 p-2 rounded border border-surface-border/50">
-                        {item.defeitoRelatado}
-                      </p>
+                    {isNoCQ ? (
+                      <div className="text-center py-1 bg-sky-950/40 border border-sky-800/40 rounded-lg text-[11px] text-sky-300 font-medium flex items-center justify-center gap-1">
+                        <Clock className="w-3 h-3 text-sky-400 animate-spin" /> No Testador
+                      </div>
+                    ) : (
+                      <Button
+                        variant="success"
+                        size="sm"
+                        onClick={() => handleDespacharCQ(item)}
+                        disabled={isDispatching === item.id}
+                        loading={isDispatching === item.id}
+                        className="text-xs font-bold shadow-glow-success"
+                        title="Enviar estas unidades prontas para teste no CQ"
+                      >
+                        Despachar CQ ⚡
+                      </Button>
                     )}
                   </div>
-
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => handleIniciar(item.id)}
-                    disabled={isStarting || !!producaoAtiva}
-                    title={producaoAtiva ? 'Finalize a produção ativa antes de iniciar outro lote' : ''}
-                    leftIcon={<Play className="w-3.5 h-3.5" />}
-                    className="w-full"
-                  >
-                    Iniciar Produção
-                  </Button>
                 </div>
               );
             })}
@@ -429,7 +354,7 @@ export const ProducaoPage: React.FC = () => {
         )}
       </div>
 
-      {/* ─── 3. HISTÓRICO DE PRODUÇÕES FINALIZADAS RECENTEMENTE ─────────────── */}
+      {/* ─── 3. HISTÓRICO DE PRODUÇÕES RECENTES DO TÉCNICO ───────────────────── */}
       {currentHistorico.length > 0 && (
         <div className="space-y-3 pt-4 border-t border-surface-border">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
@@ -468,9 +393,13 @@ export const ProducaoPage: React.FC = () => {
       {/* Drawer de Auto-apontamento do Técnico */}
       <CriarLoteTecnicoDrawer
         isOpen={isCriarLoteOpen}
-        onClose={() => setIsCriarLoteOpen(false)}
+        initialItem={editingItem}
+        onClose={() => {
+          setIsCriarLoteOpen(false);
+          setEditingItem(null);
+        }}
         onSuccess={() => {
-          setSuccessMessage('Lote de produção registrado e encaminhado para o Controle de Qualidade com sucesso!');
+          setSuccessMessage('Apontamento de OS registrado com sucesso!');
           setTimeout(() => setSuccessMessage(null), 5000);
           loadData();
         }}

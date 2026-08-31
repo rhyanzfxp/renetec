@@ -13,6 +13,12 @@ export const producaoApiService = {
     return Array.isArray(response.data?.data) ? response.data.data : [];
   },
 
+  // Busca todas as caixas/OSs recentes do técnico (bancada, fila, teste)
+  async getMinhasCaixas(): Promise<FilaItemData[]> {
+    const response = await api.get<{ success: boolean; data: FilaItemData[] }>('/producao/minhas-caixas');
+    return Array.isArray(response.data?.data) ? response.data.data : [];
+  },
+
   // Busca a produção que está atualmente em andamento
   async getProducaoAtiva(): Promise<ProducaoAtivaData | null> {
     const response = await api.get<{ success: boolean; data: ProducaoAtivaData | null }>('/producao/ativa');
