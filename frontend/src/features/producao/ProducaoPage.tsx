@@ -86,6 +86,8 @@ export const ProducaoPage: React.FC = () => {
     return () => clearInterval(interval);
   }, [producaoAtiva]);
 
+  const [isDispatching, setIsDispatching] = useState<string | null>(null);
+
   // Iniciar produção de um item
   const handleIniciar = async (itemOrdemServicoId: string) => {
     setIsStarting(true);
@@ -101,8 +103,29 @@ export const ProducaoPage: React.FC = () => {
     }
   };
 
+  // Despachar caixa/lote salvo direto para o CQ com 1 clique
+  const handleDespacharCQ = async (item: FilaItemData) => {
+    try {
+      setIsDispatching(item.id);
+      setErrorMessage(null);
+      await producaoApiService.despacharItemParaCQ(item.id);
+      const num = item.ordemServico?.numeroOS || '—';
+      setSuccessMessage(`OS #${num} (${item.quantidade} un) despachada com sucesso para o Testador do CQ!`);
+      setTimeout(() => setSuccessMessage(null), 5000);
+      await loadData();
+    } catch (err: any) {
+      setErrorMessage(err.response?.data?.message || 'Erro ao despachar lote para o CQ.');
+    } finally {
+      setIsDispatching(null);
+    }
+  };
+
   const currentFila = Array.isArray(fila) ? fila : [];
   const currentHistorico = Array.isArray(historico) ? historico : [];
+
+  // Separa as caixas salvas na bancada (EM_PRODUCAO) das novas OSs aguardando início
+  const caixasEmAndamento = currentFila.filter((item) => item.statusItem === 'EM_PRODUCAO');
+  const lotesAguardando = currentFila.filter((item) => item.statusItem !== 'EM_PRODUCAO');
 
   return (
     <div className="space-y-6">
@@ -222,7 +245,7 @@ export const ProducaoPage: React.FC = () => {
             </div>
             <div>
               <p className="text-sm font-semibold text-white">Nenhum lote com cronômetro ativo no momento</p>
-              <p className="text-xs text-gray-400">Você pode criar um novo lote no botão acima ou iniciar um item da sua fila.</p>
+              <p className="text-xs text-gray-400">Você pode criar um novo apontamento no botão acima ou continuar suas caixas salvas abaixo.</p>
             </div>
           </div>
           <Button variant="outline" size="sm" onClick={loadData} leftIcon={<RefreshCw className="w-3.5 h-3.5" />}>
@@ -231,12 +254,97 @@ export const ProducaoPage: React.FC = () => {
         </div>
       )}
 
-      {/* ─── 2. FILA DE ORDENS DE SERVIÇO ALOCADAS ─────────────────────────── */}
+      {/* ─── 2. CAIXAS E LOTES SALVOS NA BANCADA (EM PROGRESSO) ──────────────── */}
+      {caixasEmAndamento.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                📦 Caixas em Andamento na Minha Bancada ({caixasEmAndamento.length})
+              </h3>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Caixas que você salvou o progresso para continuar reparando ou despachar ao testador quando estiverem prontas.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {caixasEmAndamento.map((item) => {
+              const os = item?.ordemServico;
+              const equip = item?.tipoEquipamento;
+
+              return (
+                <div
+                  key={item.id}
+                  className="p-4 rounded-xl bg-gradient-to-b from-amber-950/20 to-surface-card border-2 border-amber-500/40 hover:border-amber-400 transition-all duration-150 flex flex-col justify-between space-y-4 shadow-sm"
+                >
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-amber-300 tabular-nums flex items-center gap-1">
+                        📦 OS #{os?.numeroOS || '—'}
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold uppercase">
+                        Na Bancada
+                      </span>
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-bold text-white line-clamp-1">
+                        {equip?.nome || 'Equipamento'}
+                      </h4>
+                      <p className="text-xs text-gray-400 line-clamp-1">
+                        {os?.cliente?.nomeRazaoSocial || 'MARANET Telecomunicações'}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs text-gray-300 py-1.5 border-y border-surface-border/50 bg-[#0d121c] px-2.5 rounded-lg">
+                      <span>Lote Registrado: <strong className="text-emerald-400 tabular-nums">{item.quantidade} un</strong></span>
+                      <span className="text-amber-400 font-bold tabular-nums">~{((Number(item.quantidade) || 0) * (equip?.pontos || 1)).toFixed(1)} pts</span>
+                    </div>
+
+                    {item.defeitoRelatado && (
+                      <p className="text-xs text-amber-200/90 line-clamp-2 bg-amber-950/30 p-2 rounded border border-amber-800/30">
+                        {item.defeitoRelatado}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsCriarLoteOpen(true)}
+                      className="text-xs"
+                      title="Adicionar mais reparos desta caixa"
+                    >
+                      Continuar
+                    </Button>
+                    <Button
+                      variant="success"
+                      size="sm"
+                      onClick={() => handleDespacharCQ(item)}
+                      disabled={isDispatching === item.id}
+                      loading={isDispatching === item.id}
+                      className="text-xs font-bold shadow-glow-success"
+                      title="Enviar estas unidades prontas para teste no CQ"
+                    >
+                      Despachar CQ ⚡
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ─── 3. FILA DE ORDENS DE SERVIÇO AGUARDANDO INÍCIO ─────────────────── */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <Layers className="w-4 h-4 text-sky-400" /> Fila de Trabalho em Aberto ({currentFila.length})
+              <Layers className="w-4 h-4 text-sky-400" /> Fila de Trabalho em Aberto ({lotesAguardando.length})
             </h3>
             <p className="text-xs text-gray-400 mt-0.5">Equipamentos alocados para sua bancada aguardando início de reparo.</p>
           </div>
@@ -252,7 +360,7 @@ export const ProducaoPage: React.FC = () => {
               <div key={n} className="h-44 rounded-xl bg-surface-card border border-surface-border animate-pulse p-4 space-y-3" />
             ))}
           </div>
-        ) : currentFila.length === 0 ? (
+        ) : lotesAguardando.length === 0 && caixasEmAndamento.length === 0 ? (
           <div className="p-8 rounded-xl bg-surface-card border border-surface-border text-center space-y-2">
             <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
             <h4 className="text-sm font-bold text-white">Sua fila de bancada está livre!</h4>
@@ -262,7 +370,7 @@ export const ProducaoPage: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {currentFila.map((item) => {
+            {lotesAguardando.map((item) => {
               const os = item?.ordemServico;
               const equip = item?.tipoEquipamento;
 

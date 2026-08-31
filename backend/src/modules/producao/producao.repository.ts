@@ -53,7 +53,7 @@ export async function getMinhaFila(tecnicoId: string) {
           { tecnicoAlocadoId: { in: aliasIds } },
           { tecnicoAlocado: { nome: { contains: tecnicoId.replace(/usr-|colab-/g, ''), mode: 'insensitive' } } },
         ],
-        statusItem: { in: ['AGUARDANDO_PRODUCAO', 'RECEBIDO'] },
+        statusItem: { in: ['AGUARDANDO_PRODUCAO', 'RECEBIDO', 'EM_PRODUCAO'] },
       },
       include: {
         ordemServico: {
@@ -63,11 +63,16 @@ export async function getMinhaFila(tecnicoId: string) {
             prioridade: true,
             status: true,
             dataEntrada: true,
+            observacoes: true,
             cliente: { select: { id: true, nomeRazaoSocial: true } },
           },
         },
         tipoEquipamento: {
-          select: { id: true, nome: true, marca: true, modelo: true, tempoEstimadoMinutos: true },
+          select: { id: true, nome: true, marca: true, modelo: true, tempoEstimadoMinutos: true, pontos: true },
+        },
+        producoes: {
+          select: { id: true, status: true, quantidadeProduzida: true, servicoRealizado: true, observacao: true, dataInicio: true, dataFim: true },
+          orderBy: { dataInicio: 'desc' },
         },
       },
       orderBy: [
@@ -502,3 +507,47 @@ export async function criarApontamentoLote(
 
   return { ordemServico: osRecord, itens: createdItens, producoes: createdProducoes };
 }
+
+// ─── Despacha um item de bancada (EM_PRODUCAO) para teste no CQ ──────────────
+export async function despacharItemParaCQ(itemOrdemServicoId: string, tecnicoId: string) {
+  if (!isDatabaseReady()) throw new Error('Banco de dados não está pronto.');
+
+  const item = await prisma.itemOrdemServico.findUnique({
+    where: { id: itemOrdemServicoId },
+    include: {
+      ordemServico: true,
+      tipoEquipamento: true,
+      tecnicoAlocado: true,
+    },
+  });
+
+  if (!item) throw new Error('Item de OS não encontrado.');
+
+  const agora = new Date();
+
+  // 1. Atualizar o item para AGUARDANDO_TESTE
+  const updatedItem = await prisma.itemOrdemServico.update({
+    where: { id: itemOrdemServicoId },
+    data: { statusItem: 'AGUARDANDO_TESTE' },
+    include: {
+      ordemServico: { include: { cliente: true } },
+      tipoEquipamento: true,
+      tecnicoAlocado: true,
+    },
+  });
+
+  // 2. Atualizar a OS caso todos os itens estejam prontos
+  await prisma.ordemServico.update({
+    where: { id: item.ordemServicoId },
+    data: { status: 'AGUARDANDO_TESTE' },
+  });
+
+  // 3. Finalizar produções ativas ou em andamento deste item
+  await prisma.producao.updateMany({
+    where: { itemOrdemServicoId, status: { in: ['EM_ANDAMENTO', 'PAUSADO'] } },
+    data: { status: 'FINALIZADO', dataFim: agora },
+  });
+
+  return updatedItem;
+}
+

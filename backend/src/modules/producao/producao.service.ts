@@ -153,3 +153,30 @@ export async function apontarLoteTecnico(
   return resultado;
 }
 
+// ─── Despacha um item de bancada salvo (EM_PRODUCAO) para teste no CQ ─────────
+export async function despacharItemParaCQ(itemOrdemServicoId: string, tecnicoId: string, tecnicoNome: string) {
+  const item = await repo.despacharItemParaCQ(itemOrdemServicoId, tecnicoId);
+
+  // Broadcast em tempo real para a tela do testador de CQ
+  realtimeService.broadcast('qualidade:novo_lote', {
+    item,
+    tecnicoNome,
+  });
+  realtimeService.broadcast('producao:finalizada', {
+    item,
+    tecnicoNome,
+  });
+
+  log({
+    acao: 'LOTE_DESPACHADO_CQ',
+    usuarioId: tecnicoId,
+    entidade: 'ItemOrdemServico',
+    entidadeId: itemOrdemServicoId,
+    descricao: `Técnico ${tecnicoNome} concluiu caixa e despachou OS #${item.ordemServico.numeroOS} (${item.quantidade} un de ${item.tipoEquipamento.nome}) para o Controle de Qualidade.`,
+    detalhes: { itemOrdemServicoId, quantidade: item.quantidade },
+  }).catch(() => {});
+
+  return item;
+}
+
+

@@ -58,4 +58,14 @@ export const producaoApiService = {
       total: response.data?.meta?.total || 0,
     };
   },
+
+  // Despacha um item de bancada (EM_PRODUCAO) para o CQ
+  async despacharItemParaCQ(itemOrdemServicoId: string) {
+    const response = await api.post<{ success: boolean; data: any; message: string }>(
+      `/producao/item/${itemOrdemServicoId}/despachar-cq`
+    );
+    return response.data;
+  },
 };
+
+

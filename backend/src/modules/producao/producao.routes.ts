@@ -119,6 +119,31 @@ export const producaoRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
+  // ─── POST /producao/item/:id/despachar-cq ────────────────────────────────
+  // Despacha um item de bancada (EM_PRODUCAO) para a fila do Testador (CQ)
+  fastify.post(
+    '/producao/item/:id/despachar-cq',
+    { preHandler: [authenticate, authorize(['TECNICO', 'ADMIN'])] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const user = request.user as UserJwtPayload;
+
+      try {
+        const item = await service.despacharItemParaCQ(id, user.sub, user.nome || 'Técnico');
+        return reply.send({
+          success: true,
+          message: `Lote da OS #${item.ordemServico.numeroOS} (${item.quantidade} un) despachado com sucesso para o Controle de Qualidade!`,
+          data: item,
+        });
+      } catch (err: any) {
+        return reply.status(400).send({
+          success: false,
+          message: err.message || 'Erro ao despachar lote para o CQ.',
+        });
+      }
+    }
+  );
+
   // ─── GET /producao/historico ──────────────────────────────────────────────
   // Histórico de produções do técnico logado
   fastify.get(
@@ -146,4 +171,5 @@ export const producaoRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 };
+
 

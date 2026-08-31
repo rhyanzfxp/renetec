@@ -12,6 +12,7 @@ export interface FilaItemData {
     marca?: string | null;
     modelo?: string | null;
     tempoEstimadoMinutos: number;
+    pontos?: number;
   };
   ordemServico: {
     id: string;
