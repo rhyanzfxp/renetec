@@ -50,8 +50,21 @@ export async function getMinhaFila(tecnicoId: string) {
     const itens = await prisma.itemOrdemServico.findMany({
       where: {
         OR: [
+          // Itens alocados diretamente ao técnico
           { tecnicoAlocadoId: { in: aliasIds } },
           { tecnicoAlocado: { nome: { contains: tecnicoId.replace(/usr-|colab-/g, ''), mode: 'insensitive' } } },
+          // Itens EM_PRODUCAO criados pelo próprio técnico via apontamento rápido
+          {
+            statusItem: 'EM_PRODUCAO',
+            producoes: {
+              some: {
+                OR: [
+                  { tecnicoId: { in: aliasIds } },
+                  { tecnico: { nome: { contains: tecnicoId.replace(/usr-|colab-/g, ''), mode: 'insensitive' } } },
+                ],
+              },
+            },
+          },
         ],
         statusItem: { in: ['AGUARDANDO_PRODUCAO', 'RECEBIDO', 'EM_PRODUCAO'] },
       },
