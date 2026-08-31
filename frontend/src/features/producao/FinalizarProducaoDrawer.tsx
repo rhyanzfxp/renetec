@@ -5,7 +5,7 @@ import { Input } from '../../components/ui/Input';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { producaoApiService } from './producao.service';
 import type { ProducaoAtivaData } from './producao.types';
-import { CheckCircle2, AlertCircle, Wrench } from 'lucide-react';
+import { AlertCircle, Wrench, Save, Zap } from 'lucide-react';
 
 interface FinalizarProducaoDrawerProps {
   isOpen: boolean;
@@ -23,32 +23,34 @@ export const FinalizarProducaoDrawer: React.FC<FinalizarProducaoDrawerProps> = (
   onSuccess,
 }) => {
   const maxQtd = producao?.itemOrdemServico?.quantidade || 1;
-  const [quantidade, setQuantidade] = useState<number>(maxQtd);
-  const [servicoRealizado, setServicoRealizado] = useState('');
-  const [observacao, setObservacao] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [quantidadeProduzida, setQuantidadeProduzida] = useState<number>(maxQtd);
+  const [servicoRealizado, setServicoRealizado] = useState<string>('Reparo e testes efetuados');
+  const [observacao, setObservacao] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Sincroniza quantidade com o lote ao abrir
+  // Sincroniza quantidade máxima com a do item ao abrir
   React.useEffect(() => {
-    if (producao) {
-      setQuantidade(producao.itemOrdemServico.quantidade);
-      setServicoRealizado('');
-      setObservacao('');
-      setErrorMessage(null);
+    if (producao?.itemOrdemServico?.quantidade) {
+      setQuantidadeProduzida(producao.itemOrdemServico.quantidade);
     }
+    setServicoRealizado('Reparo e testes efetuados');
+    setObservacao('');
+    setErrorMessage(null);
   }, [producao]);
 
   if (!producao) return null;
 
-  const handleFinalizar = async (enviarAoCQ: boolean) => {
-    if (!servicoRealizado.trim() || servicoRealizado.trim().length < 3) {
-      setErrorMessage('Descreva o serviço realizado.');
+  const handleFinalizar = async (enviarAoCQ: boolean = true) => {
+    if (!producao) return;
+
+    if (!servicoRealizado.trim()) {
+      setErrorMessage('Informe o serviço realizado.');
       return;
     }
 
-    if (quantidade < 1 || quantidade > maxQtd) {
-      setErrorMessage(`A quantidade deve estar entre 1 e ${maxQtd} unidades.`);
+    if (quantidadeProduzida <= 0) {
+      setErrorMessage('A quantidade produzida deve ser maior que zero.');
       return;
     }
 
@@ -57,7 +59,7 @@ export const FinalizarProducaoDrawer: React.FC<FinalizarProducaoDrawerProps> = (
 
     try {
       await producaoApiService.finalizarProducao(producao.id, {
-        quantidadeProduzida: Number(quantidade),
+        quantidadeProduzida: Number(quantidadeProduzida),
         servicoRealizado: servicoRealizado.trim(),
         observacao: observacao.trim() || undefined,
         enviarAoCQ,
@@ -67,7 +69,7 @@ export const FinalizarProducaoDrawer: React.FC<FinalizarProducaoDrawerProps> = (
       onClose();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } }; message?: string };
-      setErrorMessage(e.response?.data?.message || 'Falha ao salvar lote de produção.');
+      setErrorMessage(e.response?.data?.message || 'Erro ao finalizar apontamento de produção.');
     } finally {
       setIsSubmitting(false);
     }
@@ -80,7 +82,8 @@ export const FinalizarProducaoDrawer: React.FC<FinalizarProducaoDrawerProps> = (
       isOpen={isOpen}
       onClose={onClose}
       title="Concluir Produção de Bancada"
-      subtitle={`OS #${item.ordemServico.numeroOS} — ${item.ordemServico.cliente.nomeRazaoSocial}`}
+      subtitle="Escolha se deseja salvar o progresso na bancada ou encaminhar o lote ao CQ"
+      width="max-w-lg"
       footer={
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 w-full">
           <Button variant="outline" size="sm" onClick={onClose} disabled={isSubmitting}>
@@ -93,10 +96,11 @@ export const FinalizarProducaoDrawer: React.FC<FinalizarProducaoDrawerProps> = (
               onClick={() => handleFinalizar(false)}
               disabled={isSubmitting}
               loading={isSubmitting}
+              leftIcon={<Save className="w-4 h-4" />}
               className="text-xs"
               title="Salva as peças feitas e mantém o lote na sua bancada para continuar outro dia"
             >
-              💾 Salvar na Bancada
+              Salvar na Bancada
             </Button>
             <Button
               variant="success"
@@ -104,11 +108,11 @@ export const FinalizarProducaoDrawer: React.FC<FinalizarProducaoDrawerProps> = (
               onClick={() => handleFinalizar(true)}
               disabled={isSubmitting}
               loading={isSubmitting}
-              leftIcon={<CheckCircle2 className="w-4 h-4" />}
+              leftIcon={<Zap className="w-4 h-4" />}
               className="text-xs font-bold shadow-glow-success"
               title="Finaliza a caixa e envia as unidades para o CQ testar"
             >
-              ⚡ Enviar ao CQ
+              Enviar ao CQ
             </Button>
           </div>
         </div>
@@ -156,10 +160,10 @@ export const FinalizarProducaoDrawer: React.FC<FinalizarProducaoDrawerProps> = (
           </label>
           <Input
             type="number"
-            value={quantidade === 0 ? '' : quantidade}
+            value={quantidadeProduzida === 0 ? '' : quantidadeProduzida}
             onChange={(e) => {
               const raw = e.target.value.replace(/\D/g, '');
-              setQuantidade(raw === '' ? 0 : Math.min(maxQtd, Math.max(0, parseInt(raw))));
+              setQuantidadeProduzida(raw === '' ? 0 : Math.min(maxQtd, Math.max(0, parseInt(raw))));
             }}
             placeholder="0"
             required

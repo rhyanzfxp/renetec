@@ -1,6 +1,6 @@
 import React from 'react';
 import type { MetaAtualData } from './meta.types';
-import { Target, Flame, TrendingUp } from 'lucide-react';
+import { Target, Flame, TrendingUp, Award } from 'lucide-react';
 
 interface TermometroMetasProps {
   data: MetaAtualData;
@@ -75,7 +75,7 @@ export const TermometroMetas: React.FC<TermometroMetasProps> = ({ data }) => {
         </div>
       </div>
 
-      {/* ─── A BARRA DO TERMÔMETRO MULTICAMADAS EM PONTOS ───────────────── */}
+      {/* ─── BARRA PRINCIPAL DO TERMÔMETRO ─────────────────────────────────── */}
       <div className="space-y-2 relative z-10 pt-4">
         {/* Marcadores de Topo */}
         <div className="relative h-7 w-full text-xs font-bold select-none">
@@ -85,7 +85,7 @@ export const TermometroMetas: React.FC<TermometroMetasProps> = ({ data }) => {
             style={{ left: `${pctBase}%` }}
           >
             <span className="px-1.5 py-0.5 rounded bg-amber-900/70 border border-amber-600/50 text-amber-300 text-[10px] font-bold flex items-center gap-1 shadow-sm">
-              🟡 Base: {data.metaBase} pts
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" /> Base: {data.metaBase} pts
             </span>
           </div>
 
@@ -95,7 +95,7 @@ export const TermometroMetas: React.FC<TermometroMetasProps> = ({ data }) => {
             style={{ left: `${pctAlvo}%` }}
           >
             <span className="px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/60 text-emerald-300 text-[10px] font-bold flex items-center gap-1 shadow-sm">
-              🟢 Alvo: {data.metaAlvo} pts
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Alvo: {data.metaAlvo} pts
             </span>
           </div>
 
@@ -105,7 +105,7 @@ export const TermometroMetas: React.FC<TermometroMetasProps> = ({ data }) => {
             style={{ left: `${pctExcelencia}%` }}
           >
             <span className="px-2 py-0.5 rounded bg-yellow-950/80 border border-yellow-500/60 text-yellow-300 text-[10px] font-black flex items-center gap-1 shadow-glow-primary animate-pulse">
-              🏆 Excelência: {data.metaExcelencia} pts
+              <Award className="w-3 h-3 text-yellow-400" /> Excelência: {data.metaExcelencia} pts
             </span>
           </div>
         </div>
@@ -116,19 +116,16 @@ export const TermometroMetas: React.FC<TermometroMetasProps> = ({ data }) => {
           <div
             className="absolute top-0 bottom-0 left-0 bg-amber-950/20 border-r border-dashed border-amber-600/40"
             style={{ width: `${pctBase}%` }}
-            title="Faixa Base (sem bônus coletivo)"
           />
           {/* Faixa Alvo */}
           <div
             className="absolute top-0 bottom-0 bg-emerald-950/20 border-r border-dashed border-emerald-500/40"
             style={{ left: `${pctBase}%`, width: `${pctAlvo - pctBase}%` }}
-            title="Faixa Alvo (100% do bônus coletivo)"
           />
           {/* Faixa Excelência */}
           <div
             className="absolute top-0 bottom-0 bg-yellow-950/20 border-r border-dashed border-yellow-400/40"
             style={{ left: `${pctAlvo}%`, width: `${pctExcelencia - pctAlvo}%` }}
-            title="Faixa Excelência (125% do bônus coletivo)"
           />
 
           {/* Barra de Projeção */}
@@ -138,20 +135,20 @@ export const TermometroMetas: React.FC<TermometroMetasProps> = ({ data }) => {
             title={`Projeção de fechamento: ${data.projecaoFechamento} pontos`}
           />
 
-          {/* Barra de Pontos Reais */}
+          {/* Barra Real Conquistada */}
           <div
-            className={`relative h-full rounded-lg bg-gradient-to-r ${getGradientFill()} transition-all duration-700 ease-out flex items-center justify-end pr-2`}
+            className={`h-full rounded-lg bg-gradient-to-r ${getGradientFill()} transition-all duration-700 relative`}
             style={{ width: `${pctAtual}%` }}
           >
-            <div className="w-2 h-2 rounded-full bg-white animate-ping opacity-75" />
+            <div className="absolute inset-0 bg-white/10 animate-pulse rounded-lg" />
           </div>
         </div>
 
-        {/* Legenda Inferior de Marcadores */}
-        <div className="flex justify-between items-center text-[10px] text-gray-400 pt-1 px-1 font-medium">
+        {/* Indicadores Numéricos na Base */}
+        <div className="flex items-center justify-between text-[11px] text-gray-400 px-1 pt-0.5 font-mono">
           <span>0 pts</span>
-          <span className="flex items-center gap-1 text-sky-400 font-semibold">
-            <TrendingUp className="w-3 h-3" /> Projeção: {data.projecaoFechamento} pts ({data.diasUteisRestantes} dias úteis restantes)
+          <span className="flex items-center gap-1 text-brand-300">
+            <TrendingUp className="w-3 h-3 text-brand-400" /> Projeção: {data.projecaoFechamento} pts
           </span>
           <span>{maxEscala} pts</span>
         </div>
@@ -169,7 +166,7 @@ export const TermometroMetas: React.FC<TermometroMetasProps> = ({ data }) => {
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
-              🟡 Meta Base ({data.metaBase} pts)
+              <span className="w-2 h-2 rounded-full bg-amber-400" /> Meta Base ({data.metaBase} pts)
             </span>
             {data.pontosRealizados >= data.metaBase ? (
               <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/50 px-1.5 py-0.5 rounded border border-emerald-500/30">
@@ -196,11 +193,11 @@ export const TermometroMetas: React.FC<TermometroMetasProps> = ({ data }) => {
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
-              🟢 Meta Alvo ({data.metaAlvo} pts)
+              <Target className="w-3.5 h-3.5 text-emerald-400" /> Meta Alvo ({data.metaAlvo} pts)
             </span>
             {data.pontosRealizados >= data.metaAlvo ? (
               <span className="text-[10px] font-bold text-emerald-300 bg-emerald-500/20 px-1.5 py-0.5 rounded border border-emerald-500/40">
-                Atingida! 🎯
+                Atingida!
               </span>
             ) : (
               <span className="text-[10px] text-emerald-400 font-semibold">Faltam {data.faltamParaAlvo} pts</span>
@@ -223,11 +220,11 @@ export const TermometroMetas: React.FC<TermometroMetasProps> = ({ data }) => {
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-black text-yellow-400 flex items-center gap-1.5">
-              🏆 Meta Excelência ({data.metaExcelencia} pts)
+              <Award className="w-3.5 h-3.5 text-yellow-400" /> Meta Excelência ({data.metaExcelencia} pts)
             </span>
             {data.pontosRealizados >= data.metaExcelencia ? (
               <span className="text-[10px] font-black text-yellow-300 bg-yellow-500/20 px-2 py-0.5 rounded border border-yellow-500/40 animate-pulse">
-                CONQUISTADA! 🎉
+                CONQUISTADA!
               </span>
             ) : (
               <span className="text-[10px] text-yellow-400 font-semibold">Faltam {data.faltamParaExcelencia} pts</span>

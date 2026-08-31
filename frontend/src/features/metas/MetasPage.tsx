@@ -29,6 +29,7 @@ import {
   CheckCircle2,
   HelpCircle,
   RotateCcw,
+  Target,
 } from 'lucide-react';
 
 export const MetasPage: React.FC = () => {
@@ -171,8 +172,8 @@ export const MetasPage: React.FC = () => {
       return (
         <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-950/40 via-yellow-950/30 to-surface-card border border-yellow-500/40 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-glow-primary animate-fadeIn">
           <div className="flex items-center gap-4 text-center sm:text-left">
-            <div className="w-14 h-14 rounded-2xl bg-yellow-500/20 border border-yellow-500/40 flex items-center justify-center text-3xl shadow-inner flex-shrink-0 animate-bounce">
-              🏆
+            <div className="w-14 h-14 rounded-2xl bg-yellow-500/20 border border-yellow-500/40 flex items-center justify-center text-yellow-400 shadow-inner flex-shrink-0 animate-bounce">
+              <Award className="w-7 h-7" />
             </div>
             <div>
               <div className="flex items-center gap-2 justify-center sm:justify-start">
@@ -212,8 +213,8 @@ export const MetasPage: React.FC = () => {
       return (
         <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-teal-950/30 to-surface-card border border-emerald-500/40 flex flex-col sm:flex-row items-center justify-between gap-4 animate-fadeIn">
           <div className="flex items-center gap-4 text-center sm:text-left">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-900/40 border border-emerald-500/40 flex items-center justify-center text-3xl shadow-inner flex-shrink-0">
-              🟢
+            <div className="w-14 h-14 rounded-2xl bg-emerald-900/40 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-inner flex-shrink-0">
+              <CheckCircle2 className="w-7 h-7" />
             </div>
             <div>
               <div className="flex items-center gap-2 justify-center sm:justify-start">
@@ -253,8 +254,8 @@ export const MetasPage: React.FC = () => {
       return (
         <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-950/30 to-surface-card border border-amber-600/40 flex flex-col sm:flex-row items-center justify-between gap-4 animate-fadeIn">
           <div className="flex items-center gap-4 text-center sm:text-left">
-            <div className="w-14 h-14 rounded-2xl bg-amber-900/40 border border-amber-600/40 flex items-center justify-center text-3xl shadow-inner flex-shrink-0">
-              🟡
+            <div className="w-14 h-14 rounded-2xl bg-amber-900/40 border border-amber-600/40 flex items-center justify-center text-amber-400 shadow-inner flex-shrink-0">
+              <TrendingUp className="w-7 h-7" />
             </div>
             <div>
               <div className="flex items-center gap-2 justify-center sm:justify-start">
@@ -294,8 +295,8 @@ export const MetasPage: React.FC = () => {
     return (
       <div className="p-4 sm:p-5 rounded-2xl bg-surface-card border border-surface-border flex flex-col sm:flex-row items-center justify-between gap-4 animate-fadeIn">
         <div className="flex items-center gap-4 text-center sm:text-left">
-          <div className="w-14 h-14 rounded-2xl bg-rose-950/30 border border-rose-500/30 flex items-center justify-center text-3xl shadow-inner flex-shrink-0">
-            🎯
+          <div className="w-14 h-14 rounded-2xl bg-rose-950/30 border border-rose-500/30 flex items-center justify-center text-rose-400 shadow-inner flex-shrink-0">
+            <Target className="w-7 h-7" />
           </div>
           <div>
             <div className="flex items-center gap-2 justify-center sm:justify-start">
@@ -669,7 +670,7 @@ export const MetasPage: React.FC = () => {
                         : 'bg-surface-base border-surface-border text-gray-400 hover:text-white hover:bg-surface-elevated'
                     }`}
                   >
-                    <span>🎯 Meta Alvo (100%)</span>
+                    <span>Meta Alvo (100%)</span>
                     <span className="text-[10px] font-mono opacity-80">Multiplicador 1,0x</span>
                   </button>
 
@@ -682,7 +683,7 @@ export const MetasPage: React.FC = () => {
                         : 'bg-surface-base border-surface-border text-gray-400 hover:text-white hover:bg-surface-elevated'
                     }`}
                   >
-                    <span>🏆 Excelência (110%+)</span>
+                    <span>Excelência (110%+)</span>
                     <span className="text-[10px] font-mono opacity-80">Multiplicador 1,25x</span>
                   </button>
 
@@ -695,7 +696,7 @@ export const MetasPage: React.FC = () => {
                         : 'bg-surface-base border-surface-border text-gray-400 hover:text-white hover:bg-surface-elevated'
                     }`}
                   >
-                    <span>🟡 Meta Base (90%)</span>
+                    <span>Meta Base (90%)</span>
                     <span className="text-[10px] font-mono opacity-80">Multiplicador 0,5x</span>
                   </button>
 
@@ -708,7 +709,7 @@ export const MetasPage: React.FC = () => {
                         : 'bg-surface-base border-surface-border text-gray-400 hover:text-white hover:bg-surface-elevated'
                     }`}
                   >
-                    <span>📊 Real Atual ({data.percentualAlvo}%)</span>
+                    <span>Real Atual ({data.percentualAlvo}%)</span>
                     <span className="text-[10px] font-mono opacity-80">Multiplicador {data.multiplicadorBonus}x</span>
                   </button>
                 </div>
@@ -856,7 +857,7 @@ export const MetasPage: React.FC = () => {
                                   : 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30'
                               }`}
                             >
-                              {c.metaIndividualCumprida ? '✓ Sim' : '✕ Não'}
+                              {c.metaIndividualCumprida ? 'Sim' : 'Não'}
                             </button>
                           </td>
                         </tr>

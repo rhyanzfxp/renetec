@@ -201,7 +201,7 @@ export const ConfigMetaModal: React.FC<ConfigMetaModalProps> = ({
           <div className="space-y-3 pt-1">
             <div className="space-y-1">
               <label className="block text-xs font-semibold text-amber-300">
-                🟡 Meta Base (Pontos) — Sem bônus coletivo
+                Meta Base (Pontos) — Sem bônus coletivo
               </label>
               <input
                 type="text"
@@ -216,7 +216,7 @@ export const ConfigMetaModal: React.FC<ConfigMetaModalProps> = ({
 
             <div className="space-y-1">
               <label className="block text-xs font-semibold text-emerald-300">
-                🟢 Meta Alvo (Pontos) — 100% do bônus coletivo
+                Meta Alvo (Pontos) — 100% do bônus coletivo
               </label>
               <input
                 type="text"
@@ -231,7 +231,7 @@ export const ConfigMetaModal: React.FC<ConfigMetaModalProps> = ({
 
             <div className="space-y-1">
               <label className="block text-xs font-semibold text-yellow-400">
-                🏆 Meta Excelência (Pontos) — 125% do bônus coletivo (Teto)
+                Meta Excelência (Pontos) — 125% do bônus coletivo (Teto)
               </label>
               <input
                 type="text"

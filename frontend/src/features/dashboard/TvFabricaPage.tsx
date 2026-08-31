@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   RotateCcw,
   Activity,
+  Award,
 } from 'lucide-react';
 
 export const TvFabricaPage: React.FC = () => {
@@ -187,18 +188,18 @@ export const TvFabricaPage: React.FC = () => {
               {/* Marcadores de Escala */}
               <div className="relative h-7 w-full text-xs font-black select-none">
                 <div className="absolute -translate-x-1/2" style={{ left: `${pctBase}%` }}>
-                  <span className="px-2 py-1 rounded-lg bg-amber-950/90 border border-amber-500/70 text-amber-300 text-xs font-black shadow-md">
-                    🟡 Base: {meta.metaBase}
+                  <span className="px-2 py-1 rounded-lg bg-amber-950/90 border border-amber-500/70 text-amber-300 text-xs font-black shadow-md flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-amber-400" /> Base: {meta.metaBase}
                   </span>
                 </div>
                 <div className="absolute -translate-x-1/2" style={{ left: `${pctAlvo}%` }}>
-                  <span className="px-2 py-1 rounded-lg bg-emerald-950/90 border border-emerald-400/70 text-emerald-300 text-xs font-black shadow-md">
-                    🟢 Alvo: {meta.metaAlvo}
+                  <span className="px-2 py-1 rounded-lg bg-emerald-950/90 border border-emerald-400/70 text-emerald-300 text-xs font-black shadow-md flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400" /> Alvo: {meta.metaAlvo}
                   </span>
                 </div>
                 <div className="absolute -translate-x-1/2" style={{ left: `${pctExcelencia}%` }}>
-                  <span className="px-2.5 py-1 rounded-lg bg-yellow-950/90 border border-yellow-400 text-yellow-300 text-xs font-black shadow-[0_0_15px_rgba(250,204,21,0.4)] animate-pulse">
-                    🏆 Excelência: {meta.metaExcelencia}
+                  <span className="px-2.5 py-1 rounded-lg bg-yellow-950/90 border border-yellow-400 text-yellow-300 text-xs font-black shadow-[0_0_15px_rgba(250,204,21,0.4)] animate-pulse flex items-center gap-1">
+                    <Award className="w-3.5 h-3.5 text-yellow-400" /> Excelência: {meta.metaExcelencia}
                   </span>
                 </div>
               </div>

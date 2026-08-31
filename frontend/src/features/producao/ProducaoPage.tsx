@@ -14,7 +14,10 @@ import {
   History,
   PlusCircle,
   Layers,
-  AlertTriangle
+  AlertTriangle,
+  Edit3,
+  Zap,
+  Package
 } from 'lucide-react';
 
 export const ProducaoPage: React.FC = () => {
@@ -279,8 +282,8 @@ export const ProducaoPage: React.FC = () => {
                 >
                   <div className="space-y-2.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-white tabular-nums flex items-center gap-1">
-                        📦 OS #{os?.numeroOS || '—'}
+                      <span className="text-xs font-bold text-white tabular-nums flex items-center gap-1.5">
+                        <Package className="w-3.5 h-3.5 text-sky-400" /> OS #{os?.numeroOS || '—'}
                       </span>
                       {isEmBancada ? (
                         <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold uppercase">
@@ -323,10 +326,11 @@ export const ProducaoPage: React.FC = () => {
                       variant="outline"
                       size="sm"
                       onClick={() => handleReabrirOS(item)}
+                      leftIcon={<Edit3 className="w-3.5 h-3.5 text-sky-400" />}
                       className="text-xs"
                       title="Reabrir formulário para atualizar as quantidades reparadas desta OS"
                     >
-                      ✏️ Reabrir OS
+                      Reabrir OS
                     </Button>
 
                     {isNoCQ ? (
@@ -340,10 +344,11 @@ export const ProducaoPage: React.FC = () => {
                         onClick={() => handleDespacharCQ(item)}
                         disabled={isDispatching === item.id}
                         loading={isDispatching === item.id}
+                        leftIcon={<Zap className="w-3.5 h-3.5" />}
                         className="text-xs font-bold shadow-glow-success"
                         title="Enviar estas unidades prontas para teste no CQ"
                       >
-                        Despachar CQ ⚡
+                        Despachar CQ
                       </Button>
                     )}
                   </div>
@@ -388,10 +393,11 @@ export const ProducaoPage: React.FC = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleReabrirOS(h.itemOrdemServico as any)}
+                      leftIcon={<Edit3 className="w-3 h-3 text-sky-400" />}
                       className="text-[11px] h-7 px-2"
                       title="Reabrir formulário para atualizar as quantidades reparadas desta OS"
                     >
-                      ✏️ Reabrir OS
+                      Reabrir
                     </Button>
                   )}
                 </div>

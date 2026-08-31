@@ -231,7 +231,7 @@ export const QualidadePage: React.FC = () => {
                             ? 'bg-purple-950/40 border-purple-500/40 text-purple-300'
                             : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
                         }`}>
-                          {item.tipoCategoria === 'SEM_DEFEITO' ? '✅ Sem Defeito' : item.tipoCategoria === 'RETRABALHO' ? '🔄 Retrabalho' : '🔧 Reparado'}
+                          {item.tipoCategoria === 'SEM_DEFEITO' ? 'Sem Defeito' : item.tipoCategoria === 'RETRABALHO' ? 'Retrabalho' : 'Reparado'}
                         </span>
                       </div>
                       {os?.prioridade && <StatusBadge prioridade={os.prioridade} size="sm" />}

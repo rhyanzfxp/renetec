@@ -49,13 +49,13 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     } else if (event.type === 'qualidade:novo_lote') {
       addToastRef.current({ title: 'Novo Lote na Mesa de CQ', message: `Equipamentos liberados para teste por ${(event.data as any)?.tecnicoNome || 'técnico'}.`, type: 'info' });
     } else if (event.type === 'retrabalho:criado') {
-      addToastRef.current({ title: 'Retrabalho Encaminhado ⚠️', message: 'Item reprovado no CQ enviado para a bancada do técnico responsável.', type: 'warning' });
+      addToastRef.current({ title: 'Retrabalho Encaminhado', message: 'Item reprovado no CQ enviado para a bancada do técnico responsável.', type: 'warning' });
     } else if (event.type === 'producao:iniciada') {
       addToastRef.current({ title: 'Bancada Iniciada', message: 'Novo lote em produção na bancada técnica.', type: 'info' });
     } else if (event.type === 'producao:finalizada') {
       addToastRef.current({ title: 'Lote Finalizado', message: 'Montagem concluída! Encaminhado para Controle de Qualidade.', type: 'success' });
     } else if (event.type === 'qualidade:aprovado') {
-      addToastRef.current({ title: 'Lote Aprovado no CQ! 🎉', message: 'Unidades conformes somadas à meta coletiva da fábrica.', type: 'success' });
+      addToastRef.current({ title: 'Lote Aprovado no CQ', message: 'Unidades conformes somadas à meta coletiva da fábrica.', type: 'success' });
     } else if (event.type === 'qualidade:reprovado') {
       addToastRef.current({ title: 'Não-Conformidade Detectada', message: 'Peças reprovadas enviadas para a fila de Retrabalho.', type: 'warning' });
     } else if (event.type === 'retrabalho:concluido') {

@@ -171,14 +171,14 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
           )}
         </div>
 
-        {/* Painel da Equação Invariável: Aprovados + Reprovados = Testados */}
+        {/* Painel de Quantidades: Aprovados + Reprovados = Total */}
         <div className="p-4 rounded-xl bg-surface-base border border-surface-border space-y-3">
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold uppercase tracking-wider text-gray-300 flex items-center gap-1.5">
               <FileCheck className="w-4 h-4 text-emerald-400" /> Resultado Quantitativo do Teste
             </label>
             <span className="text-[11px] text-gray-400">
-              Obrigatório: <strong className="text-white tabular-nums">{qtdLote} un</strong>
+              Total a Testar: <strong className="text-white tabular-nums">{qtdLote} un</strong>
             </span>
           </div>
 
@@ -220,12 +220,12 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
             </div>
           </div>
 
-          {/* Validador Visual da Soma */}
+          {/* Validação de Soma */}
           <div
-            className={`p-2.5 rounded-lg border text-xs flex items-center justify-between ${
+            className={`p-2.5 rounded-lg flex items-center justify-between text-xs font-semibold ${
               isSomaValida
-                ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-300'
-                : 'bg-red-950/20 border-red-500/30 text-red-300'
+                ? 'bg-emerald-950/40 text-emerald-300 border border-emerald-800/40'
+                : 'bg-red-950/40 text-red-300 border border-red-800/40 animate-pulse'
             }`}
           >
             <span>
@@ -233,7 +233,7 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
               <strong className="tabular-nums">{reprovadas}</strong> (Reprov.) ={' '}
               <strong className="tabular-nums">{totalCalculado}</strong> / {qtdLote} un
             </span>
-            <span>{isSomaValida ? '✅ Soma 100% correta' : '❌ Divergência'}</span>
+            <span>{isSomaValida ? 'Soma correta' : 'Divergência de soma'}</span>
           </div>
         </div>
 
@@ -250,7 +250,7 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
             </div>
 
             <p className="text-[11px] text-amber-200 bg-amber-950/40 p-2.5 rounded-lg border border-amber-500/30">
-              🔄 <strong>Atenção:</strong> As <strong>{reprovadas} unidade(s)</strong> reprovadas serão encaminhadas imediatamente para a fila de Retrabalho do técnico <strong>{item.tecnicoAlocado?.nome || 'Samuel'}</strong> para correção.
+              <strong>Atenção:</strong> As <strong>{reprovadas} unidade(s)</strong> reprovadas serão encaminhadas imediatamente para a fila de Retrabalho do técnico <strong>{item.tecnicoAlocado?.nome || 'Samuel'}</strong> para correção.
             </p>
 
             <div className="space-y-1.5">
