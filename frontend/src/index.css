@@ -1,4 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+/* ── Fontes do sistema (sem dependência de CDN externo, carrega instantaneamente) ── */
+/* Inter e Plus Jakarta Sans via Google Fonts, com display=swap para não bloquear render */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -48,6 +50,24 @@
   ::-webkit-scrollbar-thumb:hover {
     background: #374151;
   }
+
+  /* Performance: desabilitar transições pesadas quando o sistema estiver sobrecarregado */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* Otimização de rendering para elementos que animam */
+  .animate-pulse,
+  .animate-spin,
+  .animate-slideUpFade,
+  .animate-fadeIn,
+  .animate-scaleIn {
+    will-change: opacity, transform;
+  }
 }
 
 /* ─── Micro-animações de UI Instantâneas ───────────────────────────────────── */
@@ -59,35 +79,36 @@
     100% { transform: scale(1); opacity: 1; }
   }
   .animate-scaleIn {
-    animation: scaleIn 200ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    animation: scaleIn 150ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
 
   /* Fade-in suave para alertas e mensagens de retorno */
   @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-4px); }
+    from { opacity: 0; transform: translateY(-3px); }
     to   { opacity: 1; transform: translateY(0); }
   }
   .animate-fadeIn {
-    animation: fadeIn 180ms ease-out both;
+    animation: fadeIn 120ms ease-out both;
   }
 
   /* Slide-up suave para cards que aparecem na tela */
   @keyframes slideUpFade {
-    from { opacity: 0; transform: translateY(8px); }
+    from { opacity: 0; transform: translateY(6px); }
     to   { opacity: 1; transform: translateY(0); }
   }
   .animate-slideUpFade {
-    animation: slideUpFade 220ms ease-out both;
+    animation: slideUpFade 150ms ease-out both;
   }
 
   /* Ripple de press para feedback tátil imediato */
   @keyframes ripplePulse {
-    0%   { transform: scale(0.92); }
+    0%   { transform: scale(0.95); }
     50%  { transform: scale(1.01); }
     100% { transform: scale(1); }
   }
   .animate-press {
-    animation: ripplePulse 150ms ease-out;
+    animation: ripplePulse 120ms ease-out;
   }
 }
+
 

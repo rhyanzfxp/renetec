@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { producaoApiService } from './producao.service';
 import type { FilaItemData, ProducaoAtivaData, ProducaoHistoricoItem } from './producao.types';
-import { useRealtime } from '../realtime/RealtimeContext';
+import { usePageData } from '../../hooks/usePageData';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Button } from '../../components/ui/Button';
 import { FinalizarProducaoDrawer } from './FinalizarProducaoDrawer';
@@ -54,15 +54,12 @@ export const ProducaoPage: React.FC = () => {
     }
   }, []);
 
-  const { subscribe } = useRealtime();
-
-  useEffect(() => {
-    loadData();
-    const unsubscribe = subscribe('*', () => {
-      loadData();
-    });
-    return () => unsubscribe();
-  }, [loadData, subscribe]);
+  // Recarrega apenas em eventos de produção e qualidade (debounce 400ms)
+  usePageData({
+    loadData,
+    realtimeEvents: ['producao:iniciada', 'producao:finalizada', 'qualidade:aprovado', 'qualidade:reprovado', 'qualidade:novo_lote'],
+    debounceMs: 400,
+  });
 
   // Cronômetro em tempo real para produção ativa
   useEffect(() => {

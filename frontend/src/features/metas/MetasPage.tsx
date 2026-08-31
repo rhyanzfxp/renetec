@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { metaApiService } from './meta.service';
 import type {
   MetaAtualData,
   TabelaPontuacaoItem,
   GuiaComoUsarItem,
 } from './meta.types';
-import { useRealtime } from '../realtime/RealtimeContext';
+import { usePageData } from '../../hooks/usePageData';
 import { TermometroMetas } from './TermometroMetas';
 import { ConfigMetaModal } from './ConfigMetaModal';
 import { KpiCard } from '../../components/ui/KpiCard';
@@ -75,23 +75,14 @@ export const MetasPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []); // ← sem dependência de simuladorFaturamento: não causa loop
+  }, []); // sem dependência de simuladorFaturamento: não causa loop
 
-  const { subscribe } = useRealtime();
-
-  useEffect(() => {
-    loadData();
-    const unsubscribe = subscribe('*', (event) => {
-      if (
-        event.type === 'qualidade:aprovado' ||
-        event.type === 'qualidade:reprovado' ||
-        event.type === 'meta:atualizada'
-      ) {
-        loadData();
-      }
-    });
-    return () => unsubscribe();
-  }, [loadData, subscribe]);
+  // Recarrega apenas em eventos de aprovação e metas (debounce 600ms — página pesada)
+  usePageData({
+    loadData,
+    realtimeEvents: ['qualidade:aprovado', 'qualidade:reprovado', 'meta:atualizada'],
+    debounceMs: 600,
+  });
 
   const handleSimularFaturamento = async (e: React.FormEvent) => {
     e.preventDefault();

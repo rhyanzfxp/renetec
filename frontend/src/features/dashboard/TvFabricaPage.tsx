@@ -52,17 +52,21 @@ export const TvFabricaPage: React.FC = () => {
 
   const { subscribe } = useRealtime();
 
-  // Polling a cada 20s e inscrição imediata via WebSocket
+  // Polling a cada 45s + recarrega em eventos de produção (debounce 500ms)
+  // Intervalo maior porque a TV fica aberta o dia todo — economiza CPU/rede
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 20000);
+    const interval = setInterval(loadData, 45000);
 
     const unsubscribe = subscribe('*', () => {
-      loadData();
+      // Debounce simples: espera 500ms antes de recarregar
+      if ((loadData as any)._debounceTimer) clearTimeout((loadData as any)._debounceTimer);
+      (loadData as any)._debounceTimer = setTimeout(() => loadData(), 500);
     });
 
     return () => {
       clearInterval(interval);
+      if ((loadData as any)._debounceTimer) clearTimeout((loadData as any)._debounceTimer);
       unsubscribe();
     };
   }, [loadData, subscribe]);

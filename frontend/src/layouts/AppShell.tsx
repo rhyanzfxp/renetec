@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { AppHeader } from './AppHeader';
 import { AppSidebar } from './AppSidebar';
 import { MobileNav } from './MobileNav';
@@ -6,14 +6,28 @@ import type { NavSection } from '../types/auth';
 import { useAuth } from '../features/auth/AuthContext';
 import { StatusBadge } from '../components/ui/StatusBadge';
 
-import { OsListPage } from '../features/os/OsListPage';
-import { ProducaoPage } from '../features/producao/ProducaoPage';
-import { QualidadePage } from '../features/qualidade/QualidadePage';
-import { RetrabalhoPage } from '../features/retrabalho/RetrabalhoPage';
-import { MetasPage } from '../features/metas/MetasPage';
-import { TvFabricaPage } from '../features/dashboard/TvFabricaPage';
-import { DashboardGerencialPage } from '../features/dashboard/DashboardGerencialPage';
-import { AuditoriaPage } from '../features/auditoria/AuditoriaPage';
+// Lazy loading de todos os módulos: só carrega quando o usuário acessar pela primeira vez
+const OsListPage = lazy(() => import('../features/os/OsListPage').then(m => ({ default: m.OsListPage })));
+const ProducaoPage = lazy(() => import('../features/producao/ProducaoPage').then(m => ({ default: m.ProducaoPage })));
+const QualidadePage = lazy(() => import('../features/qualidade/QualidadePage').then(m => ({ default: m.QualidadePage })));
+const RetrabalhoPage = lazy(() => import('../features/retrabalho/RetrabalhoPage').then(m => ({ default: m.RetrabalhoPage })));
+const MetasPage = lazy(() => import('../features/metas/MetasPage').then(m => ({ default: m.MetasPage })));
+const TvFabricaPage = lazy(() => import('../features/dashboard/TvFabricaPage').then(m => ({ default: m.TvFabricaPage })));
+const DashboardGerencialPage = lazy(() => import('../features/dashboard/DashboardGerencialPage').then(m => ({ default: m.DashboardGerencialPage })));
+const AuditoriaPage = lazy(() => import('../features/auditoria/AuditoriaPage').then(m => ({ default: m.AuditoriaPage })));
+
+// Skeleton minimalista de carregamento de página
+const PageSkeleton: React.FC = () => (
+  <div className="space-y-4 animate-pulse">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {[1,2,3,4].map(n => (
+        <div key={n} className="h-24 rounded-xl bg-surface-card border border-surface-border" />
+      ))}
+    </div>
+    <div className="h-64 rounded-xl bg-surface-card border border-surface-border" />
+    <div className="h-40 rounded-xl bg-surface-card border border-surface-border" />
+  </div>
+);
 
 
 
@@ -110,24 +124,26 @@ export const AppShell: React.FC = () => {
             </div>
           )}
 
-          {/* Renderização Condicional de Módulo */}
-          {activeSection === 'tv_fabrica' ? (
-            <TvFabricaPage />
-          ) : activeSection === 'dashboard' ? (
-            <DashboardGerencialPage />
-          ) : activeSection === 'producao' ? (
-            <ProducaoPage />
-          ) : activeSection === 'fila_testes' ? (
-            <QualidadePage />
-          ) : activeSection === 'retrabalho' ? (
-            <RetrabalhoPage />
-          ) : activeSection === 'metas' ? (
-            <MetasPage />
-          ) : activeSection === 'auditoria' ? (
-            <AuditoriaPage />
-          ) : (
-            <OsListPage onlyMine={activeSection === 'minhas_os' || user?.perfil === 'TECNICO'} />
-          )}
+          {/* Renderização Condicional de Módulo com lazy loading */}
+          <Suspense fallback={<PageSkeleton />}>
+            {activeSection === 'tv_fabrica' ? (
+              <TvFabricaPage />
+            ) : activeSection === 'dashboard' ? (
+              <DashboardGerencialPage />
+            ) : activeSection === 'producao' ? (
+              <ProducaoPage />
+            ) : activeSection === 'fila_testes' ? (
+              <QualidadePage />
+            ) : activeSection === 'retrabalho' ? (
+              <RetrabalhoPage />
+            ) : activeSection === 'metas' ? (
+              <MetasPage />
+            ) : activeSection === 'auditoria' ? (
+              <AuditoriaPage />
+            ) : (
+              <OsListPage onlyMine={activeSection === 'minhas_os' || user?.perfil === 'TECNICO'} />
+            )}
+          </Suspense>
         </main>
 
       </div>

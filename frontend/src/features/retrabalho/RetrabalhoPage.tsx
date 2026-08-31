@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { retrabalhoApiService } from './retrabalho.service';
 import type { RetrabalhoItemData, HistoricoRetrabalhoItem } from './retrabalho.types';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Button } from '../../components/ui/Button';
 import { KpiCard } from '../../components/ui/KpiCard';
 import { ConcluirRetrabalhoDrawer } from './ConcluirRetrabalhoDrawer';
+import { usePageData } from '../../hooks/usePageData';
 import {
   Wrench,
   AlertTriangle,
@@ -17,8 +18,6 @@ import {
   History,
   Activity
 } from 'lucide-react';
-
-import { useRealtime } from '../realtime/RealtimeContext';
 
 export const RetrabalhoPage: React.FC = () => {
   const [fila, setFila] = useState<RetrabalhoItemData[]>([]);
@@ -48,15 +47,12 @@ export const RetrabalhoPage: React.FC = () => {
     }
   }, []);
 
-  const { subscribe } = useRealtime();
-
-  useEffect(() => {
-    loadData();
-    const unsubscribe = subscribe('*', () => {
-      loadData();
-    });
-    return () => unsubscribe();
-  }, [loadData, subscribe]);
+  // Recarrega apenas em eventos de retrabalho (debounce 400ms)
+  usePageData({
+    loadData,
+    realtimeEvents: ['retrabalho:criado', 'retrabalho:iniciado', 'retrabalho:concluido', 'qualidade:reprovado'],
+    debounceMs: 400,
+  });
 
   // Iniciar a execução do retrabalho
   const handleIniciar = async (item: RetrabalhoItemData) => {
