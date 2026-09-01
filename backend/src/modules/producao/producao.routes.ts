@@ -104,6 +104,55 @@ export const producaoRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
+  // ─── POST /producao/pausar ou POST /producao/:id/pausar ──────────────────
+  // Pausa a produção ativa e mantém o item na bancada do técnico
+  fastify.post(
+    '/producao/pausar',
+    { preHandler: [authenticate, authorize(['TECNICO', 'ADMIN'])] },
+    async (request, reply) => {
+      const user = request.user as UserJwtPayload;
+      const body = (request.body || {}) as { producaoId?: string; observacao?: string };
+
+      try {
+        const pausada = await service.pausarProducao(body.producaoId, user.sub, body.observacao);
+        return reply.send({
+          success: true,
+          message: 'Produção pausada. A OS continua na sua bancada para continuação posterior.',
+          data: pausada,
+        });
+      } catch (err: any) {
+        return reply.status(err.statusCode || 400).send({
+          success: false,
+          message: err.message || 'Erro ao pausar produção.',
+        });
+      }
+    }
+  );
+
+  fastify.post(
+    '/producao/:id/pausar',
+    { preHandler: [authenticate, authorize(['TECNICO', 'ADMIN'])] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const user = request.user as UserJwtPayload;
+      const body = (request.body || {}) as { observacao?: string };
+
+      try {
+        const pausada = await service.pausarProducao(id, user.sub, body.observacao);
+        return reply.send({
+          success: true,
+          message: 'Produção pausada. A OS continua na sua bancada para continuação posterior.',
+          data: pausada,
+        });
+      } catch (err: any) {
+        return reply.status(err.statusCode || 400).send({
+          success: false,
+          message: err.message || 'Erro ao pausar produção.',
+        });
+      }
+    }
+  );
+
   // ─── POST /producao/apontamento-lote ─────────────────────────────────────
   // Auto-atendimento do Técnico: Cria OS + Itens e envia direto ao Teste (ou fila)
   fastify.post(

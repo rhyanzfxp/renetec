@@ -19,6 +19,12 @@ export const FinalizarProducaoSchema = z.object({
   enviarAoCQ: z.boolean().default(true),
 });
 
+// Schema para pausar uma produção individual na bancada
+export const PausarProducaoSchema = z.object({
+  producaoId: z.string().optional(),
+  observacao: z.string().max(1000).optional(),
+});
+
 // Schema para Apontamento de Lote do Técnico (Ex: Caixa com 50 unidades, 12 reparadas hoje, 2 sucata, 36 restantes)
 export const ApontamentoLoteItemSchema = z.object({
   tipoEquipamentoId: z.string().min(1, 'Tipo de equipamento é obrigatório'),
@@ -40,11 +46,15 @@ export const ApontamentoLoteSchema = z.object({
   prioridade: z.enum(['BAIXA', 'MEDIA', 'ALTA', 'URGENTE']).default('MEDIA'),
   observacoes: z.string().optional(),
   enviarDiretoTeste: z.boolean().default(true),
+  iniciarProducaoAoVivo: z.boolean().optional().default(false),
+  modoOperacao: z.enum(['DESPACHAR_CQ', 'INICIAR_PRODUCAO', 'SALVAR_BANCADA']).optional(),
   itens: z.array(ApontamentoLoteItemSchema).min(1, 'Adicione ao menos 1 equipamento no lote'),
 });
 
 export type IniciarProducaoInput = z.infer<typeof IniciarProducaoSchema>;
 export type FinalizarProducaoInput = z.infer<typeof FinalizarProducaoSchema>;
+export type PausarProducaoInput = z.infer<typeof PausarProducaoSchema>;
 export type ApontamentoLoteItemInput = z.infer<typeof ApontamentoLoteItemSchema>;
 export type ApontamentoLoteInput = z.infer<typeof ApontamentoLoteSchema>;
+
 

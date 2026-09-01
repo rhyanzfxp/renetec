@@ -329,6 +329,64 @@ export async function finalizarProducao(
   return p;
 }
 
+// ─── Pausa uma produção ativa (mantém o item na bancada do técnico) ───────────
+export async function pausarProducao(
+  producaoId: string,
+  observacao?: string
+) {
+  const agora = new Date();
+
+  if (!isDatabaseReady()) {
+    throw new Error('Banco de dados indisponível no momento.');
+  }
+
+  const p = await prisma.$transaction(async (tx) => {
+    const producao = await tx.producao.findUniqueOrThrow({
+      where: { id: producaoId },
+      include: {
+        itemOrdemServico: {
+          include: {
+            ordemServico: { select: { id: true, numeroOS: true } },
+            tipoEquipamento: { select: { nome: true } },
+          },
+        },
+      },
+    });
+
+    const producaoPausada = await tx.producao.update({
+      where: { id: producaoId },
+      data: {
+        status: 'FINALIZADO',
+        dataFim: agora,
+        observacao: observacao || 'Produção pausada na bancada pelo técnico para continuação posterior.',
+      },
+      include: {
+        itemOrdemServico: {
+          include: {
+            ordemServico: { select: { id: true, numeroOS: true } },
+            tipoEquipamento: { select: { nome: true } },
+          },
+        },
+      },
+    });
+
+    // Mantém o item em EM_PRODUCAO na bancada do técnico
+    await tx.itemOrdemServico.update({
+      where: { id: producao.itemOrdemServicoId },
+      data: { statusItem: 'EM_PRODUCAO' },
+    });
+
+    await tx.ordemServico.update({
+      where: { id: producao.itemOrdemServico.ordemServico.id },
+      data: { status: 'EM_PRODUCAO' },
+    });
+
+    return producaoPausada;
+  });
+
+  return p;
+}
+
 // ─── Histórico de produções do técnico (paginado) ────────────────────────────
 export async function getHistoricoProducao(tecnicoId: string, page = 1, limit = 20) {
   if (!isDatabaseReady()) {
@@ -401,7 +459,7 @@ export async function getProducaoAtivaNoItem(itemOrdemServicoId: string, tecnico
   }
 }
 
-// ─── Criar Apontamento de Lote do Técnico (Auto-atendimento com envio ao Teste) ───
+// ─── Criar Apontamento de Lote do Técnico (Auto-atendimento com envio ao Teste ou Início Ao Vivo) ───
 export async function criarApontamentoLote(
   tecnicoId: string,
   tecnicoNome: string,
@@ -412,6 +470,8 @@ export async function criarApontamentoLote(
     prioridade?: 'BAIXA' | 'MEDIA' | 'ALTA' | 'URGENTE';
     observacoes?: string;
     enviarDiretoTeste?: boolean;
+    iniciarProducaoAoVivo?: boolean;
+    modoOperacao?: 'DESPACHAR_CQ' | 'INICIAR_PRODUCAO' | 'SALVAR_BANCADA';
     itens: {
       tipoEquipamentoId: string;
       quantidade: number;
@@ -426,7 +486,11 @@ export async function criarApontamentoLote(
 ) {
   const agora = new Date();
   const dataRegistro = dados.dataEntrada ? new Date(dados.dataEntrada) : agora;
-  const initialStatus: StatusOS = dados.enviarDiretoTeste ? 'AGUARDANDO_TESTE' : 'EM_PRODUCAO';
+  
+  const isAoVivo = dados.modoOperacao === 'INICIAR_PRODUCAO' || dados.iniciarProducaoAoVivo === true;
+  const isDiretoCQ = dados.modoOperacao === 'DESPACHAR_CQ' || (dados.enviarDiretoTeste === true && !isAoVivo && dados.modoOperacao !== 'SALVAR_BANCADA');
+  
+  const initialStatus: StatusOS = isDiretoCQ ? 'AGUARDANDO_TESTE' : 'EM_PRODUCAO';
   const newNumero = dados.numeroOS ? Number(dados.numeroOS) : Math.floor(Math.random() * 9000) + 1000;
 
   // 1. Garantir ID de usuário válido no PostgreSQL para chave estrangeira
@@ -544,13 +608,15 @@ export async function criarApontamentoLote(
         itemOrdemServicoId: itemDb.id,
         tecnicoId: tecnicoDbId,
         dataInicio: dataRegistro,
-        dataFim: agora,
+        dataFim: isAoVivo ? null : agora,
         quantidadeProduzida: it.quantidade,
         servicoRealizado: servico,
-        observacao: dados.enviarDiretoTeste
+        observacao: isDiretoCQ
           ? `Apontamento técnico despachado ao CQ pelo operador ${tecnicoNome}. Categoria: ${categoria}${infoCaixa}`
+          : isAoVivo
+          ? `Produção iniciada ao vivo na bancada pelo operador ${tecnicoNome}. Categoria: ${categoria}${infoCaixa}`
           : `Progresso de caixa salvo na bancada pelo técnico ${tecnicoNome}. Categoria: ${categoria}${infoCaixa}`,
-        status: 'FINALIZADO',
+        status: isAoVivo ? 'EM_ANDAMENTO' : 'FINALIZADO',
       },
     });
 
@@ -559,7 +625,7 @@ export async function criarApontamentoLote(
     // Se houve envio ao teste de lote parcial e ainda restam unidades na caixa para reparar depois,
     // cria automaticamente o saldo restante na bancada do técnico em AGUARDANDO_PRODUCAO
     const qtdRestante = (it as any).quantidadeRestante;
-    if (dados.enviarDiretoTeste && qtdRestante && Number(qtdRestante) > 0) {
+    if (isDiretoCQ && qtdRestante && Number(qtdRestante) > 0) {
       const itemRestanteDb = await prisma.itemOrdemServico.create({
         data: {
           ordemServicoId: osDb.id,

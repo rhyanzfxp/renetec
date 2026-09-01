@@ -88,6 +88,38 @@ export async function finalizarProducao(
   return finalizada;
 }
 
+// ─── Pausar produção na bancada ───────────────────────────────────────────────
+export async function pausarProducao(
+  producaoId: string | undefined,
+  tecnicoId: string,
+  observacao?: string
+) {
+  const producaoAtiva = await repo.getProducaoAtiva(tecnicoId);
+
+  const targetId = producaoId || producaoAtiva?.id;
+  if (!targetId) {
+    throw {
+      statusCode: 404,
+      message: 'Nenhuma produção ativa encontrada para pausar.',
+    };
+  }
+
+  const pausada = await repo.pausarProducao(targetId, observacao);
+  realtimeService.broadcast('producao:finalizada', { producao: pausada, pausado: true });
+  realtimeService.broadcast('producao:pausada', { producao: pausada });
+
+  log({
+    acao: 'PRODUCAO_PAUSADA',
+    usuarioId: tecnicoId,
+    entidade: 'Producao',
+    entidadeId: targetId,
+    descricao: `Produção da OS #${pausada.itemOrdemServico.ordemServico.numeroOS} pausada na bancada pelo técnico para continuação posterior.`,
+    detalhes: { producaoId: targetId },
+  }).catch(() => {});
+
+  return pausada;
+}
+
 // ─── Histórico ────────────────────────────────────────────────────────────────
 export async function getHistoricoProducao(tecnicoId: string, page: number, limit: number) {
   return repo.getHistoricoProducao(tecnicoId, page, limit);
@@ -117,10 +149,12 @@ export async function apontarLoteTecnico(
   );
 
   const totalUnidades = dados.itens.reduce((acc: number, it: any) => acc + Number(it.quantidade), 0);
+  const isAoVivo = dados.modoOperacao === 'INICIAR_PRODUCAO' || dados.iniciarProducaoAoVivo === true;
+  const isDiretoCQ = dados.modoOperacao === 'DESPACHAR_CQ' || (dados.enviarDiretoTeste === true && !isAoVivo && dados.modoOperacao !== 'SALVAR_BANCADA');
 
   // Broadcasts em tempo real para TV, CQ, Dashboard e Técnicos
   realtimeService.broadcast('os:criada', { os: resultado.ordemServico });
-  if (dados.enviarDiretoTeste) {
+  if (isDiretoCQ) {
     realtimeService.broadcast('qualidade:novo_lote', {
       os: resultado.ordemServico,
       itens: resultado.itens,
@@ -134,23 +168,33 @@ export async function apontarLoteTecnico(
     getMetasAtual().then((metas) => {
       realtimeService.broadcast('meta:atualizada', { metas });
     }).catch(() => {});
-  } else {
+  } else if (isAoVivo) {
     realtimeService.broadcast('producao:iniciada', {
+      os: resultado.ordemServico,
+      producoes: resultado.producoes,
+      tecnicoNome,
+    });
+  } else {
+    realtimeService.broadcast('producao:salva', {
       os: resultado.ordemServico,
       tecnicoNome,
     });
   }
 
   log({
-    acao: 'APONTAMENTO_LOTE_TECNICO',
+    acao: isAoVivo ? 'PRODUCAO_INICIADA_AO_VIVO' : 'APONTAMENTO_LOTE_TECNICO',
     usuarioId: tecnicoId,
     entidade: 'Producao',
     entidadeId: resultado.ordemServico.id,
-    descricao: `Técnico ${tecnicoNome} apontou lote da OS #${resultado.ordemServico.numeroOS} com ${totalUnidades} unidades (${dados.itens.length} tipo(s) de equipamento).`,
+    descricao: isAoVivo
+      ? `Técnico ${tecnicoNome} iniciou produção ao vivo da OS #${resultado.ordemServico.numeroOS} (${totalUnidades} un).`
+      : `Técnico ${tecnicoNome} apontou lote da OS #${resultado.ordemServico.numeroOS} com ${totalUnidades} unidades (${dados.itens.length} tipo(s) de equipamento).`,
     detalhes: {
       numeroOS: resultado.ordemServico.numeroOS,
       totalUnidades,
       enviarDiretoTeste: dados.enviarDiretoTeste,
+      iniciarProducaoAoVivo: isAoVivo,
+      modoOperacao: dados.modoOperacao,
       itens: dados.itens,
     },
   }).catch(() => {});

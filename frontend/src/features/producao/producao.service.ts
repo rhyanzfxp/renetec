@@ -43,6 +43,16 @@ export const producaoApiService = {
     return response.data;
   },
 
+  // Pausa a produção ativa e mantém a OS na bancada do técnico para continuar depois
+  async pausarProducao(producaoId?: string, observacao?: string) {
+    const response = await api.post<{ success: boolean; data: any; message: string }>(
+      '/producao/pausar',
+      { producaoId, observacao }
+    );
+    return response.data;
+  },
+
+
   // Apontamento de Lote pelo próprio técnico (Auto-atendimento com OS e múltiplos equipamentos)
   async apontarLote(payload: any) {
     const response = await api.post<{ success: boolean; data: any; message: string }>(

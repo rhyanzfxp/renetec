@@ -5,6 +5,8 @@ export type RealtimeEventType =
   | 'retrabalho:criado'
   | 'producao:iniciada'
   | 'producao:finalizada'
+  | 'producao:pausada'
+  | 'producao:salva'
   | 'qualidade:aprovado'
   | 'qualidade:reprovado'
   | 'retrabalho:iniciado'
@@ -12,6 +14,7 @@ export type RealtimeEventType =
   | 'meta:atualizada'
   | 'dashboard:atualizado'
   | 'sistema:ping';
+
 
 
 export interface RealtimeEvent<T = any> {

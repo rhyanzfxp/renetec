@@ -21,8 +21,10 @@ import {
   XCircle,
   Save,
   ShieldCheck,
-  RotateCcw
+  RotateCcw,
+  Play,
 } from 'lucide-react';
+
 
 interface EquipamentoLinha {
   tipoEquipamentoId: string;
@@ -57,7 +59,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
   const [isSavingCliente, setIsSavingCliente] = useState(false);
   const [clienteSuccessMsg, setClienteSuccessMsg] = useState<string | null>(null);
 
-  const [modoOperacao, setModoOperacao] = useState<'DESPACHAR_CQ' | 'SALVAR_BANCADA'>('DESPACHAR_CQ');
+  const [modoOperacao, setModoOperacao] = useState<'INICIAR_PRODUCAO' | 'DESPACHAR_CQ' | 'SALVAR_BANCADA'>('INICIAR_PRODUCAO');
 
   const [numeroOS, setNumeroOS] = useState<string>('');
   const [clienteId, setClienteId] = useState<string>('');
@@ -130,7 +132,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
             setClienteId(os.cliente?.id || os.clienteId || (clientesList[0]?.id || ''));
             setPrioridade(os.prioridade || 'MEDIA');
             setObservacoes(os.observacoes || '');
-            setModoOperacao(initialItem.statusItem === 'EM_PRODUCAO' ? 'SALVAR_BANCADA' : 'DESPACHAR_CQ');
+            setModoOperacao(initialItem.statusItem === 'EM_PRODUCAO' ? 'INICIAR_PRODUCAO' : 'DESPACHAR_CQ');
 
             setItens([
               {
@@ -147,7 +149,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
             setNumeroOS('');
             setObservacoes('');
             setPrioridade('MEDIA');
-            setModoOperacao('DESPACHAR_CQ');
+            setModoOperacao('INICIAR_PRODUCAO');
             if (clientesList.length > 0) {
               setClienteId(clientesList[0].id);
             }
@@ -211,13 +213,21 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
     return acc + (Number(it.quantidadeReparada) || 0) * pts;
   }, 0);
 
-  const handleSubmit = async (enviarDiretoTeste: boolean) => {
+  const handleSubmit = async (modo: 'INICIAR_PRODUCAO' | 'DESPACHAR_CQ' | 'SALVAR_BANCADA') => {
     if (!numeroOS.trim() || !parseInt(numeroOS.replace(/\D/g, ''))) {
       setError('Informe o número da OS.');
       return;
     }
 
-    if (itens.length === 0 || totalProcessados < 1) {
+    if (itens.length === 0) {
+      setError('Adicione ao menos 1 equipamento no apontamento.');
+      return;
+    }
+
+    const isAoVivo = modo === 'INICIAR_PRODUCAO';
+    const isDiretoCQ = modo === 'DESPACHAR_CQ';
+
+    if (!isAoVivo && totalProcessados < 1) {
       setError('Informe ao menos 1 unidade reparada ou sucata no apontamento.');
       return;
     }
@@ -255,13 +265,15 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
         dataEntrada: timestampISO,
         prioridade,
         observacoes: observacoes.trim() || undefined,
-        enviarDiretoTeste,
+        enviarDiretoTeste: isDiretoCQ,
+        iniciarProducaoAoVivo: isAoVivo,
+        modoOperacao: modo,
         itens: itens.map((it) => {
           const totalCx = Number(it.quantidadeTotalCaixa) || (Number(it.quantidadeReparada) + Number(it.quantidadeSucata)) || 1;
           const reparadas = Number(it.quantidadeReparada) || 0;
           const sucata = Number(it.quantidadeSucata) || 0;
           const restante = Math.max(0, totalCx - reparadas - sucata);
-          const qtdOperada = reparadas > 0 ? reparadas : sucata;
+          const qtdOperada = reparadas > 0 ? reparadas : (sucata > 0 ? sucata : (totalCx || 1));
 
           return {
             tipoEquipamentoId: it.tipoEquipamentoId,
@@ -298,45 +310,66 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title="Apontamento de Lote / Minha OS"
-      subtitle={`Técnico: ${user?.nome || 'Operador'} — Relate a quantidade exata reparada da caixa`}
+      subtitle={`Técnico: ${user?.nome || 'Operador'} — Inicie a produção ou relate a quantidade reparada`}
       width="max-w-2xl"
       footer={
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
           <div className="flex flex-wrap items-center gap-2 text-xs text-gray-300">
-            <span className="font-bold text-emerald-400 tabular-nums flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> {totalReparados} un prontas
-            </span>
-            {totalRestantes > 0 && (
+            {modoOperacao === 'INICIAR_PRODUCAO' ? (
+              <span className="font-bold text-amber-400 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                Cronômetro ao vivo no Painel Renetec (TV)
+              </span>
+            ) : (
               <>
+                <span className="font-bold text-emerald-400 tabular-nums flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> {totalReparados} un prontas
+                </span>
+                {totalRestantes > 0 && (
+                  <>
+                    <span className="text-gray-500">•</span>
+                    <span className="text-sky-300 font-medium tabular-nums flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5 text-sky-400" /> {totalRestantes} un na bancada
+                    </span>
+                  </>
+                )}
+                {totalSucata > 0 && (
+                  <>
+                    <span className="text-gray-500">•</span>
+                    <span className="text-red-400 font-medium tabular-nums flex items-center gap-1">
+                      <XCircle className="w-3.5 h-3.5 text-red-400" /> {totalSucata} un sucata
+                    </span>
+                  </>
+                )}
                 <span className="text-gray-500">•</span>
-                <span className="text-sky-300 font-medium tabular-nums flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-sky-400" /> {totalRestantes} un na bancada
+                <span className="text-amber-400 font-bold tabular-nums" title="Pontos creditados automaticamente após o testador (CQ) aprovar">
+                  ~{pontuacaoEstimada.toFixed(1)} pts
                 </span>
               </>
             )}
-            {totalSucata > 0 && (
-              <>
-                <span className="text-gray-500">•</span>
-                <span className="text-red-400 font-medium tabular-nums flex items-center gap-1">
-                  <XCircle className="w-3.5 h-3.5 text-red-400" /> {totalSucata} un sucata
-                </span>
-              </>
-            )}
-            <span className="text-gray-500">•</span>
-            <span className="text-amber-400 font-bold tabular-nums" title="Pontos creditados automaticamente após o testador (CQ) aprovar">
-              ~{pontuacaoEstimada.toFixed(1)} pts (após teste CQ)
-            </span>
           </div>
 
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={onClose} disabled={isLoading}>
               Cancelar
             </Button>
-            {modoOperacao === 'SALVAR_BANCADA' ? (
+            {modoOperacao === 'INICIAR_PRODUCAO' ? (
+              <Button
+                variant="success"
+                size="sm"
+                onClick={() => handleSubmit('INICIAR_PRODUCAO')}
+                disabled={isLoading}
+                loading={isLoading}
+                leftIcon={<Play className="w-3.5 h-3.5 fill-current" />}
+                className="shadow-glow-success font-bold"
+              >
+                Iniciar Produção Ao Vivo
+              </Button>
+            ) : modoOperacao === 'SALVAR_BANCADA' ? (
               <Button
                 variant="primary"
                 size="sm"
-                onClick={() => handleSubmit(false)}
+                onClick={() => handleSubmit('SALVAR_BANCADA')}
                 disabled={isLoading}
                 loading={isLoading}
                 leftIcon={<Save className="w-3.5 h-3.5" />}
@@ -348,7 +381,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
               <Button
                 variant="success"
                 size="sm"
-                onClick={() => handleSubmit(true)}
+                onClick={() => handleSubmit('DESPACHAR_CQ')}
                 disabled={isLoading}
                 loading={isLoading}
                 leftIcon={<Send className="w-3.5 h-3.5" />}
@@ -361,7 +394,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
         </div>
       }
     >
-      <form onSubmit={(e) => { e.preventDefault(); handleSubmit(modoOperacao === 'DESPACHAR_CQ'); }} className="space-y-5 text-sm">
+      <form onSubmit={(e) => { e.preventDefault(); handleSubmit(modoOperacao); }} className="space-y-5 text-sm">
         {error && (
           <div className="p-3.5 rounded-lg bg-red-950/40 border border-red-800/40 flex items-start gap-2.5 text-xs text-red-300">
             <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
@@ -371,13 +404,40 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
 
         <div className="space-y-2">
           <label className="text-xs font-bold text-gray-300 uppercase tracking-wider block">
-            Destino deste Apontamento:
+            Ação / Destino deste Apontamento:
           </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            {/* 1. Iniciar Produção Ao Vivo */}
+            <button
+              type="button"
+              onClick={() => setModoOperacao('INICIAR_PRODUCAO')}
+              className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                modoOperacao === 'INICIAR_PRODUCAO'
+                  ? 'bg-amber-950/40 border-amber-500 shadow-[0_0_15px_rgba(251,191,36,0.3)] ring-1 ring-amber-500/50'
+                  : 'bg-surface-elevated/60 border-surface-border hover:border-surface-border/80 opacity-75 hover:opacity-100'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                    <Play className="w-3.5 h-3.5 fill-current" />
+                  </div>
+                  <span className="text-xs font-bold text-white">Iniciar Produção</span>
+                </div>
+                {modoOperacao === 'INICIAR_PRODUCAO' && (
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+                )}
+              </div>
+              <p className="text-[10px] text-gray-300 mt-2 leading-relaxed">
+                Inicia o <strong>cronômetro ao vivo</strong> agora na bancada e no Painel Renetec (TV).
+              </p>
+            </button>
+
+            {/* 2. Despachar p/ Teste CQ */}
             <button
               type="button"
               onClick={() => setModoOperacao('DESPACHAR_CQ')}
-              className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+              className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                 modoOperacao === 'DESPACHAR_CQ'
                   ? 'bg-emerald-950/40 border-emerald-500 shadow-glow-success ring-1 ring-emerald-500/50'
                   : 'bg-surface-elevated/60 border-surface-border hover:border-surface-border/80 opacity-75 hover:opacity-100'
@@ -385,24 +445,25 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-                    <Send className="w-4 h-4" />
+                  <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                    <Send className="w-3.5 h-3.5" />
                   </div>
-                  <span className="text-sm font-bold text-white">Despachar p/ Teste (CQ)</span>
+                  <span className="text-xs font-bold text-white">Despachar p/ CQ</span>
                 </div>
                 {modoOperacao === 'DESPACHAR_CQ' && (
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                 )}
               </div>
-              <p className="text-[11px] text-gray-300 mt-2">
-                A caixa/lote está pronta para o <strong>testador (CQ)</strong> inspecionar. Os pontos entram na meta após aprovação.
+              <p className="text-[10px] text-gray-300 mt-2 leading-relaxed">
+                Lote concluído pronto para o <strong>testador (CQ)</strong> inspecionar.
               </p>
             </button>
 
+            {/* 3. Salvar na Minha Bancada */}
             <button
               type="button"
               onClick={() => setModoOperacao('SALVAR_BANCADA')}
-              className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+              className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                 modoOperacao === 'SALVAR_BANCADA'
                   ? 'bg-sky-950/40 border-sky-500 shadow-glow-primary ring-1 ring-sky-500/50'
                   : 'bg-surface-elevated/60 border-surface-border hover:border-surface-border/80 opacity-75 hover:opacity-100'
@@ -410,21 +471,22 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center">
-                    <Save className="w-4 h-4" />
+                  <div className="w-7 h-7 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center">
+                    <Save className="w-3.5 h-3.5" />
                   </div>
-                  <span className="text-sm font-bold text-white">Salvar na Minha Bancada</span>
+                  <span className="text-xs font-bold text-white">Salvar na Bancada</span>
                 </div>
                 {modoOperacao === 'SALVAR_BANCADA' && (
-                  <CheckCircle2 className="w-5 h-5 text-sky-400" />
+                  <CheckCircle2 className="w-4 h-4 text-sky-400" />
                 )}
               </div>
-              <p className="text-[11px] text-gray-300 mt-2">
-                Caixa em andamento (ainda vou reparar as outras). Salva o progresso nas <strong>Minhas OSs</strong> sem mandar ao testador ainda.
+              <p className="text-[10px] text-gray-300 mt-2 leading-relaxed">
+                Salva a OS na sua bancada sem cronômetro ativo para continuar depois.
               </p>
             </button>
           </div>
         </div>
+
 
         <div className="p-4 rounded-xl bg-surface-elevated/70 border border-surface-border space-y-3.5">
           <div className="flex items-center justify-between">
