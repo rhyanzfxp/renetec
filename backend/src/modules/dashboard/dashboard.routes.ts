@@ -15,14 +15,27 @@ export const dashboardRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // ─── GET /dashboard/gerencial ─────────────────────────────────────────────
-  // Dados executivos para o Admin e Qualidade
+  // Dados executivos e indicadores gerenciais acessíveis aos usuários autenticados
   fastify.get(
     '/dashboard/gerencial',
-    { preHandler: [authenticate, authorize(['ADMIN', 'QUALIDADE'])] },
+    { preHandler: [authenticate] },
     async (request, reply) => {
-      const { periodo = 'mes_atual' } = request.query as { periodo?: string };
-      const data = await service.getGerencialData(periodo);
-      return reply.send({ success: true, data });
+      try {
+        const { periodo = 'mes_atual' } = request.query as { periodo?: string };
+        const data = await service.getGerencialData(periodo);
+        return reply.send({ success: true, data });
+      } catch (err: any) {
+        request.log.error({ err }, 'Erro ao gerar dados do dashboard gerencial');
+        return reply.status(500).send({
+          success: false,
+          error: {
+            code: 'DASHBOARD_ERROR',
+            message: 'Erro ao consolidar dados gerenciais da fábrica.',
+            details: err?.message,
+          },
+        });
+      }
     }
   );
 };
+

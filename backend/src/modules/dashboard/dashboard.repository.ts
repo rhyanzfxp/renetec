@@ -191,6 +191,7 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
       faturamentoLancado: metasData.faturamentoLancado || 0.0,
       taxaRetrabalho: metasData.taxaRetrabalho || 0.0,
       statusQualidadeLabel: metasData.statusQualidadeLabel || 'Sem dados',
+      colaboradores: metasData.equipe || [],
     };
   } catch (err) {
     console.error('[getTvFabricaData] Erro ao integrar metas:', err);
@@ -444,15 +445,15 @@ export async function getGerencialData(periodo: string = 'mes_atual'): Promise<G
 
   let leadTimeMedioGeralMinutos = 0;
   let totalOsAtivas = tvData.filaPrioritaria.length + tvData.bancadas.filter((b) => b.status === 'EM_PRODUCAO').length;
-  let distribuicaoDefeitos: { defeito: string; quantidade: number; percentual: number }[] = [];
-  let leadTimePorEquipamento: { equipamento: string; tempoMedioMinutos: number; quantidadeProduzida: number }[] = [];
-  let producaoHistoricoDias: { data: string; pontos: number; unidades: number; fpy: number }[] = [];
+  let distribuicaoDefeitos: DefeitoDistribuicao[] = [];
+  let leadTimePorEquipamento: LeadTimeEquipamento[] = [];
+  let producaoHistoricoDias: { data: string; pontos: number; reprovados: number }[] = [];
 
   if (isDatabaseReady()) {
     try {
-      // 1. Total real de OSs ativas no sistema (não finalizadas e não canceladas)
+      // 1. Total real de OSs ativas no sistema (não concluídas e não canceladas)
       const osAtivasCount = await prisma.ordemServico.count({
-        where: { status: { notIn: ['FINALIZADO', 'CANCELADO'] } },
+        where: { status: { notIn: ['CONCLUIDO', 'CANCELADO', 'SEM_REPARO'] } },
       });
       totalOsAtivas = osAtivasCount;
 
@@ -482,9 +483,10 @@ export async function getGerencialData(periodo: string = 'mes_atual'): Promise<G
         leadTimeMedioGeralMinutos = Math.round(somaMinutos / producoesFinalizadas.length);
 
         leadTimePorEquipamento = Object.entries(equipMap).map(([equipamento, data]) => ({
-          equipamento,
+          tipoEquipamentoNome: equipamento,
+          pontosUnitarios: getPontosUnitarios(equipamento),
+          quantidadeConcluida: data.qtd,
           tempoMedioMinutos: Math.round(data.somaMin / (data.qtd || 1)),
-          quantidadeProduzida: data.qtd,
         }));
       }
 
@@ -496,16 +498,23 @@ export async function getGerencialData(periodo: string = 'mes_atual'): Promise<G
       });
 
       if (retrabalhos.length > 0) {
-        const defeitosMap: Record<string, number> = {};
+        const defeitosMap: Record<string, { count: number; categoria: string; codigo: string }> = {};
         for (const r of retrabalhos) {
           const motivo = r.motivoReprovacao?.descricao || r.detalhesDefeito || 'Não conformidade';
-          defeitosMap[motivo] = (defeitosMap[motivo] || 0) + (r.quantidadeRetrabalho || 1);
+          const categoria = r.motivoReprovacao?.categoria || 'OUTRO';
+          const codigo = r.motivoReprovacao?.codigo || 'MOT-00';
+          if (!defeitosMap[motivo]) {
+            defeitosMap[motivo] = { count: 0, categoria, codigo };
+          }
+          defeitosMap[motivo].count += (r.quantidadeRetrabalho || 1);
         }
-        const totalDefeitos = Object.values(defeitosMap).reduce((a, b) => a + b, 0) || 1;
-        distribuicaoDefeitos = Object.entries(defeitosMap).map(([defeito, quantidade]) => ({
-          defeito,
-          quantidade,
-          percentual: Number(((quantidade / totalDefeitos) * 100).toFixed(1)),
+        const totalDefeitos = Object.values(defeitosMap).reduce((a, b) => a + b.count, 0) || 1;
+        distribuicaoDefeitos = Object.entries(defeitosMap).map(([motivo, item]) => ({
+          categoria: item.categoria,
+          codigo: item.codigo,
+          motivo,
+          quantidade: item.count,
+          percentual: Number(((item.count / totalDefeitos) * 100).toFixed(1)),
         }));
       }
     } catch (err) {
@@ -519,16 +528,29 @@ export async function getGerencialData(periodo: string = 'mes_atual'): Promise<G
     ? (tvData.bancadas.reduce((a, b) => a + (b.pontosHoje || 0), 0) || 1)
     : (tvData.meta.pontosRealizados || 1);
 
-  const produtividadeTecnicos: ProdutividadeTecnico[] = tvData.meta.colaboradores.map((c) => {
+  const colaboradoresLista =
+    (tvData.meta as any)?.colaboradores && (tvData.meta as any).colaboradores.length > 0
+      ? (tvData.meta as any).colaboradores
+      : (tvData.meta as any)?.equipe && (tvData.meta as any).equipe.length > 0
+      ? (tvData.meta as any).equipe
+      : [
+          { id: 'colab-samuel', nome: 'Samuel', funcao: 'Produção', pesoBonus: 0.22, pontosRealizados: 0 },
+          { id: 'colab-joao', nome: 'João', funcao: 'Produção', pesoBonus: 0.22, pontosRealizados: 0 },
+          { id: 'colab-joas', nome: 'Joás', funcao: 'Produção', pesoBonus: 0.22, pontosRealizados: 0 },
+          { id: 'colab-rhyan', nome: 'Rhyan', funcao: 'Qualidade/Testes', pesoBonus: 0.17, pontosRealizados: 0 },
+          { id: 'colab-luana', nome: 'Luana', funcao: 'Atendimento/Comercial', pesoBonus: 0.17, pontosRealizados: 0 },
+        ];
+
+  const produtividadeTecnicos: ProdutividadeTecnico[] = colaboradoresLista.map((c: any) => {
     const bancada = tvData.bancadas.find((b) => isTecnicoMatch(b.id, b.nome, c.id, c.nome));
-    const pts = isHoje ? (bancada?.pontosHoje || 0) : c.pontosRealizados;
+    const pts = isHoje ? (bancada?.pontosHoje || 0) : (c.pontosRealizados ?? 0);
     const taxaAprov = bancada ? (bancada.taxaQualidadeHoje ?? 100.0) : 100.0;
 
     return {
       tecnicoId: c.id,
       tecnicoNome: c.nome,
-      funcao: c.funcao,
-      pesoBonus: c.pesoBonus,
+      funcao: c.funcao || 'Produção',
+      pesoBonus: c.pesoBonus ?? 0.2,
       pontosRealizados: pts,
       percentualTotal: totalPts > 0 ? Number(((pts / totalPts) * 100).toFixed(1)) : 0,
       taxaAprovacao: taxaAprov,
