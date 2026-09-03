@@ -15,6 +15,7 @@ const MetasPage = lazy(() => import('../features/metas/MetasPage').then(m => ({ 
 const TvFabricaPage = lazy(() => import('../features/dashboard/TvFabricaPage').then(m => ({ default: m.TvFabricaPage })));
 const DashboardGerencialPage = lazy(() => import('../features/dashboard/DashboardGerencialPage').then(m => ({ default: m.DashboardGerencialPage })));
 const AuditoriaPage = lazy(() => import('../features/auditoria/AuditoriaPage').then(m => ({ default: m.AuditoriaPage })));
+const RelatoriosPage = lazy(() => import('../features/relatorios/RelatoriosPage').then(m => ({ default: m.RelatoriosPage })));
 
 // Skeleton minimalista de carregamento de página
 const PageSkeleton: React.FC = () => (
@@ -60,6 +61,7 @@ export const AppShell: React.FC = () => {
     if (activeSection === 'metas') return 'Metas Coletivas de Produção';
     if (activeSection === 'ordens_servico') return 'Gerenciamento de Ordens de Serviço';
     if (activeSection === 'auditoria') return 'Trilha de Auditoria & Logs de Segurança';
+    if (activeSection === 'relatorios') return 'Relatórios Gerenciais & Operacionais';
     return 'Visão Geral da Produção';
   };
 
@@ -80,6 +82,8 @@ export const AppShell: React.FC = () => {
       return 'Acompanhamento do termômetro de pontos (Base 250, Alvo 300, Excelência 350), qualidade e bônus.';
     if (activeSection === 'auditoria')
       return 'Registro imutável de todas as ações de usuários, mudanças de estado, logins e laudos técnicos.';
+    if (activeSection === 'relatorios')
+      return 'Análise histórica de produção técnica, inspeções de CQ, retrabalhos, consolidados por profissional e resumo por cliente.';
     return 'Acompanhamento em tempo real das ordens de serviço e metas de produção.';
   };
 
@@ -140,6 +144,8 @@ export const AppShell: React.FC = () => {
               <MetasPage />
             ) : activeSection === 'auditoria' ? (
               <AuditoriaPage />
+            ) : activeSection === 'relatorios' ? (
+              <RelatoriosPage />
             ) : (
               <OsListPage onlyMine={activeSection === 'minhas_os' || user?.perfil === 'TECNICO'} />
             )}

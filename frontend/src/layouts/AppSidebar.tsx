@@ -8,7 +8,8 @@ import {
   BarChart2, 
   Layers,
   Tv,
-  ChevronRight
+  ChevronRight,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 import { clsx } from 'clsx';
@@ -69,6 +70,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       { id: 'retrabalho' as NavSection, label: 'Fila de Retrabalho', icon: <History className="w-4 h-4" /> },
       { id: 'metas' as NavSection, label: 'Metas e Produtividade', icon: <Target className="w-4 h-4" /> },
       { id: 'auditoria' as NavSection, label: 'Auditoria e Logs', icon: <Layers className="w-4 h-4" /> },
+      { id: 'relatorios' as NavSection, label: 'Relatórios Gerenciais', icon: <FileSpreadsheet className="w-4 h-4 text-emerald-400" /> },
     ],
     TECNICO: [
       { id: 'producao' as NavSection, label: 'Apontamento de Produção', icon: <Wrench className="w-4 h-4" /> },

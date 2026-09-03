@@ -15,6 +15,7 @@ import { metaRoutes } from './modules/meta/meta.routes.js';
 import { dashboardRoutes } from './modules/dashboard/dashboard.routes.js';
 import { realtimeRoutes } from './modules/realtime/realtime.routes.js';
 import { auditoriaRoutes } from './modules/auditoria/auditoria.routes.js';
+import { relatorioRoutes } from './modules/relatorios/relatorio.routes.js';
 
 const app = fastify({
   logger: {
@@ -129,6 +130,7 @@ await app.register(metaRoutes, { prefix: '/api/v1' });
 await app.register(dashboardRoutes, { prefix: '/api/v1' });
 await app.register(realtimeRoutes, { prefix: '/api/v1' });
 await app.register(auditoriaRoutes, { prefix: '/api/v1' });
+await app.register(relatorioRoutes, { prefix: '/api/v1' });
 
 // ─── 8. Rota de Health Check Segura ───────────────────────────────────────────
 app.get('/api/v1/health', async () => {

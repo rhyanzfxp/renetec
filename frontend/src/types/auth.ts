@@ -39,7 +39,8 @@ export type NavSection =
   | 'retrabalho'
   | 'ordens_servico'
   | 'metas'
-  | 'auditoria';
+  | 'auditoria'
+  | 'relatorios';
 
 export type PrioridadeOS = 'BAIXA' | 'MEDIA' | 'ALTA' | 'URGENTE';
 
