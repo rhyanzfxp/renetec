@@ -21,10 +21,7 @@ export async function realizarTeste(inspetorId: string, dados: RealizarTesteInpu
   }
 
   if (dados.quantidadeReprovada > 0 && !dados.motivoReprovacaoId) {
-    throw {
-      statusCode: 400,
-      message: 'É obrigatório selecionar um motivo de reprovação para os itens não-conformes.',
-    };
+    dados.motivoReprovacaoId = 'mot-01';
   }
 
   const teste = await repo.realizarTeste(inspetorId, dados);

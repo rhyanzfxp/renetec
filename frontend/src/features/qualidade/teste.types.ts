@@ -54,9 +54,13 @@ export interface FilaTesteItem {
 }
 
 export interface RealizarTestePayload {
-  producaoId: string;
-  itemOrdemServicoId: string;
+  producaoId?: string;
+  itemOrdemServicoId?: string;
+  numeroOS?: number;
+  tipoEquipamentoId?: string;
   tecnicoResponsavelId?: string;
+  tecnicoDestinoId?: string;
+  dataTeste?: string;
   quantidadeTestada: number;
   quantidadeAprovada: number;
   quantidadeReprovada: number;
@@ -73,18 +77,44 @@ export interface HistoricoTesteItem {
   dataTeste: string;
   observacao: string | null;
   inspetor: {
+    id?: string;
     nome: string;
   };
-  producao: {
-    itemOrdemServico: {
-      ordemServico: {
+  retrabalhos?: {
+    id: string;
+    quantidadeRetrabalho: number;
+    tecnicoResponsavel?: {
+      id: string;
+      nome: string;
+    } | null;
+    motivoReprovacao?: {
+      id: string;
+      descricao: string;
+      categoria: string;
+    } | null;
+  }[];
+  producao?: {
+    tecnico?: {
+      id: string;
+      nome: string;
+    } | null;
+    itemOrdemServico?: {
+      tecnicoAlocado?: {
+        id: string;
+        nome: string;
+      } | null;
+      ordemServico?: {
         numeroOS: number;
-        cliente: {
+        prioridade?: PrioridadeOS;
+        cliente?: {
           nomeRazaoSocial: string;
         };
       };
-      tipoEquipamento: {
+      tipoEquipamento?: {
         nome: string;
+        marca?: string | null;
+        modelo?: string | null;
+        pontos?: number;
       };
     };
   };

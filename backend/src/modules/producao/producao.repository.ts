@@ -81,7 +81,7 @@ export async function getMinhaFila(tecnicoId: string) {
           },
         },
         tipoEquipamento: {
-          select: { id: true, nome: true, marca: true, modelo: true, tempoEstimadoMinutos: true, pontos: true },
+          select: { id: true, nome: true, marca: true, modelo: true, tempoEstimadoMinutos: true },
         },
         producoes: {
           select: { id: true, status: true, quantidadeProduzida: true, servicoRealizado: true, observacao: true, dataInicio: true, dataFim: true },
@@ -129,10 +129,11 @@ export async function getMinhasCaixas(tecnicoId: string) {
                 dataEntrada: true,
                 observacoes: true,
                 cliente: { select: { id: true, nomeRazaoSocial: true } },
+                itens: { select: { id: true, quantidade: true, statusItem: true } },
               },
             },
             tipoEquipamento: {
-              select: { id: true, nome: true, marca: true, modelo: true, tempoEstimadoMinutos: true, pontos: true },
+              select: { id: true, nome: true, marca: true, modelo: true, tempoEstimadoMinutos: true },
             },
           },
         },
@@ -147,12 +148,17 @@ export async function getMinhasCaixas(tecnicoId: string) {
     for (const prod of producoes) {
       if (prod.itemOrdemServico && !seenItemIds.has(prod.itemOrdemServico.id)) {
         seenItemIds.add(prod.itemOrdemServico.id);
+        const osItens = prod.itemOrdemServico.ordemServico?.itens || [];
+        const totalAcumulado = osItens.reduce((acc: number, it: any) => acc + Number(it.quantidade || 0), 0) || prod.itemOrdemServico.quantidade;
+
         itens.push({
           ...prod.itemOrdemServico,
           quantidade: prod.quantidadeProduzida || prod.itemOrdemServico.quantidade,
           defeitoRelatado: prod.observacao || prod.servicoRealizado || prod.itemOrdemServico.defeitoRelatado,
           producaoId: prod.id,
           producaoStatus: prod.status,
+          totalAcumuladoCaixa: totalAcumulado,
+          anterioresNaCaixa: Math.max(0, totalAcumulado - (prod.quantidadeProduzida || prod.itemOrdemServico.quantidade)),
         });
       }
     }
@@ -475,6 +481,11 @@ export async function criarApontamentoLote(
     itens: {
       tipoEquipamentoId: string;
       quantidade: number;
+      quantidadeTotalCaixa?: number;
+      quantidadeReparada?: number;
+      quantidadeSemDefeito?: number;
+      quantidadeSucata?: number;
+      quantidadeRestante?: number;
       tipoCategoria?: 'REPARADO' | 'SEM_DEFEITO' | 'RETRABALHO';
       defeitoRelatado?: string;
       servicoRealizado?: string;
@@ -491,12 +502,11 @@ export async function criarApontamentoLote(
   const isDiretoCQ = dados.modoOperacao === 'DESPACHAR_CQ' || (dados.enviarDiretoTeste === true && !isAoVivo && dados.modoOperacao !== 'SALVAR_BANCADA');
   
   const initialStatus: StatusOS = isDiretoCQ ? 'AGUARDANDO_TESTE' : 'EM_PRODUCAO';
-  const newNumero = dados.numeroOS ? Number(dados.numeroOS) : Math.floor(Math.random() * 9000) + 1000;
 
   // 1. Garantir ID de usuário válido no PostgreSQL para chave estrangeira
   const tecnicoDbId = await ensureUsuarioDbId(tecnicoId || tecnicoNome, 'TECNICO');
 
-  // 2. Garantir que o cliente existe no banco
+  // 2. Garantir que o cliente existe no banco (padrão MARANET se não informado)
   let clienteDb = await prisma.cliente.findFirst({
     where: { nomeRazaoSocial: { contains: clienteInfo?.nomeRazaoSocial || 'MARANET', mode: 'insensitive' } },
   });
@@ -542,7 +552,7 @@ export async function criarApontamentoLote(
 
   // 4. Criar ou reutilizar a Ordem de Serviço no banco
   let osDb: any = null;
-  if (dados.numeroOS) {
+  if (dados.numeroOS && Number(dados.numeroOS) > 0) {
     const num = Number(dados.numeroOS);
     osDb = await prisma.ordemServico.findUnique({ where: { numeroOS: num } });
   }
@@ -550,7 +560,7 @@ export async function criarApontamentoLote(
   if (!osDb) {
     osDb = await prisma.ordemServico.create({
       data: {
-        ...(dados.numeroOS ? { numeroOS: Number(dados.numeroOS) } : {}),
+        ...(dados.numeroOS && Number(dados.numeroOS) > 0 ? { numeroOS: Number(dados.numeroOS) } : {}),
         clienteId: clienteDb.id,
         prioridade: (dados.prioridade || 'MEDIA') as PrioridadeOS,
         status: initialStatus,
@@ -574,21 +584,33 @@ export async function criarApontamentoLote(
   for (const it of dados.itens) {
     const tipoDb = tiposDbMap[it.tipoEquipamentoId];
     const categoria = it.tipoCategoria || 'REPARADO';
-    
-    // Descrição informativa do lote/caixa
-    const infoCaixa = (it as any).quantidadeTotalCaixa
-      ? ` [Caixa: ${(it as any).quantidadeTotalCaixa} un | Reparadas: ${it.quantidade} un${(it as any).quantidadeSucata ? ` | Sucata: ${(it as any).quantidadeSucata} un` : ''}${(it as any).quantidadeRestante ? ` | Restantes: ${(it as any).quantidadeRestante} un` : ''}]`
-      : '';
+    const rep = Number(it.quantidadeReparada) || 0;
+    const semDef = Number((it as any).quantidadeSemDefeito) || 0;
+    const suc = Number((it as any).quantidadeSucata) || 0;
+    const totalHoje = rep + semDef + suc;
+    const totalCaixa = Number((it as any).quantidadeTotalCaixa) || totalHoje || it.quantidade;
+    const qtdProntaCQ = (rep + semDef) > 0 ? (rep + semDef) : (it.quantidade || totalHoje || 1);
 
-    const defeito = it.defeitoRelatado || (categoria === 'SEM_DEFEITO' ? `Sem defeito aparente (Triagem)${infoCaixa}` : `Manutenção corretiva${infoCaixa}`);
-    const servico = it.servicoRealizado || (categoria === 'SEM_DEFEITO' ? `Equipamento testado e aprovado em triagem (sem defeito)${infoCaixa}` : `Reparo realizado na bancada${infoCaixa}`);
+    // Descrição detalhada do lote/caixa
+    const infoCaixa = ` [Caixa Total: ${totalCaixa} un | Hoje: ${rep} rep, ${semDef} sem def, ${suc} sucata]`;
 
-    // Cria o item da produção atual (unidades reparadas prontas para teste ou em andamento)
+    const defeito = it.defeitoRelatado || (
+      categoria === 'SEM_DEFEITO'
+        ? `Sem defeito aparente (Triagem)${infoCaixa}`
+        : `Manutenção de bancada${infoCaixa}`
+    );
+    const servico = it.servicoRealizado || (
+      categoria === 'SEM_DEFEITO'
+        ? `Equipamento testado em triagem (${semDef || rep} un sem defeito)${suc ? ` | ${suc} un sucata` : ''}`
+        : `Reparo efetuado (${rep} un reparadas${semDef ? `, ${semDef} sem defeito` : ''})${suc ? ` | ${suc} un sucata` : ''}`
+    );
+
+    // Cria o item da produção atual
     const itemDb = await prisma.itemOrdemServico.create({
       data: {
         ordemServicoId: osDb.id,
         tipoEquipamentoId: tipoDb.id,
-        quantidade: it.quantidade,
+        quantidade: qtdProntaCQ,
         defeitoRelatado: defeito,
         statusItem: initialStatus,
         tecnicoAlocadoId: tecnicoDbId,
@@ -600,7 +622,13 @@ export async function criarApontamentoLote(
       },
     });
 
-    createdItens.push(itemDb);
+    createdItens.push({
+      ...itemDb,
+      quantidadeReparada: rep,
+      quantidadeSemDefeito: semDef,
+      quantidadeSucata: suc,
+      quantidadeTotalCaixa: totalCaixa,
+    });
 
     // Criar registro de produção para o lote trabalhado
     const prodDb = await prisma.producao.create({
@@ -609,20 +637,20 @@ export async function criarApontamentoLote(
         tecnicoId: tecnicoDbId,
         dataInicio: dataRegistro,
         dataFim: isAoVivo ? null : agora,
-        quantidadeProduzida: it.quantidade,
+        quantidadeProduzida: qtdProntaCQ,
         servicoRealizado: servico,
         observacao: isDiretoCQ
-          ? `Apontamento técnico despachado ao CQ pelo operador ${tecnicoNome}. Categoria: ${categoria}${infoCaixa}`
+          ? `Apontamento técnico despachado ao CQ por ${tecnicoNome}. Categoria: ${categoria}${infoCaixa}`
           : isAoVivo
-          ? `Produção iniciada ao vivo na bancada pelo operador ${tecnicoNome}. Categoria: ${categoria}${infoCaixa}`
-          : `Progresso de caixa salvo na bancada pelo técnico ${tecnicoNome}. Categoria: ${categoria}${infoCaixa}`,
+          ? `Produção iniciada ao vivo na bancada por ${tecnicoNome}. Categoria: ${categoria}${infoCaixa}`
+          : `Progresso de caixa salvo na bancada por ${tecnicoNome}. Categoria: ${categoria}${infoCaixa}`,
         status: isAoVivo ? 'EM_ANDAMENTO' : 'FINALIZADO',
       },
     });
 
     createdProducoes.push(prodDb);
 
-    // Se houve envio ao teste de lote parcial e ainda restam unidades na caixa para reparar depois,
+    // Se houver saldo restante registrado na caixa para reparar depois,
     // cria automaticamente o saldo restante na bancada do técnico em AGUARDANDO_PRODUCAO
     const qtdRestante = (it as any).quantidadeRestante;
     if (isDiretoCQ && qtdRestante && Number(qtdRestante) > 0) {
@@ -694,7 +722,7 @@ export async function despacharItemParaCQ(itemOrdemServicoId: string, tecnicoId:
 
   // 3. Finalizar produções ativas ou em andamento deste item
   await prisma.producao.updateMany({
-    where: { itemOrdemServicoId, status: { in: ['EM_ANDAMENTO', 'PAUSADO'] } },
+    where: { itemOrdemServicoId, status: 'EM_ANDAMENTO' },
     data: { status: 'FINALIZADO', dataFim: agora },
   });
 

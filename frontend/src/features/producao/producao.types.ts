@@ -4,6 +4,15 @@ export interface FilaItemData {
   id: string;
   ordemServicoId: string;
   quantidade: number;
+  quantidadeReparada?: number;
+  quantidadeSemDefeito?: number;
+  quantidadeSucata?: number;
+  totalAcumuladoCaixa?: number;
+  anterioresNaCaixa?: number;
+  tipoCategoria?: 'REPARADO' | 'SEM_DEFEITO' | 'RETRABALHO';
+  servicoRealizado?: string | null;
+  producaoId?: string;
+  producaoStatus?: string;
   defeitoRelatado: string | null;
   statusItem: StatusOS;
   tipoEquipamento: {
@@ -20,6 +29,7 @@ export interface FilaItemData {
     prioridade: PrioridadeOS;
     status: StatusOS;
     dataEntrada: string;
+    observacoes?: string | null;
     cliente: {
       id: string;
       nomeRazaoSocial: string;
@@ -69,6 +79,11 @@ export interface FinalizarProducaoPayload {
 export interface ApontamentoLoteItemPayload {
   tipoEquipamentoId: string;
   quantidade: number;
+  quantidadeTotalCaixa?: number;
+  quantidadeReparada?: number;
+  quantidadeSemDefeito?: number;
+  quantidadeSucata?: number;
+  quantidadeRestante?: number;
   tipoCategoria: 'REPARADO' | 'SEM_DEFEITO' | 'RETRABALHO';
   defeitoRelatado?: string;
   servicoRealizado?: string;
@@ -82,6 +97,8 @@ export interface ApontamentoLotePayload {
   prioridade?: PrioridadeOS;
   observacoes?: string;
   enviarDiretoTeste?: boolean;
+  iniciarProducaoAoVivo?: boolean;
+  modoOperacao?: 'DESPACHAR_CQ' | 'INICIAR_PRODUCAO' | 'SALVAR_BANCADA';
   itens: ApontamentoLoteItemPayload[];
 }
 

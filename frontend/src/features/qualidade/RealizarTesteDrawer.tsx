@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Drawer } from '../../components/ui/Drawer';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -28,38 +28,42 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
   item,
   onSuccess,
 }) => {
+  const [qtdTestada, setQtdTestada] = useState<number>(0);
   const [aprovadas, setAprovadas] = useState<number>(0);
   const [reprovadas, setReprovadas] = useState<number>(0);
   const [detalhesDefeito, setDetalhesDefeito] = useState<string>('');
   const [observacao, setObservacao] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
+  const isSubmittingRef = useRef(false);
 
   // Sincroniza quantidades com o lote do item selecionado
   useEffect(() => {
     if (item) {
-      const qtdLote = item.quantidade;
-      setAprovadas(qtdLote); // Padrão: sugere 100% de aprovação
+      const qtd = item.quantidade;
+      setQtdTestada(qtd);
+      setAprovadas(qtd); // Padrão: sugere 100% de aprovação
       setReprovadas(0);
       setDetalhesDefeito('');
       setObservacao('');
       setErrorMessage(null);
+      isSubmittingRef.current = false;
     }
   }, [item]);
 
   if (!item) return null;
 
   const totalCalculado = Number(aprovadas) + Number(reprovadas);
-  const qtdLote = item.quantidade;
-  const isSomaValida = totalCalculado === qtdLote;
+  const qtdLoteTotal = item.quantidade;
+  const isSomaValida = totalCalculado === Number(qtdTestada) && Number(qtdTestada) > 0 && Number(qtdTestada) <= qtdLoteTotal;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingRef.current || isSubmitting) return;
 
     if (!isSomaValida) {
       setErrorMessage(
-        `A soma de Aprovadas (${aprovadas}) + Reprovadas (${reprovadas}) totaliza ${totalCalculado} un, mas o lote possui ${qtdLote} un.`
+        `A soma de Aprovadas (${aprovadas}) + Reprovadas (${reprovadas}) totaliza ${totalCalculado} un, mas a quantidade a testar é ${qtdTestada} un (máx ${qtdLoteTotal} un).`
       );
       return;
     }
@@ -73,15 +77,17 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
     const producaoId =
       item.producoes?.[0]?.id || item.producaoRecente?.id || `prod-ref-${item.id}`;
 
-    setIsSubmitting(true);
-    setErrorMessage(null);
-
     try {
+      isSubmittingRef.current = true;
+      setIsSubmitting(true);
+      setErrorMessage(null);
+
       await qualidadeApiService.realizarTeste({
         producaoId,
         itemOrdemServicoId: item.id,
         tecnicoResponsavelId: item.tecnicoAlocadoId || item.tecnicoAlocado?.id || (item.producoes?.[0] as any)?.tecnicoId || undefined,
-        quantidadeTestada: qtdLote,
+        tecnicoDestinoId: item.tecnicoAlocadoId || item.tecnicoAlocado?.id || undefined,
+        quantidadeTestada: Number(qtdTestada),
         quantidadeAprovada: Number(aprovadas),
         quantidadeReprovada: Number(reprovadas),
         motivoReprovacaoId: reprovadas > 0 ? 'mot-01' : undefined,
@@ -89,13 +95,13 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
         observacao: observacao.trim() || detalhesDefeito.trim() || undefined,
       });
 
-
       onSuccess();
       onClose();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } }; message?: string };
       setErrorMessage(e.response?.data?.message || 'Falha ao registrar laudo de inspeção do CQ.');
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -159,7 +165,7 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
               <span>Técnico Responsável: <strong className="text-white">{item.tecnicoAlocado?.nome || 'Samuel'}</strong></span>
             </div>
             <div className="text-right">
-              <span>Tamanho do Lote: <strong className="text-amber-400 tabular-nums">{qtdLote} un</strong></span>
+              <span>Lote Disponível: <strong className="text-amber-400 tabular-nums">{qtdLoteTotal} un</strong></span>
             </div>
           </div>
 
@@ -175,11 +181,28 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
         <div className="p-4 rounded-xl bg-surface-base border border-surface-border space-y-3">
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold uppercase tracking-wider text-gray-300 flex items-center gap-1.5">
-              <FileCheck className="w-4 h-4 text-emerald-400" /> Resultado Quantitativo do Teste
+              <FileCheck className="w-4 h-4 text-emerald-400" /> Quantidades Inspecionadas
             </label>
-            <span className="text-[11px] text-gray-400">
-              Total a Testar: <strong className="text-white tabular-nums">{qtdLote} un</strong>
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-400">Testar agora:</span>
+              <input
+                type="number"
+                min="1"
+                max={qtdLoteTotal}
+                value={qtdTestada === 0 ? '' : qtdTestada}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/\D/g, '');
+                  const v = raw === '' ? 0 : Math.min(qtdLoteTotal, Math.max(0, parseInt(raw)));
+                  setQtdTestada(v);
+                  if (raw !== '') {
+                    setAprovadas(v);
+                    setReprovadas(0);
+                  }
+                }}
+                className="w-16 h-7 px-2 bg-[#12161f] border border-surface-border rounded text-xs text-center text-white font-mono font-bold focus:outline-none focus:border-brand-500"
+              />
+              <span className="text-xs text-gray-400">/ {qtdLoteTotal} un</span>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -192,9 +215,9 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
                 value={aprovadas === 0 ? '' : aprovadas}
                 onChange={(e) => {
                   const raw = e.target.value.replace(/\D/g, '');
-                  const v = raw === '' ? 0 : Math.min(qtdLote, Math.max(0, parseInt(raw)));
+                  const v = raw === '' ? 0 : Math.min(qtdTestada, Math.max(0, parseInt(raw)));
                   setAprovadas(v === 0 && raw === '' ? 0 : v);
-                  if (raw !== '') setReprovadas(qtdLote - v);
+                  if (raw !== '') setReprovadas(Math.max(0, qtdTestada - v));
                 }}
                 placeholder="0"
                 required
@@ -210,9 +233,9 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
                 value={reprovadas === 0 ? '' : reprovadas}
                 onChange={(e) => {
                   const raw = e.target.value.replace(/\D/g, '');
-                  const v = raw === '' ? 0 : Math.min(qtdLote, Math.max(0, parseInt(raw)));
+                  const v = raw === '' ? 0 : Math.min(qtdTestada, Math.max(0, parseInt(raw)));
                   setReprovadas(v === 0 && raw === '' ? 0 : v);
-                  if (raw !== '') setAprovadas(qtdLote - v);
+                  if (raw !== '') setAprovadas(Math.max(0, qtdTestada - v));
                 }}
                 placeholder="0"
                 required
@@ -231,7 +254,7 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
             <span>
               Equação: <strong className="tabular-nums">{aprovadas}</strong> (Aprov.) +{' '}
               <strong className="tabular-nums">{reprovadas}</strong> (Reprov.) ={' '}
-              <strong className="tabular-nums">{totalCalculado}</strong> / {qtdLote} un
+              <strong className="tabular-nums">{totalCalculado}</strong> / {qtdTestada} un testadas
             </span>
             <span>{isSomaValida ? 'Soma correta' : 'Divergência de soma'}</span>
           </div>

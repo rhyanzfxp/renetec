@@ -133,7 +133,7 @@ export async function realizarTeste(
   inspetorId: string,
   dados: RealizarTesteInput
 ) {
-  const agora = new Date();
+  const agora = dados.dataTeste ? new Date(dados.dataTeste) : new Date();
   const temReprovacao = dados.quantidadeReprovada > 0;
   const novoStatusItem: StatusOS = temReprovacao ? 'RETRABALHO' : 'APROVADO';
 
@@ -146,7 +146,12 @@ export async function realizarTeste(
     ? await ensureUsuarioDbId(dados.tecnicoResponsavelId, 'TECNICO')
     : null;
 
-  if (!tecnicoRespDbId && dados.itemOrdemServicoId) {
+  const tecnicoDestinoDbId = dados.tecnicoDestinoId
+    ? await ensureUsuarioDbId(dados.tecnicoDestinoId, 'TECNICO')
+    : tecnicoRespDbId;
+
+  // Se não veio técnico e veio item da OS, busca o técnico alocado no item
+  if (!tecnicoRespDbId && dados.itemOrdemServicoId && dados.itemOrdemServicoId !== 'item-direto') {
     const itemDb = await prisma.itemOrdemServico.findUnique({
       where: { id: dados.itemOrdemServicoId },
       select: { tecnicoAlocadoId: true },
@@ -157,29 +162,135 @@ export async function realizarTeste(
   }
 
   const resultado = await prisma.$transaction(async (tx) => {
-    // 0. Garantir que a produção existe no DB (ou buscar a mais recente)
+    let itemOrdemServicoId = dados.itemOrdemServicoId;
     let producaoDbId = dados.producaoId;
-    const producaoExiste = await tx.producao.findUnique({ where: { id: producaoDbId } });
-    if (!producaoExiste) {
-      const prodMaisRecente = await tx.producao.findFirst({
-        where: { itemOrdemServicoId: dados.itemOrdemServicoId },
-        orderBy: { dataInicio: 'desc' },
-      });
-      if (prodMaisRecente) {
-        producaoDbId = prodMaisRecente.id;
-      } else {
-        const novaProd = await tx.producao.create({
+
+    // A. Apontamento Direto do CQ (sem item pré-existente na fila)
+    if (!itemOrdemServicoId || itemOrdemServicoId === 'item-direto') {
+      // 1. Garantir cliente padrão
+      let clienteDb = await tx.cliente.findFirst();
+      if (!clienteDb) {
+        clienteDb = await tx.cliente.create({
           data: {
-            itemOrdemServicoId: dados.itemOrdemServicoId,
-            tecnicoId: tecnicoRespDbId || inspetorDbId,
-            dataInicio: agora,
-            dataFim: agora,
-            quantidadeProduzida: dados.quantidadeTestada,
-            status: 'FINALIZADO',
-            servicoRealizado: 'Produção apontada',
+            nomeRazaoSocial: 'MARANET Telecomunicações',
+            documento: '00.000.000/0001-00',
           },
         });
-        producaoDbId = novaProd.id;
+      }
+
+      // 2. Garantir tipo de equipamento
+      let tipoDb = dados.tipoEquipamentoId
+        ? await tx.tipoEquipamento.findUnique({ where: { id: dados.tipoEquipamentoId } })
+        : await tx.tipoEquipamento.findFirst();
+
+      if (!tipoDb) {
+        tipoDb = await tx.tipoEquipamento.create({
+          data: {
+            nome: 'Equipamento Geral',
+            marca: 'Padrão',
+            modelo: 'Geral',
+            tempoEstimadoMinutos: 45,
+          },
+        });
+      }
+
+      // 3. Ordem de Serviço
+      let osDb: any = null;
+      if (dados.numeroOS && Number(dados.numeroOS) > 0) {
+        osDb = await tx.ordemServico.findUnique({ where: { numeroOS: Number(dados.numeroOS) } });
+      }
+      if (!osDb) {
+        osDb = await tx.ordemServico.create({
+          data: {
+            ...(dados.numeroOS && Number(dados.numeroOS) > 0 ? { numeroOS: Number(dados.numeroOS) } : {}),
+            clienteId: clienteDb.id,
+            status: novoStatusItem,
+            prioridade: 'MEDIA',
+            observacoes: `Apontamento direto registrado pelo Controle de Qualidade`,
+          },
+        });
+      }
+
+      // 4. Criar Item da OS
+      const novoItem = await tx.itemOrdemServico.create({
+        data: {
+          ordemServicoId: osDb.id,
+          tipoEquipamentoId: tipoDb.id,
+          quantidade: dados.quantidadeTestada,
+          statusItem: novoStatusItem,
+          tecnicoAlocadoId: tecnicoRespDbId || inspetorDbId,
+          defeitoRelatado: `Inspeção de bancada CQ (${dados.quantidadeAprovada} aprovadas, ${dados.quantidadeReprovada} retrabalho)`,
+        },
+      });
+      itemOrdemServicoId = novoItem.id;
+
+      // 5. Criar Produção vinculada ao técnico responsável
+      const novaProd = await tx.producao.create({
+        data: {
+          itemOrdemServicoId: novoItem.id,
+          tecnicoId: tecnicoRespDbId || inspetorDbId,
+          dataInicio: agora,
+          dataFim: agora,
+          quantidadeProduzida: dados.quantidadeTestada,
+          status: 'FINALIZADO',
+          servicoRealizado: `Reparo inspecionado e testado pelo CQ`,
+          observacao: `Apontamento de CQ. ${dados.quantidadeAprovada} un aprovadas, ${dados.quantidadeReprovada} un retrabalho.`,
+        },
+      });
+      producaoDbId = novaProd.id;
+    } else {
+      // B. Inspeção de item existente da fila
+      const itemExistente = await tx.itemOrdemServico.findUnique({
+        where: { id: itemOrdemServicoId },
+        include: { producoes: { orderBy: { dataInicio: 'desc' }, take: 1 } },
+      });
+
+      if (itemExistente) {
+        // Se o teste foi parcial (testou menos que o total do lote na fila)
+        if (dados.quantidadeTestada < itemExistente.quantidade) {
+          const qtdRestante = itemExistente.quantidade - dados.quantidadeTestada;
+          // Cria o item com o saldo restante na fila
+          await tx.itemOrdemServico.create({
+            data: {
+              ordemServicoId: itemExistente.ordemServicoId,
+              tipoEquipamentoId: itemExistente.tipoEquipamentoId,
+              quantidade: qtdRestante,
+              statusItem: 'AGUARDANDO_TESTE',
+              tecnicoAlocadoId: itemExistente.tecnicoAlocadoId,
+              defeitoRelatado: `Saldo restante para teste CQ (${qtdRestante} un pendentes)`,
+            },
+          });
+          // Ajusta a quantidade do item atual para a quantidade que foi realmente testada hoje
+          await tx.itemOrdemServico.update({
+            where: { id: itemOrdemServicoId },
+            data: { quantidade: dados.quantidadeTestada },
+          });
+        }
+
+        // Garantir produção válida
+        let producaoExiste = producaoDbId && producaoDbId !== 'prod-direto'
+          ? await tx.producao.findUnique({ where: { id: producaoDbId } })
+          : null;
+
+        if (!producaoExiste) {
+          const prodMaisRecente = itemExistente.producoes?.[0];
+          if (prodMaisRecente) {
+            producaoDbId = prodMaisRecente.id;
+          } else {
+            const novaProd = await tx.producao.create({
+              data: {
+                itemOrdemServicoId,
+                tecnicoId: itemExistente.tecnicoAlocadoId || tecnicoRespDbId || inspetorDbId,
+                dataInicio: agora,
+                dataFim: agora,
+                quantidadeProduzida: dados.quantidadeTestada,
+                status: 'FINALIZADO',
+                servicoRealizado: 'Produção apontada',
+              },
+            });
+            producaoDbId = novaProd.id;
+          }
+        }
       }
     }
 
@@ -191,17 +302,19 @@ export async function realizarTeste(
         quantidadeTestada: dados.quantidadeTestada,
         quantidadeAprovada: dados.quantidadeAprovada,
         quantidadeReprovada: dados.quantidadeReprovada,
-        observacao: dados.observacao,
+        observacao: dados.observacao || (dados.quantidadeReprovada > 0 ? dados.detalhesDefeito : 'Aprovado em conformidade no CQ'),
         dataTeste: agora,
       },
       include: {
         inspetor: { select: { id: true, nome: true } },
         producao: {
           include: {
+            tecnico: { select: { id: true, nome: true } },
             itemOrdemServico: {
               include: {
                 ordemServico: { select: { id: true, numeroOS: true, cliente: { select: { nomeRazaoSocial: true } } } },
                 tipoEquipamento: { select: { nome: true, marca: true } },
+                tecnicoAlocado: { select: { id: true, nome: true } },
               },
             },
           },
@@ -209,7 +322,7 @@ export async function realizarTeste(
       },
     });
 
-    // 2. Se houver unidades reprovadas, gerar automaticamente o Retrabalho
+    // 2. Se houver unidades reprovadas, gerar automaticamente o Retrabalho atribuído ao técnico de destino
     if (temReprovacao) {
       let motivoId = dados.motivoReprovacaoId;
       if (motivoId) {
@@ -223,9 +336,9 @@ export async function realizarTeste(
       await tx.retrabalho.create({
         data: {
           testeId: teste.id,
-          itemOrdemServicoId: dados.itemOrdemServicoId,
+          itemOrdemServicoId,
           motivoReprovacaoId: motivoId || undefined,
-          tecnicoResponsavelId: tecnicoRespDbId,
+          tecnicoResponsavelId: tecnicoDestinoDbId || tecnicoRespDbId,
           quantidadeRetrabalho: dados.quantidadeReprovada,
           detalhesDefeito: dados.detalhesDefeito || dados.observacao || 'Não conformidade detectada no CQ',
           status: 'PENDENTE',
@@ -236,13 +349,13 @@ export async function realizarTeste(
 
     // 3. Atualizar status do Item da OS
     await tx.itemOrdemServico.update({
-      where: { id: dados.itemOrdemServicoId },
+      where: { id: itemOrdemServicoId },
       data: { statusItem: novoStatusItem },
     });
 
-    // 4. Atualizar status da OS pai se todos os itens foram concluídos
+    // 4. Atualizar status da OS pai
     const itemDb = await tx.itemOrdemServico.findUnique({
-      where: { id: dados.itemOrdemServicoId },
+      where: { id: itemOrdemServicoId },
       select: {
         ordemServicoId: true,
         ordemServico: {
@@ -256,10 +369,10 @@ export async function realizarTeste(
 
     if (itemDb?.ordemServico) {
       const todosAprovados = itemDb.ordemServico.itens.every(
-        (it) => (it.id === dados.itemOrdemServicoId ? novoStatusItem === 'APROVADO' : it.statusItem === 'APROVADO')
+        (it) => (it.id === itemOrdemServicoId ? novoStatusItem === 'APROVADO' : it.statusItem === 'APROVADO')
       );
       const temAlgumRetrabalho = itemDb.ordemServico.itens.some(
-        (it) => (it.id === dados.itemOrdemServicoId ? novoStatusItem === 'RETRABALHO' : it.statusItem === 'RETRABALHO')
+        (it) => (it.id === itemOrdemServicoId ? novoStatusItem === 'RETRABALHO' : it.statusItem === 'RETRABALHO')
       );
 
       const statusOsFinal: StatusOS = temAlgumRetrabalho ? 'RETRABALHO' : (todosAprovados ? 'APROVADO' : novoStatusItem);
@@ -276,7 +389,7 @@ export async function realizarTeste(
   return resultado;
 }
 
-// ─── Histórico de Testes de CQ (paginado) ────────────────────────────────────
+// ─── Histórico de Testes de CQ (paginado com dados completos de técnicos e retrabalho) ───
 export async function getHistoricoTestes(page = 1, limit = 20) {
   if (!isDatabaseReady()) {
     return { data: [], total: 0, page, totalPages: 0 };
@@ -288,11 +401,26 @@ export async function getHistoricoTestes(page = 1, limit = 20) {
       prisma.teste.findMany({
         include: {
           inspetor: { select: { id: true, nome: true } },
+          retrabalhos: {
+            include: {
+              tecnicoResponsavel: { select: { id: true, nome: true } },
+              motivoReprovacao: { select: { id: true, descricao: true, categoria: true } },
+            },
+          },
           producao: {
             include: {
+              tecnico: { select: { id: true, nome: true } },
               itemOrdemServico: {
                 include: {
-                  ordemServico: { select: { id: true, numeroOS: true, prioridade: true } },
+                  tecnicoAlocado: { select: { id: true, nome: true } },
+                  ordemServico: {
+                    select: {
+                      id: true,
+                      numeroOS: true,
+                      prioridade: true,
+                      cliente: { select: { id: true, nomeRazaoSocial: true } },
+                    },
+                  },
                   tipoEquipamento: { select: { id: true, nome: true, marca: true, modelo: true } },
                 },
               },

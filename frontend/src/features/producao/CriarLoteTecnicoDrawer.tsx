@@ -28,9 +28,10 @@ import {
 
 interface EquipamentoLinha {
   tipoEquipamentoId: string;
-  quantidadeTotalCaixa: number; 
-  quantidadeReparada: number;   
-  quantidadeSucata: number;     
+  quantidadeReparada: number;
+  quantidadeSemDefeito: number;
+  quantidadeSucata: number;
+  anterioresNaCaixa?: number;
   tipoCategoria: 'REPARADO' | 'SEM_DEFEITO' | 'RETRABALHO';
   servicoRealizado: string;
 }
@@ -83,6 +84,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isSubmittingRef = React.useRef(false);
 
   const handleSalvarNovoCliente = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -119,16 +121,19 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
   useEffect(() => {
     if (isOpen) {
       setError(null);
+      isSubmittingRef.current = false;
       Promise.all([osApiService.getTiposEquipamento(), osApiService.getClientes()])
         .then(([equipamentos, clientesList]) => {
           setTiposEquipamento(equipamentos);
           setClientes(clientesList);
 
           if (initialItem) {
-            // Reabertura de OS existente para continuar apontamento
+            // Reabertura de OS existente para continuar apontamento de novos dias
             const os = initialItem.ordemServico || initialItem;
             const equip = initialItem.tipoEquipamento;
-            setNumeroOS(String(os.numeroOS || ''));
+            const qtdAnterior = Number(initialItem.totalAcumuladoCaixa) || Number(initialItem.quantidade) || 0;
+
+            setNumeroOS(os.numeroOS ? String(os.numeroOS) : '');
             setClienteId(os.cliente?.id || os.clienteId || (clientesList[0]?.id || ''));
             setPrioridade(os.prioridade || 'MEDIA');
             setObservacoes(os.observacoes || '');
@@ -137,9 +142,10 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
             setItens([
               {
                 tipoEquipamentoId: equip?.id || (equipamentos[0]?.id || 'pt-01'),
-                quantidadeTotalCaixa: 50,
-                quantidadeReparada: initialItem.quantidade || 0,
+                quantidadeReparada: 0,
+                quantidadeSemDefeito: 0,
                 quantidadeSucata: 0,
+                anterioresNaCaixa: qtdAnterior,
                 tipoCategoria: 'REPARADO',
                 servicoRealizado: initialItem.defeitoRelatado || 'Reparo de bancada efetuado',
               },
@@ -157,9 +163,10 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
               setItens([
                 {
                   tipoEquipamentoId: equipamentos[0].id,
-                  quantidadeTotalCaixa: 50,
                   quantidadeReparada: 0,
+                  quantidadeSemDefeito: 0,
                   quantidadeSucata: 0,
+                  anterioresNaCaixa: 0,
                   tipoCategoria: 'REPARADO',
                   servicoRealizado: '',
                 },
@@ -177,9 +184,10 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
       ...itens,
       {
         tipoEquipamentoId: defaultId,
-        quantidadeTotalCaixa: 50,
         quantidadeReparada: 0,
+        quantidadeSemDefeito: 0,
         quantidadeSucata: 0,
+        anterioresNaCaixa: 0,
         tipoCategoria: 'REPARADO',
         servicoRealizado: 'Reparo de bancada efetuado',
       },
@@ -198,26 +206,22 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
   };
 
   const totalReparados = itens.reduce((acc, it) => acc + Number(it.quantidadeReparada || 0), 0);
+  const totalSemDefeito = itens.reduce((acc, it) => acc + Number(it.quantidadeSemDefeito || 0), 0);
   const totalSucata = itens.reduce((acc, it) => acc + Number(it.quantidadeSucata || 0), 0);
-  const totalProcessados = totalReparados + totalSucata;
-  const totalRestantes = itens.reduce((acc, it) => {
-    const totalCx = Number(it.quantidadeTotalCaixa) || (Number(it.quantidadeReparada || 0) + Number(it.quantidadeSucata || 0)) || 0;
-    const rep = Number(it.quantidadeReparada || 0);
-    const suc = Number(it.quantidadeSucata || 0);
-    return acc + Math.max(0, totalCx - rep - suc);
-  }, 0);
+  const totalHoje = totalReparados + totalSemDefeito + totalSucata;
+  const totalAnteriores = itens.reduce((acc, it) => acc + Number(it.anterioresNaCaixa || 0), 0);
+  const totalGeralCaixa = totalAnteriores + totalHoje;
+  const totalProcessados = totalHoje;
 
   const pontuacaoEstimada = itens.reduce((acc, it) => {
     const eq = tiposEquipamento.find((e) => e.id === it.tipoEquipamentoId);
     const pts = eq?.pontos || 1.0;
-    return acc + (Number(it.quantidadeReparada) || 0) * pts;
+    const qtdPronta = (Number(it.quantidadeReparada) || 0) + (Number(it.quantidadeSemDefeito) || 0);
+    return acc + qtdPronta * pts;
   }, 0);
 
   const handleSubmit = async (modo: 'INICIAR_PRODUCAO' | 'DESPACHAR_CQ' | 'SALVAR_BANCADA') => {
-    if (!numeroOS.trim() || !parseInt(numeroOS.replace(/\D/g, ''))) {
-      setError('Informe o número da OS.');
-      return;
-    }
+    if (isSubmittingRef.current || isLoading) return;
 
     if (itens.length === 0) {
       setError('Adicione ao menos 1 equipamento no apontamento.');
@@ -228,22 +232,12 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
     const isDiretoCQ = modo === 'DESPACHAR_CQ';
 
     if (!isAoVivo && totalProcessados < 1) {
-      setError('Informe ao menos 1 unidade reparada ou sucata no apontamento.');
+      setError('Informe ao menos 1 unidade reparada, sem defeito ou sucata no apontamento de hoje.');
       return;
     }
 
-    for (let i = 0; i < itens.length; i++) {
-      const it = itens[i];
-      const totalCx = Number(it.quantidadeTotalCaixa) || 0;
-      const rep = Number(it.quantidadeReparada) || 0;
-      const suc = Number(it.quantidadeSucata) || 0;
-      if (totalCx > 0 && (rep + suc) > totalCx) {
-        setError(`Item #${i + 1}: A soma de Reparadas (${rep}) + Sucata (${suc}) = ${rep + suc} un não pode ser maior que o Total na Caixa (${totalCx} un).`);
-        return;
-      }
-    }
-
     try {
+      isSubmittingRef.current = true;
       setIsLoading(true);
       setError(null);
 
@@ -257,10 +251,10 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
         timestampISO = new Date().toISOString();
       }
 
-      const numParsed = parseInt(numeroOS.replace(/\D/g, ''));
+      const numParsed = numeroOS.trim() ? parseInt(numeroOS.replace(/\D/g, '')) : undefined;
 
       const payload = {
-        numeroOS: numParsed,
+        numeroOS: numParsed && !isNaN(numParsed) ? numParsed : undefined,
         clienteId: clienteId || (clientes[0]?.id || 'cli-01'),
         dataEntrada: timestampISO,
         prioridade,
@@ -269,27 +263,33 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
         iniciarProducaoAoVivo: isAoVivo,
         modoOperacao: modo,
         itens: itens.map((it) => {
-          const totalCx = Number(it.quantidadeTotalCaixa) || (Number(it.quantidadeReparada) + Number(it.quantidadeSucata)) || 1;
-          const reparadas = Number(it.quantidadeReparada) || 0;
-          const sucata = Number(it.quantidadeSucata) || 0;
-          const restante = Math.max(0, totalCx - reparadas - sucata);
-          const qtdOperada = reparadas > 0 ? reparadas : (sucata > 0 ? sucata : (totalCx || 1));
+          const rep = Number(it.quantidadeReparada) || 0;
+          const semDef = Number(it.quantidadeSemDefeito) || 0;
+          const suc = Number(it.quantidadeSucata) || 0;
+          const ant = Number(it.anterioresNaCaixa) || 0;
+          const hojeSoma = rep + semDef + suc;
+          const totalNaCaixa = ant + hojeSoma;
+          const qtdOperada = (rep + semDef) > 0 ? (rep + semDef) : (hojeSoma > 0 ? hojeSoma : (totalNaCaixa || 1));
+
+          const categoria: 'REPARADO' | 'SEM_DEFEITO' | 'RETRABALHO' =
+            it.tipoCategoria || (semDef > 0 && rep === 0 ? 'SEM_DEFEITO' : 'REPARADO');
 
           return {
             tipoEquipamentoId: it.tipoEquipamentoId,
             quantidade: qtdOperada,
-            quantidadeTotalCaixa: totalCx,
-            quantidadeReparada: reparadas,
-            quantidadeSucata: sucata,
-            quantidadeRestante: restante,
-            tipoCategoria: it.tipoCategoria,
-            defeitoRelatado: it.tipoCategoria === 'SEM_DEFEITO'
-              ? `Sem defeito aparente (Triagem) [Caixa: ${totalCx} un | ${reparadas} reparadas | ${sucata} sucata | ${restante} restantes]`
-              : (it.servicoRealizado.trim() || `Manutenção de bancada [Caixa: ${totalCx} un | ${reparadas} reparadas | ${sucata} sucata | ${restante} restantes]`),
+            quantidadeTotalCaixa: totalNaCaixa,
+            quantidadeReparada: rep,
+            quantidadeSemDefeito: semDef,
+            quantidadeSucata: suc,
+            quantidadeRestante: 0,
+            tipoCategoria: categoria,
+            defeitoRelatado: categoria === 'SEM_DEFEITO'
+              ? `Sem defeito aparente (Triagem) [Caixa Total: ${totalNaCaixa} un | Hoje: ${rep} rep, ${semDef} sem def, ${suc} sucata]`
+              : (it.servicoRealizado.trim() || `Manutenção de bancada [Caixa Total: ${totalNaCaixa} un | Hoje: ${rep} rep, ${semDef} sem def, ${suc} sucata]`),
             servicoRealizado: it.servicoRealizado.trim() || (
-              it.tipoCategoria === 'SEM_DEFEITO'
-                ? `Testado em triagem (${reparadas} un)${sucata ? ` | ${sucata} un descartadas` : ''}`
-                : `Reparo efetuado (${reparadas} un)${sucata ? ` | ${sucata} un sem conserto` : ''}`
+              categoria === 'SEM_DEFEITO'
+                ? `Testado em triagem (${semDef || rep} un sem defeito)${suc ? ` | ${suc} un sucata` : ''}`
+                : `Reparo efetuado (${rep} un reparadas${semDef ? `, ${semDef} sem defeito` : ''})${suc ? ` | ${suc} un sucata` : ''}`
             ),
           };
         }),
@@ -301,6 +301,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
     } catch (err: any) {
       setError(err.response?.data?.message || 'Falha ao registrar lote de produção.');
     } finally {
+      isSubmittingRef.current = false;
       setIsLoading(false);
     }
   };
@@ -323,13 +324,13 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
             ) : (
               <>
                 <span className="font-bold text-emerald-400 tabular-nums flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> {totalReparados} un prontas
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> {totalReparados} reparadas
                 </span>
-                {totalRestantes > 0 && (
+                {totalSemDefeito > 0 && (
                   <>
                     <span className="text-gray-500">•</span>
-                    <span className="text-sky-300 font-medium tabular-nums flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5 text-sky-400" /> {totalRestantes} un na bancada
+                    <span className="text-sky-400 font-bold tabular-nums flex items-center gap-1">
+                      <ShieldCheck className="w-3.5 h-3.5 text-sky-400" /> {totalSemDefeito} sem defeito
                     </span>
                   </>
                 )}
@@ -337,7 +338,15 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                   <>
                     <span className="text-gray-500">•</span>
                     <span className="text-red-400 font-medium tabular-nums flex items-center gap-1">
-                      <XCircle className="w-3.5 h-3.5 text-red-400" /> {totalSucata} un sucata
+                      <XCircle className="w-3.5 h-3.5 text-red-400" /> {totalSucata} sucata
+                    </span>
+                  </>
+                )}
+                {totalAnteriores > 0 && (
+                  <>
+                    <span className="text-gray-500">•</span>
+                    <span className="text-gray-300 font-semibold tabular-nums">
+                      Total Caixa: <strong className="text-white">{totalGeralCaixa} un</strong>
                     </span>
                   </>
                 )}
@@ -487,7 +496,6 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
           </div>
         </div>
 
-
         <div className="p-4 rounded-xl bg-surface-elevated/70 border border-surface-border space-y-3.5">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-brand-300 flex items-center gap-1.5">
@@ -501,7 +509,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1">
               <label className="text-xs font-semibold text-gray-300 flex items-center gap-1">
-                Número da OS <span className="text-brand-400">*</span>
+                Número da OS <span className="text-gray-500 text-[11px] font-normal">(Opcional)</span>
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-2.5 text-gray-400 font-bold text-sm">#</span>
@@ -509,9 +517,8 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                   type="text"
                   value={numeroOS}
                   onChange={(e) => setNumeroOS(e.target.value.replace(/[^0-9]/g, ''))}
-                  placeholder="1920"
+                  placeholder="Auto se vazio"
                   className="w-full h-10 pl-7 pr-3 bg-surface-base border border-surface-border rounded-lg text-sm text-white font-mono font-bold focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-                  required
                 />
               </div>
             </div>
@@ -547,7 +554,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-semibold text-gray-300 flex items-center gap-1">
-                  Cliente / Empresa <span className="text-brand-400">*</span>
+                  Cliente / Empresa <span className="text-gray-500 text-[11px] font-normal">(Opcional)</span>
                 </label>
                 <button
                   type="button"
@@ -672,7 +679,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                 <Layers className="w-4 h-4 text-emerald-400" /> Equipamentos da Caixa / Lote ({itens.length})
               </h4>
               <p className="text-[11px] text-gray-400">
-                Informe o total da caixa, quantas você reparou hoje e quantas morreram/sucata.
+                Informe as quantidades que você fez <strong>hoje</strong> (reparadas, sem defeito e sucata). O total da caixa acumula automaticamente.
               </p>
             </div>
 
@@ -691,12 +698,13 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
             {itens.map((item, idx) => {
               const selectedEq = tiposEquipamento.find((e) => e.id === item.tipoEquipamentoId);
               const ptsUnit = selectedEq?.pontos || 1.0;
-              const subtotalPts = (Number(item.quantidadeReparada) || 0) * ptsUnit;
-
-              const totalCx = Number(item.quantidadeTotalCaixa) || Number(item.quantidadeReparada) || 1;
               const repHoje = Number(item.quantidadeReparada) || 0;
+              const semDefHoje = Number(item.quantidadeSemDefeito) || 0;
               const sucHoje = Number(item.quantidadeSucata) || 0;
-              const restanteCx = Math.max(0, totalCx - repHoje - sucHoje);
+              const antHoje = Number(item.anterioresNaCaixa) || 0;
+              const hojeSoma = repHoje + semDefHoje + sucHoje;
+              const totalItemCaixa = antHoje + hojeSoma;
+              const subtotalPts = (repHoje + semDefHoje) * ptsUnit;
 
               return (
                 <div
@@ -710,7 +718,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                       </span>
                       <span className="text-xs font-bold text-white">Item #{idx + 1}</span>
                       <span className="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 tabular-nums font-semibold">
-                        {ptsUnit} pt/un • Estimado p/ {repHoje} un: {subtotalPts.toFixed(1)} pts
+                        {ptsUnit} pt/un • Estimado p/ {repHoje + semDefHoje} un: {subtotalPts.toFixed(1)} pts
                       </span>
                     </div>
 
@@ -746,26 +754,8 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                     </select>
                   </div>
 
+                  {/* 3 CAMPOS PRINCIPAIS DE APONTAMENTO: REPARADAS | SEM DEFEITO | SUCATA */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-[#0e121a] p-3 rounded-xl border border-surface-border/70">
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-gray-300 flex items-center gap-1">
-                        <Package className="w-3.5 h-3.5 text-amber-400" /> Total na Caixa
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={item.quantidadeTotalCaixa === 0 ? '' : item.quantidadeTotalCaixa}
-                        onChange={(e) => {
-                          const v = e.target.value.replace(/\D/g, '');
-                          handleUpdateItem(idx, 'quantidadeTotalCaixa', v === '' ? 0 : parseInt(v));
-                        }}
-                        placeholder="Ex: 50"
-                        className="w-full h-9 px-2.5 bg-[#141923] border border-surface-border rounded-lg text-xs text-center text-white font-mono font-bold focus:outline-none focus:border-brand-500"
-                        title="Tamanho total da caixa recebida"
-                      />
-                      <span className="text-[10px] text-gray-500 block text-center">Tamanho da caixa</span>
-                    </div>
-
                     <div className="space-y-1">
                       <label className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
                         <Wrench className="w-3.5 h-3.5" /> Reparadas Hoje
@@ -786,6 +776,25 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                     </div>
 
                     <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-sky-400 flex items-center gap-1">
+                        <ShieldCheck className="w-3.5 h-3.5 text-sky-400" /> Sem Defeito (Triagem)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={item.quantidadeSemDefeito === 0 ? '' : item.quantidadeSemDefeito}
+                        onChange={(e) => {
+                          const v = e.target.value.replace(/\D/g, '');
+                          handleUpdateItem(idx, 'quantidadeSemDefeito', v === '' ? 0 : parseInt(v));
+                        }}
+                        placeholder="0 (opcional)"
+                        className="w-full h-9 px-2.5 bg-[#141923] border border-sky-500/40 rounded-lg text-xs text-center text-sky-300 font-mono font-bold focus:outline-none focus:border-sky-400"
+                        title="Equipamentos testados na triagem que estavam funcionando perfeitamente sem defeito (opcional)"
+                      />
+                      <span className="text-[10px] text-sky-400/80 block text-center font-medium">OK em triagem</span>
+                    </div>
+
+                    <div className="space-y-1">
                       <label className="text-[11px] font-semibold text-gray-400 flex items-center gap-1">
                         <XCircle className="w-3.5 h-3.5 text-red-400" /> Sem Reparo / Sucata
                       </label>
@@ -797,7 +806,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                           const v = e.target.value.replace(/\D/g, '');
                           handleUpdateItem(idx, 'quantidadeSucata', v === '' ? 0 : parseInt(v));
                         }}
-                        placeholder="0"
+                        placeholder="0 (opcional)"
                         className="w-full h-9 px-2.5 bg-[#141923] border border-surface-border rounded-lg text-xs text-center text-red-300 font-mono font-bold focus:outline-none focus:border-red-500"
                         title="Unidades que morreram ou não deram conserto (opcional)"
                       />
@@ -805,26 +814,40 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                     </div>
                   </div>
 
+                  {/* CONTABILIDADE DINÂMICA DA CAIXA E DIAS ANTERIORES */}
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 p-2.5 rounded-lg bg-surface-elevated/50 border border-surface-border/50 text-xs">
-                    <span className="text-gray-400 font-semibold">Contabilidade da Caixa:</span>
+                    <span className="text-gray-400 font-semibold flex items-center gap-1">
+                      <Package className="w-3.5 h-3.5 text-amber-400" /> Contabilidade da Caixa:
+                    </span>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-bold text-emerald-400 tabular-nums flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> {repHoje} prontas
+                        <CheckCircle2 className="w-3.5 h-3.5" /> {repHoje} reparadas hoje
                       </span>
+                      {semDefHoje > 0 && (
+                        <span className="text-sky-300 tabular-nums flex items-center gap-1 font-semibold">
+                          <ShieldCheck className="w-3.5 h-3.5 text-sky-400" /> {semDefHoje} sem defeito
+                        </span>
+                      )}
                       {sucHoje > 0 && (
                         <span className="text-red-400 tabular-nums flex items-center gap-1">
                           <XCircle className="w-3.5 h-3.5" /> {sucHoje} sucata
                         </span>
                       )}
-                      <span className="font-bold text-sky-400 tabular-nums bg-sky-500/10 px-2 py-0.5 rounded border border-sky-500/20 flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5" /> {restanteCx} un restantes na bancada
-                      </span>
+                      {antHoje > 0 ? (
+                        <span className="font-bold text-amber-300 tabular-nums bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 flex items-center gap-1">
+                          +{antHoje} anteriores = <strong className="text-white">{totalItemCaixa} un total na caixa</strong>
+                        </span>
+                      ) : (
+                        <span className="font-bold text-gray-200 tabular-nums bg-surface-base px-2 py-0.5 rounded border border-surface-border">
+                          Total na Caixa: {hojeSoma} un
+                        </span>
+                      )}
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-semibold text-gray-300 uppercase tracking-wide">
-                      Classificação do Equipamento
+                      Classificação Principal
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 bg-[#10141d] border border-surface-border p-1 rounded-lg">
                       <button
@@ -894,18 +917,12 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                <span className="text-gray-300">Reparadas Hoje: <strong className="text-white tabular-nums">{totalReparados} un</strong></span>
+                <span className="text-gray-300">Hoje: <strong className="text-white tabular-nums">{totalProcessados} un</strong> ({totalReparados} rep{totalSemDefeito ? `, ${totalSemDefeito} sem def` : ''}{totalSucata ? `, ${totalSucata} suc` : ''})</span>
               </div>
-              {totalRestantes > 0 && (
+              {totalAnteriores > 0 && (
                 <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-sky-400" />
-                  <span className="text-gray-300">Restantes na Caixa: <strong className="text-sky-300 tabular-nums">{totalRestantes} un</strong></span>
-                </div>
-              )}
-              {totalSucata > 0 && (
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-red-400" />
-                  <span className="text-gray-300">Sucata / Sem Reparo: <strong className="text-red-300 tabular-nums">{totalSucata} un</strong></span>
+                  <span className="w-2 h-2 rounded-full bg-amber-400" />
+                  <span className="text-gray-300">Total Acumulado na Caixa: <strong className="text-amber-300 tabular-nums">{totalGeralCaixa} un</strong></span>
                 </div>
               )}
             </div>
@@ -925,7 +942,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
             rows={2}
             value={observacoes}
             onChange={(e) => setObservacoes(e.target.value)}
-            placeholder="Ex: Caixa com 12 reparadas concluídas. 36 unidades restantes continuam na bancada para os próximos dias."
+            placeholder="Ex: Caixa com 11 peças feitas hoje (6 rep, 2 sem def, 3 sucata). Amanhã continuarei este lote."
             className="w-full bg-surface-base border border-surface-border rounded-lg p-2.5 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-brand-500 resize-none"
           />
         </div>

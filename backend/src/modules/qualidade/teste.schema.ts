@@ -8,6 +8,8 @@ export const RealizarTesteSchema = z
     tipoEquipamentoId: z.string().optional(),
     origemTriagem: z.boolean().optional().default(false),
     tecnicoResponsavelId: z.string().optional(),
+    tecnicoDestinoId: z.string().optional(),
+    dataTeste: z.string().optional(),
     quantidadeTestada: z
       .number({ required_error: 'Quantidade testada é obrigatória' })
       .int()
@@ -29,18 +31,6 @@ export const RealizarTesteSchema = z
     {
       message: 'A soma de APROVADOS + REPROVADOS deve ser exatamente igual à QUANTIDADE TESTADA.',
       path: ['quantidadeTestada'],
-    }
-  )
-  .refine(
-    (data) => {
-      if (data.quantidadeReprovada > 0 && !data.motivoReprovacaoId) {
-        return false;
-      }
-      return true;
-    },
-    {
-      message: 'Informe o motivo da não-conformidade para itens reprovados.',
-      path: ['motivoReprovacaoId'],
     }
   );
 

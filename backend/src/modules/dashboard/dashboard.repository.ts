@@ -3,6 +3,8 @@ import { prisma, isDatabaseReady } from '../../database/prisma.js';
 export interface BancadaStatus {
   tecnicoId: string;
   tecnicoNome: string;
+  id?: string;
+  nome?: string;
   funcao: string;
   status: 'EM_PRODUCAO' | 'DISPONIVEL' | 'EM_PAUSA';
   producaoAtiva?: {
@@ -16,6 +18,8 @@ export interface BancadaStatus {
     tempoDecorridoMinutos: number;
   } | null;
   pontosHoje: number;
+  taxaQualidadeHoje?: number;
+  quantidadeAprovadaHoje?: number;
 }
 
 export interface TvFabricaData {
@@ -542,7 +546,7 @@ export async function getGerencialData(periodo: string = 'mes_atual'): Promise<G
         ];
 
   const produtividadeTecnicos: ProdutividadeTecnico[] = colaboradoresLista.map((c: any) => {
-    const bancada = tvData.bancadas.find((b) => isTecnicoMatch(b.id, b.nome, c.id, c.nome));
+    const bancada = tvData.bancadas.find((b) => isTecnicoMatch(b.tecnicoId || b.id || '', b.tecnicoNome || b.nome || '', c.id, c.nome));
     const pts = isHoje ? (bancada?.pontosHoje || 0) : (c.pontosRealizados ?? 0);
     const taxaAprov = bancada ? (bancada.taxaQualidadeHoje ?? 100.0) : 100.0;
 

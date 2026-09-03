@@ -94,6 +94,7 @@ export const ProducaoPage: React.FC = () => {
 
   // Iniciar produção ao vivo de uma caixa na bancada
   const handleIniciarProducao = async (item: FilaItemData) => {
+    if (isStarting || isPausing) return;
     try {
       setIsStarting(item.id);
       setErrorMessage(null);
@@ -110,7 +111,7 @@ export const ProducaoPage: React.FC = () => {
 
   // Pausar produção ativa na bancada para continuar depois
   const handlePausarProducao = async () => {
-    if (!producaoAtiva?.id) return;
+    if (!producaoAtiva?.id || isPausing) return;
     try {
       setIsPausing(true);
       setErrorMessage(null);
@@ -127,6 +128,7 @@ export const ProducaoPage: React.FC = () => {
 
   // Despachar caixa/lote direto para o CQ com 1 clique
   const handleDespacharCQ = async (item: FilaItemData) => {
+    if (isDispatching) return;
     try {
       setIsDispatching(item.id);
       setErrorMessage(null);

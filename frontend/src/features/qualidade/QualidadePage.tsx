@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { qualidadeApiService } from './teste.service';
 import type { FilaTesteItem, HistoricoTesteItem } from './teste.types';
 import { useRealtime } from '../realtime/RealtimeContext';
@@ -6,6 +6,7 @@ import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Button } from '../../components/ui/Button';
 import { KpiCard } from '../../components/ui/KpiCard';
 import { RealizarTesteDrawer } from './RealizarTesteDrawer';
+import { RegistrarTesteCQDrawer } from './RegistrarTesteCQDrawer';
 import {
   CheckCircle2,
   XCircle,
@@ -14,7 +15,9 @@ import {
   RefreshCw,
   User,
   ShieldCheck,
-  History
+  History,
+  PlusCircle,
+  RotateCcw,
 } from 'lucide-react';
 
 export const QualidadePage: React.FC = () => {
@@ -23,17 +26,19 @@ export const QualidadePage: React.FC = () => {
   const [selectedItem, setSelectedItem] = useState<FilaTesteItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isRegistrarCQOpen, setIsRegistrarCQOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  const isApprovingRef = useRef(false);
 
   const loadData = useCallback(async () => {
     try {
       setErrorMessage(null);
       const [filaData, histData] = await Promise.all([
         qualidadeApiService.getFila(),
-        qualidadeApiService.getHistorico(1, 5),
+        qualidadeApiService.getHistorico(1, 8),
       ]);
       setFila(Array.isArray(filaData) ? filaData : []);
       setHistorico(Array.isArray(histData?.data) ? histData.data : []);
@@ -57,11 +62,12 @@ export const QualidadePage: React.FC = () => {
     return () => unsubscribe();
   }, [loadData, subscribe]);
 
-  // Aprovação Rápida 100% de um lote sem reprovações (com proteção contra clique triplo)
+  // Aprovação Rápida 100% de um lote sem reprovações (com proteção contra clique duplo)
   const handleAprovacaoRapida = async (item: FilaTesteItem) => {
-    if (approvingId) return; // Evita cliques múltiplos concorrentes
+    if (approvingId || isApprovingRef.current) return;
 
     try {
+      isApprovingRef.current = true;
       setApprovingId(item.id);
       setErrorMessage(null);
 
@@ -74,6 +80,8 @@ export const QualidadePage: React.FC = () => {
       await qualidadeApiService.realizarTeste({
         producaoId,
         itemOrdemServicoId: item.id,
+        tecnicoResponsavelId: item.tecnicoAlocadoId || item.tecnicoAlocado?.id || undefined,
+        tecnicoDestinoId: item.tecnicoAlocadoId || item.tecnicoAlocado?.id || undefined,
         quantidadeTestada: item.quantidade,
         quantidadeAprovada: item.quantidade,
         quantidadeReprovada: 0,
@@ -89,6 +97,7 @@ export const QualidadePage: React.FC = () => {
       setErrorMessage(e.response?.data?.message || 'Erro ao aprovar lote.');
       await loadData(); // Restaura caso falhe
     } finally {
+      isApprovingRef.current = false;
       setApprovingId(null);
     }
   };
@@ -178,7 +187,7 @@ export const QualidadePage: React.FC = () => {
 
       {/* ─── 2. FILA DE LOTES AGUARDANDO INSPEÇÃO ──────────────────────────── */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
               <FileCheck className="w-4 h-4 text-emerald-400" /> Fila de Inspeção de Qualidade ({currentFila.length})
@@ -188,9 +197,20 @@ export const QualidadePage: React.FC = () => {
             </p>
           </div>
 
-          <Button variant="ghost" size="sm" onClick={loadData} leftIcon={<RefreshCw className="w-3.5 h-3.5" />}>
-            Atualizar Fila
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setIsRegistrarCQOpen(true)}
+              leftIcon={<PlusCircle className="w-4 h-4" />}
+              className="shadow-glow-primary font-bold"
+            >
+              + Registrar Teste / Lote de CQ
+            </Button>
+            <Button variant="ghost" size="sm" onClick={loadData} leftIcon={<RefreshCw className="w-3.5 h-3.5" />}>
+              Atualizar
+            </Button>
+          </div>
         </div>
 
         {isLoading ? (
@@ -200,12 +220,21 @@ export const QualidadePage: React.FC = () => {
             ))}
           </div>
         ) : currentFila.length === 0 ? (
-          <div className="p-8 rounded-xl bg-surface-card border border-surface-border text-center space-y-2">
+          <div className="p-8 rounded-xl bg-surface-card border border-surface-border text-center space-y-3">
             <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
-            <h4 className="text-sm font-bold text-white">Mesa de Controle de Qualidade limpa!</h4>
+            <h4 className="text-sm font-bold text-white">Fila de espera de CQ zerada!</h4>
             <p className="text-xs text-gray-400 max-w-sm mx-auto">
-              Todos os lotes liberados pela produção já foram inspecionados, aprovados ou encaminhados para retrabalho.
+              Você pode registrar testes diários diretamente usando o botão <strong>"+ Registrar Teste / Lote de CQ"</strong> acima.
             </p>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setIsRegistrarCQOpen(true)}
+              leftIcon={<PlusCircle className="w-3.5 h-3.5" />}
+              className="mt-2"
+            >
+              Apontar Testes de Hoje
+            </Button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -298,44 +327,69 @@ export const QualidadePage: React.FC = () => {
           </h3>
 
           <div className="bg-surface-card border border-surface-border rounded-xl divide-y divide-surface-border overflow-hidden">
-            {currentHistorico.map((h, idx) => (
-              <div key={h.id || idx} className="p-3 sm:px-4 flex items-center justify-between text-xs">
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-white tabular-nums">
-                      OS #{h.producao?.itemOrdemServico?.ordemServico?.numeroOS || '—'}
-                    </span>
-                    <span className="text-gray-400">—</span>
-                    <span className="text-gray-300 font-medium">
-                      {h.producao?.itemOrdemServico?.tipoEquipamento?.nome || 'Equipamento'}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-gray-400">
-                    Inspetor: {h.inspetor?.nome || 'Controle de Qualidade'} {h.observacao ? `• ${h.observacao}` : ''}
-                  </p>
-                </div>
+            {currentHistorico.map((h, idx) => {
+              const numOS = h.producao?.itemOrdemServico?.ordemServico?.numeroOS;
+              const equipNome = h.producao?.itemOrdemServico?.tipoEquipamento?.nome || 'Equipamento';
+              const tecNome = h.producao?.tecnico?.nome || h.producao?.itemOrdemServico?.tecnicoAlocado?.nome || 'Técnico';
+              const retrabalhoTec = h.retrabalhos?.[0]?.tecnicoResponsavel?.nome;
 
-                <div className="text-right flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 text-[10px] font-semibold tabular-nums">
-                    +{h.quantidadeAprovada} Aprovadas (Meta)
-                  </span>
-                  {h.quantidadeReprovada > 0 && (
-                    <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30 text-[10px] font-semibold tabular-nums">
-                      {h.quantidadeReprovada} Retrabalho
-                    </span>
-                  )}
+              return (
+                <div key={h.id || idx} className="p-3 sm:px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-white tabular-nums">
+                        OS #{numOS || '—'}
+                      </span>
+                      <span className="text-gray-400">—</span>
+                      <span className="text-gray-200 font-medium">
+                        {equipNome}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-400 flex flex-wrap items-center gap-1.5">
+                      <span>Inspetor: <strong className="text-gray-300">{h.inspetor?.nome || 'CQ'}</strong></span>
+                      <span>•</span>
+                      <span>Técnico Reparo: <strong className="text-sky-300">{tecNome}</strong></span>
+                      {retrabalhoTec && retrabalhoTec !== tecNome && (
+                        <>
+                          <span>•</span>
+                          <span className="text-amber-400">Retrabalho direcionado p/: <strong>{retrabalhoTec}</strong></span>
+                        </>
+                      )}
+                      {h.observacao ? ` • ${h.observacao}` : ''}
+                    </p>
+                  </div>
+
+                  <div className="text-right flex items-center gap-2">
+                    {h.quantidadeAprovada > 0 && (
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 text-[10px] font-semibold tabular-nums flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" /> +{h.quantidadeAprovada} Aprovadas
+                      </span>
+                    )}
+                    {h.quantidadeReprovada > 0 && (
+                      <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30 text-[10px] font-semibold tabular-nums flex items-center gap-1">
+                        <RotateCcw className="w-3 h-3 text-amber-400" /> {h.quantidadeReprovada} Retrabalho
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* Drawer de Inspeção */}
+      {/* Drawer de Inspeção da Fila */}
       <RealizarTesteDrawer
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         item={selectedItem}
+        onSuccess={loadData}
+      />
+
+      {/* Drawer de Apontamento Direto de Testes CQ */}
+      <RegistrarTesteCQDrawer
+        isOpen={isRegistrarCQOpen}
+        onClose={() => setIsRegistrarCQOpen(false)}
         onSuccess={loadData}
       />
     </div>
