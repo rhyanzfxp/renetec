@@ -171,4 +171,27 @@ export async function osRoutes(app: FastifyInstance) {
       });
     }
   });
+
+  // Exclusão de Ordem de Serviço
+  app.delete('/:id', { preHandler: [authenticate] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const user = request.user as { sub: string };
+    try {
+      const deleted = await osService.delete(id, user.sub);
+      return {
+        success: true,
+        data: deleted,
+        message: `Ordem de Serviço #${deleted.numeroOS} excluída com sucesso!`,
+      };
+    } catch (err: any) {
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: 'ERRO_EXCLUSAO_OS',
+          message: err.message || 'Erro ao excluir OS.',
+        },
+      });
+    }
+  });
 }
+

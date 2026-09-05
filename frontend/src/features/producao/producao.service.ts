@@ -107,6 +107,23 @@ export const producaoApiService = {
     );
     return response.data;
   },
+
+  // Despacha a OS inteira e seus itens para a fila de testes do CQ
+  async despacharOsParaCQ(osIdOrNumero: string | number, observacao?: string) {
+    const response = await api.post<{ success: boolean; data: any; message: string }>(
+      `/producao/os/${osIdOrNumero}/despachar-cq`,
+      { observacao }
+    );
+    return response.data;
+  },
+
+  // Exclui uma Ordem de Serviço incorreta / lançada por engano
+  async excluirOs(osIdOrNumero: string | number) {
+    const response = await api.delete<{ success: boolean; data: any; message: string }>(
+      `/producao/os/${osIdOrNumero}`
+    );
+    return response.data;
+  },
 };
 
 

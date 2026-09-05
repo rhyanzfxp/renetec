@@ -27,6 +27,9 @@ import {
   Sparkles,
   CheckCheck,
   Calendar,
+  Send,
+  Trash2,
+  ChevronDown,
 } from 'lucide-react';
 
 export const ProducaoPage: React.FC = () => {
@@ -48,7 +51,57 @@ export const ProducaoPage: React.FC = () => {
   const [isStarting, setIsStarting] = useState<string | null>(null);
   const [isDispatching, setIsDispatching] = useState<string | null>(null);
 
-  // Modal para Concluir OS
+  // Estados de abertura das gavetas (com persistência no localStorage)
+  const [isOsAndamentoOpen, setIsOsAndamentoOpen] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('renetec:gaveta_os_andamento');
+      return saved !== null ? saved === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const [isMinhasCaixasOpen, setIsMinhasCaixasOpen] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('renetec:gaveta_minhas_caixas');
+      return saved !== null ? saved === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleOsAndamento = () => {
+    setIsOsAndamentoOpen((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('renetec:gaveta_os_andamento', String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const toggleMinhasCaixas = () => {
+    setIsMinhasCaixasOpen((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('renetec:gaveta_minhas_caixas', String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  // Modal para Mandar OS ao CQ
+  const [despacharCqModalOpen, setDespacharCqModalOpen] = useState(false);
+  const [osParaDespacharCQ, setOsParaDespacharCQ] = useState<OsEmAndamentoData | null>(null);
+  const [despacharCqObservacao, setDespacharCqObservacao] = useState('');
+  const [isDespachandoCQ, setIsDespachandoCQ] = useState(false);
+
+  // Modal para Excluir OS Errada
+  const [excluirOsModalOpen, setExcluirOsModalOpen] = useState(false);
+  const [osParaExcluir, setOsParaExcluir] = useState<OsEmAndamentoData | null>(null);
+  const [isExcluindoOs, setIsExcluindoOs] = useState(false);
+
+  // Modal para Concluir OS Definitivamente (secundário)
   const [concluirOsModalOpen, setConcluirOsModalOpen] = useState(false);
   const [osParaConcluir, setOsParaConcluir] = useState<OsEmAndamentoData | null>(null);
   const [concluirOsObservacao, setConcluirOsObservacao] = useState('');
@@ -95,6 +148,9 @@ export const ProducaoPage: React.FC = () => {
       'qualidade:reprovado',
       'qualidade:novo_lote',
       'os:concluida',
+      'os:despachada_cq',
+      'os:deletada',
+      'os:atualizada',
     ],
     debounceMs: 400,
   });
@@ -177,6 +233,46 @@ export const ProducaoPage: React.FC = () => {
   };
 
   // Concluir OS definitivamente
+  const handleDespacharOsParaCQ = async () => {
+    if (!osParaDespacharCQ || isDespachandoCQ) return;
+    try {
+      setIsDespachandoCQ(true);
+      setErrorMessage(null);
+      await producaoApiService.despacharOsParaCQ(
+        osParaDespacharCQ.id,
+        despacharCqObservacao.trim() || undefined
+      );
+      setSuccessMessage(`OS #${osParaDespacharCQ.numeroOS} enviada ao CQ com sucesso! Os equipamentos já estão na fila de testes.`);
+      setTimeout(() => setSuccessMessage(null), 5000);
+      setDespacharCqModalOpen(false);
+      setOsParaDespacharCQ(null);
+      setDespacharCqObservacao('');
+      await loadData();
+    } catch (err: any) {
+      setErrorMessage(err.response?.data?.message || 'Erro ao enviar OS para o CQ.');
+    } finally {
+      setIsDespachandoCQ(false);
+    }
+  };
+
+  const handleExcluirOS = async () => {
+    if (!osParaExcluir || isExcluindoOs) return;
+    try {
+      setIsExcluindoOs(true);
+      setErrorMessage(null);
+      await producaoApiService.excluirOs(osParaExcluir.id);
+      setSuccessMessage(`Ordem de Serviço #${osParaExcluir.numeroOS} excluída com sucesso.`);
+      setTimeout(() => setSuccessMessage(null), 5000);
+      setExcluirOsModalOpen(false);
+      setOsParaExcluir(null);
+      await loadData();
+    } catch (err: any) {
+      setErrorMessage(err.response?.data?.message || 'Erro ao excluir ordem de serviço.');
+    } finally {
+      setIsExcluindoOs(false);
+    }
+  };
+
   const handleConcluirOS = async () => {
     if (!osParaConcluir || isConcluindoOs) return;
     try {
@@ -348,31 +444,95 @@ export const ProducaoPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ─── SEÇÃO: MINHAS ORDENS DE SERVIÇO EM ANDAMENTO ────────────── */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <Layers className="w-4 h-4 text-brand-400" /> Minhas OS em Andamento ({osEmAndamento.length})
-            </h3>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Ordens de serviço abertas atribuídas a você. Continue apontando sua produção diária ou finalize a OS quando concluída.
-            </p>
+      {/* ─── GAVETA 1: MINHAS ORDENS DE SERVIÇO EM ANDAMENTO ────────────── */}
+      <div className="rounded-xl bg-surface-card border border-surface-border overflow-hidden transition-all duration-200 shadow-sm">
+        {/* Cabeçalho da Gaveta (Clicável para expandir/recolher) */}
+        <div
+          onClick={toggleOsAndamento}
+          className="p-3.5 sm:px-4 flex items-center justify-between gap-3 cursor-pointer select-none hover:bg-surface-elevated/50 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className={`p-2 rounded-lg transition-colors ${
+                isOsAndamentoOpen
+                  ? 'bg-brand-500/15 text-brand-400 border border-brand-500/30'
+                  : 'bg-surface-base text-gray-400 border border-surface-border'
+              }`}
+            >
+              <Layers className="w-4 h-4" />
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                  Minhas OS em Andamento
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-xs font-bold font-mono bg-surface-base text-brand-300 border border-brand-500/30">
+                  {osEmAndamento.length}
+                </span>
+
+                {!isOsAndamentoOpen && osEmAndamento.length > 0 && (
+                  <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-800/40">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    {osEmAndamento.reduce((acc, os) => acc + (os.totalGeralReparado ?? os.totalReparados ?? 0), 0)} rep acumuladas
+                  </span>
+                )}
+              </div>
+
+              <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">
+                {isOsAndamentoOpen
+                  ? 'Ordens de serviço abertas atribuídas a você na bancada. Continue apontando ou mande ao CQ.'
+                  : `Gaveta recolhida • Clique para expandir as ${osEmAndamento.length} OSs`}
+              </p>
+            </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={loadData} leftIcon={<RefreshCw className="w-3.5 h-3.5" />}>
-            Atualizar
-          </Button>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                loadData();
+              }}
+              leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
+              className="text-xs text-gray-400 hover:text-white"
+              title="Atualizar ordens de serviço"
+            >
+              Atualizar
+            </Button>
+
+            <div
+              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                isOsAndamentoOpen
+                  ? 'bg-surface-base border-surface-border text-gray-300'
+                  : 'bg-brand-500/10 border-brand-500/30 text-brand-300'
+              }`}
+            >
+              <span className="text-[11px] hidden sm:inline">
+                {isOsAndamentoOpen ? 'Recolher' : 'Abrir'}
+              </span>
+              <ChevronDown
+                className={`w-4 h-4 transition-transform duration-200 text-gray-400 ${
+                  isOsAndamentoOpen ? 'rotate-180 text-brand-400' : 'rotate-0'
+                }`}
+              />
+            </div>
+          </div>
         </div>
 
-        {osEmAndamento.length === 0 ? (
-          <div className="p-6 rounded-xl bg-surface-card border border-surface-border text-center space-y-2">
-            <CheckCircle2 className="w-7 h-7 text-emerald-400 mx-auto" />
-            <h4 className="text-sm font-bold text-white">Nenhuma OS em andamento no momento</h4>
-            <p className="text-xs text-gray-400 max-w-sm mx-auto">
-              Clique em <strong>"Novo Apontamento / Minha OS"</strong> acima para registrar uma nova OS na bancada.
-            </p>
-          </div>
-        ) : (
+        {/* Conteúdo da Gaveta */}
+        {isOsAndamentoOpen && (
+          <div className="p-4 pt-1 border-t border-surface-border/50 animate-fadeIn">
+            {osEmAndamento.length === 0 ? (
+              <div className="p-6 rounded-xl bg-surface-base/60 border border-surface-border text-center space-y-2">
+                <CheckCircle2 className="w-7 h-7 text-emerald-400 mx-auto" />
+                <h4 className="text-sm font-bold text-white">Nenhuma OS em andamento no momento</h4>
+                <p className="text-xs text-gray-400 max-w-sm mx-auto">
+                  Clique em <strong>"Novo Apontamento / Minha OS"</strong> acima para registrar uma nova OS na bancada.
+                </p>
+              </div>
+            ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {osEmAndamento.map((os) => (
               <div
@@ -389,6 +549,17 @@ export const ProducaoPage: React.FC = () => {
                         Em Andamento
                       </span>
                       {os.prioridade && <StatusBadge prioridade={os.prioridade as any} size="sm" />}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOsParaExcluir(os);
+                          setExcluirOsModalOpen(true);
+                        }}
+                        className="p-1 rounded text-gray-500 hover:text-red-400 hover:bg-red-500/15 transition-colors ml-1"
+                        title="Excluir OS incorreta / lançada por engano"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
 
@@ -486,22 +657,24 @@ export const ProducaoPage: React.FC = () => {
                   </Button>
 
                   <Button
-                    variant="danger"
+                    variant="success"
                     size="sm"
                     onClick={() => {
-                      setOsParaConcluir(os);
-                      setConcluirOsObservacao('');
-                      setConcluirOsModalOpen(true);
+                      setOsParaDespacharCQ(os);
+                      setDespacharCqObservacao('');
+                      setDespacharCqModalOpen(true);
                     }}
-                    leftIcon={<CheckCheck className="w-3.5 h-3.5" />}
-                    className="w-full font-bold text-xs"
-                    title="Marcar esta OS como concluída definitivamente"
+                    leftIcon={<Send className="w-3.5 h-3.5" />}
+                    className="w-full font-bold text-xs shadow-glow-success"
+                    title="Enviar esta OS e equipamentos reparados para a fila de testes do CQ"
                   >
-                    Concluir OS
+                    Mandar para o CQ
                   </Button>
                 </div>
               </div>
             ))}
+          </div>
+            )}
           </div>
         )}
       </div>
@@ -584,38 +757,101 @@ export const ProducaoPage: React.FC = () => {
         </div>
       ) : null}
 
-      {/* ─── 2. MINHAS CAIXAS E ORDENS DE SERVIÇO NA BANCADA ────────────────── */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <Layers className="w-4 h-4 text-sky-400" /> Minhas Caixas & Ordens de Serviço ({currentCaixas.length})
-            </h3>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Suas caixas em andamento na bancada. Clique em <strong>"Iniciar Produção"</strong> para ativar o cronômetro ao vivo ou em <strong>"Reabrir OS"</strong> para atualizar as peças.
-            </p>
+      {/* ─── GAVETA 2: MINHAS CAIXAS E ORDENS DE SERVIÇO NA BANCADA ─────────── */}
+      <div className="rounded-xl bg-surface-card border border-surface-border overflow-hidden transition-all duration-200 shadow-sm">
+        {/* Cabeçalho da Gaveta (Clicável para expandir/recolher) */}
+        <div
+          onClick={toggleMinhasCaixas}
+          className="p-3.5 sm:px-4 flex items-center justify-between gap-3 cursor-pointer select-none hover:bg-surface-elevated/50 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className={`p-2 rounded-lg transition-colors ${
+                isMinhasCaixasOpen
+                  ? 'bg-sky-500/15 text-sky-400 border border-sky-500/30'
+                  : 'bg-surface-base text-gray-400 border border-surface-border'
+              }`}
+            >
+              <Package className="w-4 h-4" />
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                  Minhas Caixas & Ordens de Serviço
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-xs font-bold font-mono bg-surface-base text-sky-300 border border-sky-500/30">
+                  {currentCaixas.length}
+                </span>
+
+                {!isMinhasCaixasOpen && currentCaixas.length > 0 && (
+                  <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-sky-400 bg-sky-950/40 px-2.5 py-0.5 rounded-full border border-sky-800/40">
+                    <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
+                    {currentCaixas.filter((c) => c.statusItem === 'EM_PRODUCAO').length} na bancada
+                  </span>
+                )}
+              </div>
+
+              <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">
+                {isMinhasCaixasOpen
+                  ? 'Suas caixas em andamento na bancada. Clique em "Iniciar Produção" ou "Reabrir OS".'
+                  : `Gaveta recolhida • Clique para expandir os ${currentCaixas.length} lotes de bancada`}
+              </p>
+            </div>
           </div>
 
-          <Button variant="ghost" size="sm" onClick={loadData} leftIcon={<RefreshCw className="w-3.5 h-3.5" />}>
-            Atualizar
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                loadData();
+              }}
+              leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
+              className="text-xs text-gray-400 hover:text-white"
+              title="Atualizar caixas"
+            >
+              Atualizar
+            </Button>
+
+            <div
+              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                isMinhasCaixasOpen
+                  ? 'bg-surface-base border-surface-border text-gray-300'
+                  : 'bg-sky-500/10 border-sky-500/30 text-sky-300'
+              }`}
+            >
+              <span className="text-[11px] hidden sm:inline">
+                {isMinhasCaixasOpen ? 'Recolher' : 'Abrir'}
+              </span>
+              <ChevronDown
+                className={`w-4 h-4 transition-transform duration-200 text-gray-400 ${
+                  isMinhasCaixasOpen ? 'rotate-180 text-sky-400' : 'rotate-0'
+                }`}
+              />
+            </div>
+          </div>
         </div>
 
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3].map((n) => (
-              <div key={n} className="h-44 rounded-xl bg-surface-card border border-surface-border animate-pulse p-4 space-y-3" />
-            ))}
-          </div>
-        ) : currentCaixas.length === 0 ? (
-          <div className="p-8 rounded-xl bg-surface-card border border-surface-border text-center space-y-2">
-            <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
-            <h4 className="text-sm font-bold text-white">Sua bancada está livre!</h4>
-            <p className="text-xs text-gray-400 max-w-sm mx-auto">
-              Clique em <strong>"Novo Apontamento / Minha OS"</strong> acima para registrar a caixa ou lote que você está trabalhando.
-            </p>
-          </div>
-        ) : (
+        {/* Conteúdo da Gaveta */}
+        {isMinhasCaixasOpen && (
+          <div className="p-4 pt-1 border-t border-surface-border/50 animate-fadeIn">
+            {isLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3].map((n) => (
+                  <div key={n} className="h-44 rounded-xl bg-surface-card border border-surface-border animate-pulse p-4 space-y-3" />
+                ))}
+              </div>
+            ) : currentCaixas.length === 0 ? (
+              <div className="p-8 rounded-xl bg-surface-base/60 border border-surface-border text-center space-y-2">
+                <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
+                <h4 className="text-sm font-bold text-white">Sua bancada está livre!</h4>
+                <p className="text-xs text-gray-400 max-w-sm mx-auto">
+                  Clique em <strong>"Novo Apontamento / Minha OS"</strong> acima para registrar a caixa ou lote que você está trabalhando.
+                </p>
+              </div>
+            ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {currentCaixas.map((item) => {
               const os = item?.ordemServico;
@@ -760,6 +996,8 @@ export const ProducaoPage: React.FC = () => {
               );
             })}
           </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -811,14 +1049,125 @@ export const ProducaoPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal de Conclusão Definitiva de OS */}
+      {/* Modal: Mandar OS para o CQ (Testes) */}
+      {despacharCqModalOpen && osParaDespacharCQ && (
+        <Modal
+          isOpen={despacharCqModalOpen}
+          onClose={() => setDespacharCqModalOpen(false)}
+          title={`Mandar OS #${osParaDespacharCQ.numeroOS} para o CQ`}
+          subtitle="Envio dos equipamentos reparados para a bancada do tester de qualidade"
+          size="md"
+          footer={
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDespacharCqModalOpen(false)}
+                disabled={isDespachandoCQ}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="success"
+                size="sm"
+                onClick={handleDespacharOsParaCQ}
+                loading={isDespachandoCQ}
+                disabled={isDespachandoCQ}
+                leftIcon={<Send className="w-4 h-4" />}
+                className="shadow-glow-success font-bold"
+              >
+                Confirmar Envio ao CQ
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-3 text-sm text-gray-300">
+            <p>
+              Você está enviando a <strong>OS #{osParaDespacharCQ.numeroOS}</strong> ({osParaDespacharCQ.clienteNome || osParaDespacharCQ.cliente?.nomeRazaoSocial}) para a fila de testes do Controle de Qualidade (CQ).
+            </p>
+            <div className="p-3 rounded-lg bg-surface-base border border-surface-border text-xs space-y-1">
+              <span className="font-semibold text-gray-300 block">Resumo do lote a ser inspecionado:</span>
+              <span className="text-emerald-400 font-bold">{osParaDespacharCQ.totalGeralReparado ?? osParaDespacharCQ.totalReparados ?? 0} reparadas</span>
+              {(osParaDespacharCQ.totalGeralSemDefeito ?? osParaDespacharCQ.totalSemDefeito ?? 0) > 0 && (
+                <span className="text-sky-400 font-bold"> • {osParaDespacharCQ.totalGeralSemDefeito ?? osParaDespacharCQ.totalSemDefeito} sem defeito</span>
+              )}
+              {(osParaDespacharCQ.totalGeralSucata ?? osParaDespacharCQ.totalSucata ?? 0) > 0 && (
+                <span className="text-red-400 font-bold"> • {osParaDespacharCQ.totalGeralSucata ?? osParaDespacharCQ.totalSucata} sucata</span>
+              )}
+              <span className="text-gray-400"> ({osParaDespacharCQ.totalGeralEquipamentos ?? osParaDespacharCQ.totalProcessado ?? 0} un no total)</span>
+            </div>
+            <p className="text-xs text-sky-300 bg-sky-950/40 p-2.5 rounded border border-sky-800/40">
+              ℹ️ Ao enviar para o CQ, a OS sairá da sua bancada de produção e entrará diretamente na tela do <strong>tester de qualidade</strong> para inspeção e testes de bancada.
+            </p>
+            <div className="space-y-1 pt-1">
+              <label className="text-xs font-semibold text-gray-400 block">
+                Observações / Instruções para o testador CQ (opcional):
+              </label>
+              <textarea
+                rows={2}
+                value={despacharCqObservacao}
+                onChange={(e) => setDespacharCqObservacao(e.target.value)}
+                placeholder="Ex: Lote revisado, trocados conectores óticos da porta PON. Pronto para teste de potência."
+                className="w-full bg-surface-base border border-surface-border rounded-lg p-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 resize-none"
+              />
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal: Excluir OS Errada */}
+      {excluirOsModalOpen && osParaExcluir && (
+        <Modal
+          isOpen={excluirOsModalOpen}
+          onClose={() => setExcluirOsModalOpen(false)}
+          title={`Excluir OS #${osParaExcluir.numeroOS}`}
+          subtitle="Remoção de Ordem de Serviço lançada por engano"
+          size="md"
+          footer={
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setExcluirOsModalOpen(false)}
+                disabled={isExcluindoOs}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={handleExcluirOS}
+                loading={isExcluindoOs}
+                disabled={isExcluindoOs}
+                leftIcon={<Trash2 className="w-4 h-4" />}
+                className="font-bold"
+              >
+                Sim, Excluir OS
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-3 text-sm text-gray-300">
+            <div className="p-3 rounded-lg bg-red-950/30 border border-red-800/50 text-xs text-red-200 space-y-2">
+              <p className="font-bold text-red-300 flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" /> Atenção: Esta ação é definitiva!
+              </p>
+              <p>
+                Tem certeza de que deseja excluir a <strong>OS #{osParaExcluir.numeroOS}</strong> ({osParaExcluir.clienteNome || osParaExcluir.cliente?.nomeRazaoSocial})?
+              </p>
+              <p className="text-gray-400">
+                Esta ação removerá a OS e todos os apontamentos vinculados a ela do banco de dados. Utilize esta opção caso a OS tenha sido criada por engano ou duplicada.
+              </p>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal para Concluir OS Definitivamente */}
       {concluirOsModalOpen && osParaConcluir && (
         <Modal
           isOpen={concluirOsModalOpen}
-          onClose={() => {
-            setConcluirOsModalOpen(false);
-            setOsParaConcluir(null);
-          }}
+          onClose={() => setConcluirOsModalOpen(false)}
           title={`Concluir Ordem de Serviço #${osParaConcluir.numeroOS}`}
           subtitle="Finalização definitiva da OS"
           size="md"
@@ -827,10 +1176,7 @@ export const ProducaoPage: React.FC = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  setConcluirOsModalOpen(false);
-                  setOsParaConcluir(null);
-                }}
+                onClick={() => setConcluirOsModalOpen(false)}
                 disabled={isConcluindoOs}
               >
                 Cancelar

@@ -5,6 +5,7 @@ import { prisma, isDatabaseReady } from '../../database/prisma.js';
 import { TABELA_PONTUACAO_OFICIAL } from '../meta/meta.repository.js';
 import { realtimeService } from '../realtime/realtime.service.js';
 import { log } from '../auditoria/auditoria.service.js';
+import { excluirOrdemServico } from '../producao/producao.repository.js';
 
 let fallbackClientes = [
   { id: 'cli-01', nomeRazaoSocial: 'MARANET Telecomunicações', documento: '12.345.678/0001-90', contatoTelefone: '(98) 98765-4321', email: 'operacoes@maranet.com.br' },
@@ -275,6 +276,27 @@ export class OsService {
     }).catch(() => {});
 
     return updated;
+  }
+
+  async delete(id: string, usuarioId: string) {
+    const deleted = await excluirOrdemServico(id, usuarioId);
+    realtimeService.broadcast('os:deletada', {
+      osId: deleted.id,
+      numeroOS: deleted.numeroOS,
+      usuarioId,
+    });
+    realtimeService.broadcast('dashboard:atualizado', { osId: deleted.id });
+
+    log({
+      acao: 'OS_EXCLUIDA',
+      usuarioId,
+      entidade: 'OrdemServico',
+      entidadeId: deleted.id,
+      descricao: `OS #${deleted.numeroOS} excluída pelo usuário.`,
+      detalhes: { numeroOS: deleted.numeroOS },
+    }).catch(() => {});
+
+    return deleted;
   }
 }
 

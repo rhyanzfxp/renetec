@@ -260,6 +260,63 @@ export const producaoRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
+  // ─── POST /producao/os/:id/despachar-cq ───────────────────────────────────
+  // Despacha a OS e todos os itens para a fila de testes do CQ
+  fastify.post(
+    '/producao/os/:id/despachar-cq',
+    { preHandler: [authenticate, authorize(['TECNICO', 'ADMIN'])] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const body = request.body as { observacao?: string } | undefined;
+      const user = request.user as UserJwtPayload;
+
+      try {
+        const osDespachada = await service.despacharOrdemServicoParaCQ(
+          id,
+          user.sub,
+          user.nome || 'Técnico',
+          body?.observacao
+        );
+        return reply.send({
+          success: true,
+          message: `OS #${osDespachada.numeroOS} enviada com sucesso para a fila de testes do CQ!`,
+          data: osDespachada,
+        });
+      } catch (err: any) {
+        return reply.status(400).send({
+          success: false,
+          message: err.message || 'Erro ao despachar OS para o CQ.',
+        });
+      }
+    }
+  );
+
+  // ─── DELETE /producao/os/:id ──────────────────────────────────────────────
+  // Exclui uma OS incorreta/errada lançada por engano
+  fastify.delete(
+    '/producao/os/:id',
+    { preHandler: [authenticate, authorize(['TECNICO', 'ADMIN'])] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const user = request.user as UserJwtPayload;
+
+      try {
+        const deleted = await service.excluirOrdemServico(id, user.sub);
+        return reply.send({
+          success: true,
+          message: `Ordem de Serviço #${deleted.numeroOS} excluída com sucesso!`,
+          data: deleted,
+        });
+      } catch (err: any) {
+        return reply.status(400).send({
+          success: false,
+          message: err.message || 'Erro ao excluir OS.',
+        });
+      }
+    }
+  );
+
+
   // ─── GET /producao/historico ──────────────────────────────────────────────
   // Histórico de produções do técnico logado
   fastify.get(

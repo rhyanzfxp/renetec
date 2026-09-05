@@ -339,6 +339,84 @@ async function runFluxoOsTestSuite() {
     );
 
     // ─────────────────────────────────────────────────────────────────────────
+    // PASSO 12: Despacho da OS inteira para o CQ (AGUARDANDO_TESTE)
+    // ─────────────────────────────────────────────────────────────────────────
+    console.log('\n--- PASSO 12: Despacho da OS inteira para o CQ ---');
+    const osDespachada = await producaoRepository.despacharOrdemServicoParaCQ(
+      loteDia1.ordemServico.id,
+      tecnico.id,
+      'Lote pronto para testes funcionais no CQ'
+    );
+
+    const osAguardandoTeste = await prisma.ordemServico.findUnique({
+      where: { id: loteDia1.ordemServico.id },
+      include: { itens: true },
+    });
+
+    const todosItensAguardandoTeste = osAguardandoTeste?.itens.every(
+      (it) => it.statusItem === 'AGUARDANDO_TESTE'
+    );
+
+    record(
+      12,
+      'Despacho da OS inteira para o Controle de Qualidade (CQ)',
+      osAguardandoTeste?.status === 'AGUARDANDO_TESTE' && Boolean(todosItensAguardandoTeste),
+      `OS #${osAguardandoTeste?.numeroOS} status: "${osAguardandoTeste?.status}", todos os ${osAguardandoTeste?.itens.length} itens com statusItem: "AGUARDANDO_TESTE".`
+    );
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // PASSO 13: Exclusão de OS Errada / Incorreta pelo Técnico
+    // ─────────────────────────────────────────────────────────────────────────
+    console.log('\n--- PASSO 13: Exclusão de OS Errada pelo Técnico ---');
+    // Cria uma OS simulando um erro de digitação do técnico
+    const osErradaNum = 99900 + Math.floor(Math.random() * 90);
+    const osErradaLote = await producaoService.apontarLoteTecnico(
+      tecnico.id,
+      tecnico.nome,
+      {
+        numeroOS: osErradaNum,
+        clienteId: cliente.id,
+        dataEntrada: new Date().toISOString(),
+        dataProducao: new Date().toISOString(),
+        prioridade: 'MEDIA',
+        observacoes: 'OS aberta por engano',
+        modoOperacao: 'SALVAR_BANCADA',
+        itens: [
+          {
+            tipoEquipamentoId: tipoEquip.id,
+            quantidade: 2,
+            quantidadeTotalCaixa: 2,
+            quantidadeReparada: 2,
+            quantidadeSemDefeito: 0,
+            quantidadeSucata: 0,
+            quantidadeRestante: 0,
+            tipoCategoria: 'REPARADO',
+            defeitoRelatado: 'OS errada',
+            servicoRealizado: 'Engano',
+          },
+        ],
+      }
+    );
+
+    // Técnico clica em "Excluir OS"
+    await producaoRepository.excluirOrdemServico(osErradaLote.ordemServico.id, tecnico.id);
+
+    // Verifica que a OS e seus itens foram completamente eliminados do banco
+    const osExcluidaDb = await prisma.ordemServico.findUnique({
+      where: { id: osErradaLote.ordemServico.id },
+    });
+    const itensOrfaos = await prisma.itemOrdemServico.findMany({
+      where: { ordemServicoId: osErradaLote.ordemServico.id },
+    });
+
+    record(
+      13,
+      'Exclusão de OS Errada pelo Técnico (Cascade Limpo)',
+      osExcluidaDb === null && itensOrfaos.length === 0,
+      `OS #${osErradaNum} e todos os seus itens associados foram removidos do banco com sucesso.`
+    );
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Limpeza de registros de teste
     // ─────────────────────────────────────────────────────────────────────────
     console.log('\n🧹 Limpando dados criados durante os testes automatizados...');
@@ -376,7 +454,7 @@ async function runFluxoOsTestSuite() {
     console.log(`Aprovados: ${totalPassed} / ${results.length}`);
 
     if (totalPassed === results.length) {
-      console.log('\n🎉 TODOS OS 11 TESTES PASSARAM COM 100% DE SUCESSO! 🎉\n');
+      console.log(`\n🎉 TODOS OS ${results.length} TESTES PASSARAM COM 100% DE SUCESSO! 🎉\n`);
     } else {
       console.error('\n⚠️ ALGUNS TESTES FALHARAM! Verifique os detalhes acima.\n');
     }

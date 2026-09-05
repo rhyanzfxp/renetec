@@ -1164,4 +1164,156 @@ export async function despacharItemParaCQ(itemOrdemServicoId: string, tecnicoId:
   return updatedItem;
 }
 
+// ─── Despacha a Ordem de Serviço inteira e todos os itens para o CQ ────────────
+export async function despacharOrdemServicoParaCQ(
+  osIdOrNumero: string | number,
+  tecnicoId: string,
+  observacao?: string
+) {
+  if (!isDatabaseReady()) throw new Error('Banco de dados indisponível.');
+
+  const str = String(osIdOrNumero);
+  const num = parseInt(str.replace(/\D/g, ''));
+  const isUuid = str.length > 20 && str.includes('-');
+
+  const osDb = await prisma.ordemServico.findFirst({
+    where: isUuid
+      ? { id: str }
+      : !isNaN(num) && num > 0
+      ? { OR: [{ id: str }, { numeroOS: num }] }
+      : { id: str },
+    include: {
+      itens: {
+        include: { tipoEquipamento: true },
+      },
+      cliente: true,
+    },
+  });
+
+  if (!osDb) {
+    throw new Error('Ordem de Serviço não encontrada.');
+  }
+
+  const agora = new Date();
+  const obsAtualizada = observacao
+    ? `${osDb.observacoes ? osDb.observacoes + ' | ' : ''}[Enviada ao CQ em ${agora.toLocaleDateString('pt-BR')}]: ${observacao}`
+    : osDb.observacoes;
+
+  const updatedOs = await prisma.$transaction(async (tx) => {
+    // 1. Atualizar a OS para AGUARDANDO_TESTE
+    const osAtualizada = await tx.ordemServico.update({
+      where: { id: osDb.id },
+      data: {
+        status: 'AGUARDANDO_TESTE',
+        observacoes: obsAtualizada,
+      },
+      include: {
+        cliente: true,
+        itens: {
+          include: { tipoEquipamento: true },
+        },
+      },
+    });
+
+    // 2. Atualizar todos os itens da OS para AGUARDANDO_TESTE
+    await tx.itemOrdemServico.updateMany({
+      where: { ordemServicoId: osDb.id },
+      data: { statusItem: 'AGUARDANDO_TESTE' },
+    });
+
+    // 3. Finalizar produções ativas ou em andamento desta OS
+    await tx.producao.updateMany({
+      where: {
+        itemOrdemServico: { ordemServicoId: osDb.id },
+        status: 'EM_ANDAMENTO',
+      },
+      data: {
+        status: 'FINALIZADO',
+        dataFim: agora,
+      },
+    });
+
+    // 4. Registrar no histórico de status
+    try {
+      const tecnicoDbId = await ensureUsuarioDbId(tecnicoId, 'TECNICO');
+      await tx.historicoStatus.create({
+        data: {
+          ordemServicoId: osDb.id,
+          statusAnterior: osDb.status,
+          statusNovo: 'AGUARDANDO_TESTE',
+          usuarioId: tecnicoDbId,
+          observacao: observacao || 'OS despachada para a fila de testes do CQ pelo técnico.',
+        },
+      });
+    } catch {
+      // Histórico opcional se usuário não tiver FK direta
+    }
+
+    return osAtualizada;
+  });
+
+  return updatedOs;
+}
+
+// ─── Exclui uma Ordem de Serviço incorreta/errada (com cascata limpa) ────────
+export async function excluirOrdemServico(
+  osIdOrNumero: string | number,
+  usuarioId: string
+) {
+  if (!isDatabaseReady()) throw new Error('Banco de dados indisponível.');
+
+  const str = String(osIdOrNumero);
+  const num = parseInt(str.replace(/\D/g, ''));
+  const isUuid = str.length > 20 && str.includes('-');
+
+  const osDb = await prisma.ordemServico.findFirst({
+    where: isUuid
+      ? { id: str }
+      : !isNaN(num) && num > 0
+      ? { OR: [{ id: str }, { numeroOS: num }] }
+      : { id: str },
+    include: {
+      itens: true,
+      cliente: true,
+    },
+  });
+
+  if (!osDb) {
+    throw new Error('Ordem de Serviço não encontrada para exclusão.');
+  }
+
+  const numeroOS = osDb.numeroOS;
+  const osId = osDb.id;
+
+  await prisma.$transaction(async (tx) => {
+    // 1. Exclusão determinística e segura em cascata
+    const itemIds = osDb.itens.map((it) => it.id);
+    if (itemIds.length > 0) {
+      await tx.retrabalho.deleteMany({
+        where: { itemOrdemServicoId: { in: itemIds } },
+      });
+      await tx.teste.deleteMany({
+        where: { producao: { itemOrdemServicoId: { in: itemIds } } },
+      });
+      await tx.producao.deleteMany({
+        where: { itemOrdemServicoId: { in: itemIds } },
+      });
+      await tx.itemOrdemServico.deleteMany({
+        where: { ordemServicoId: osId },
+      });
+    }
+
+    await tx.historicoStatus.deleteMany({
+      where: { ordemServicoId: osId },
+    });
+
+    await tx.ordemServico.delete({
+      where: { id: osId },
+    });
+  });
+
+  return { id: osId, numeroOS };
+}
+
+
 

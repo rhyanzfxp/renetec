@@ -24,7 +24,6 @@ import {
   ShieldCheck,
   RotateCcw,
   Play,
-  CheckCheck,
 } from 'lucide-react';
 
 interface EquipamentoLinha {
@@ -67,9 +66,12 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
   const [clienteSuccessMsg, setClienteSuccessMsg] = useState<string | null>(null);
 
   const [modoOperacao, setModoOperacao] = useState<'INICIAR_PRODUCAO' | 'DESPACHAR_CQ' | 'SALVAR_BANCADA'>('SALVAR_BANCADA');
-  const [isConcluindoOs, setIsConcluindoOs] = useState(false);
-  const [confirmConcluirModalOpen, setConfirmConcluirModalOpen] = useState(false);
-  const [concluirObservacao, setConcluirObservacao] = useState('');
+  const [isDespachandoCq, setIsDespachandoCq] = useState(false);
+  const [confirmDespacharModalOpen, setConfirmDespacharModalOpen] = useState(false);
+  const [despacharObservacao, setDespacharObservacao] = useState('');
+
+  const [isExcluindoOs, setIsExcluindoOs] = useState(false);
+  const [confirmExcluirModalOpen, setConfirmExcluirModalOpen] = useState(false);
 
   const [numeroOS, setNumeroOS] = useState<string>('');
   const [clienteId, setClienteId] = useState<string>('');
@@ -363,13 +365,13 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
     }
   };
 
-  const handleConcluirOS = async () => {
-    if (!numeroOS || isConcluindoOs) return;
+  const handleDespacharCQ = async () => {
+    if (!numeroOS || isDespachandoCq) return;
     try {
-      setIsConcluindoOs(true);
+      setIsDespachandoCq(true);
       setError(null);
       const numParsed = parseInt(numeroOS.replace(/\D/g, ''));
-      // Se o técnico informou quantidades hoje antes de clicar em concluir, salva a produção primeiro
+      // Se o técnico informou quantidades hoje antes de despachar ao CQ, salva a produção primeiro
       if (totalHoje > 0) {
         let timestampISO: string;
         if (dataRegistro && horaRegistro) {
@@ -388,9 +390,9 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
           idempotencyKey: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `lote-${Date.now()}-${Math.random()}`,
           prioridade,
           observacoes: observacoes.trim() || undefined,
-          enviarDiretoTeste: false,
+          enviarDiretoTeste: true,
           iniciarProducaoAoVivo: false,
-          modoOperacao: 'SALVAR_BANCADA',
+          modoOperacao: 'DESPACHAR_CQ',
           itens: itens.map((it) => {
             const rep = Number(it.quantidadeReparada) || 0;
             const semDef = Number(it.quantidadeSemDefeito) || 0;
@@ -406,20 +408,37 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
               quantidadeSucata: suc,
               quantidadeRestante: 0,
               tipoCategoria: it.tipoCategoria || 'REPARADO',
-              defeitoRelatado: `Produção diária final [${rep} rep, ${semDef} sem def, ${suc} suc]`,
+              defeitoRelatado: `Produção diária enviada ao CQ [${rep} rep, ${semDef} sem def, ${suc} suc]`,
               servicoRealizado: it.servicoRealizado.trim() || `Manutenção finalizada`,
             };
           }),
         });
       }
-      await producaoApiService.concluirOs(numParsed, concluirObservacao.trim() || undefined);
-      setConfirmConcluirModalOpen(false);
+      await producaoApiService.despacharOsParaCQ(numParsed, despacharObservacao.trim() || observacoes.trim() || undefined);
+      setConfirmDespacharModalOpen(false);
       onSuccess();
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao concluir ordem de serviço.');
+      setError(err.response?.data?.message || 'Erro ao enviar OS para o CQ.');
     } finally {
-      setIsConcluindoOs(false);
+      setIsDespachandoCq(false);
+    }
+  };
+
+  const handleExcluirOS = async () => {
+    if (!numeroOS || isExcluindoOs) return;
+    try {
+      setIsExcluindoOs(true);
+      setError(null);
+      const numParsed = parseInt(numeroOS.replace(/\D/g, ''));
+      await producaoApiService.excluirOs(numParsed);
+      setConfirmExcluirModalOpen(false);
+      onSuccess();
+      onClose();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Erro ao excluir ordem de serviço.');
+    } finally {
+      setIsExcluindoOs(false);
     }
   };
 
@@ -477,22 +496,37 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
             </div>
 
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={onClose} disabled={isLoading || isConcluindoOs}>
+              <Button variant="outline" size="sm" onClick={onClose} disabled={isLoading || isDespachandoCq || isExcluindoOs}>
                 Cancelar
               </Button>
+
+              {initialOs && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setConfirmExcluirModalOpen(true)}
+                  disabled={isLoading || isDespachandoCq || isExcluindoOs}
+                  leftIcon={<Trash2 className="w-3.5 h-3.5 text-red-400" />}
+                  className="text-red-400 hover:bg-red-500/10 font-medium text-xs"
+                  title="Excluir esta OS lançada por engano"
+                >
+                  Excluir OS
+                </Button>
+              )}
 
               {numeroOS && (
                 <Button
                   type="button"
-                  variant="danger"
+                  variant="success"
                   size="sm"
-                  onClick={() => setConfirmConcluirModalOpen(true)}
-                  disabled={isLoading || isConcluindoOs}
-                  leftIcon={<CheckCheck className="w-3.5 h-3.5" />}
-                  className="font-bold text-xs"
-                  title="Finalizar e concluir definitivamente esta OS"
+                  onClick={() => setConfirmDespacharModalOpen(true)}
+                  disabled={isLoading || isDespachandoCq || isExcluindoOs}
+                  leftIcon={<Send className="w-3.5 h-3.5" />}
+                  className="font-bold text-xs shadow-glow-success"
+                  title="Enviar esta OS e equipamentos reparados para a fila de testes do CQ"
                 >
-                  Concluir OS
+                  Mandar para o CQ
                 </Button>
               )}
 
@@ -501,7 +535,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                   variant="success"
                   size="sm"
                   onClick={() => handleSubmit('INICIAR_PRODUCAO')}
-                  disabled={isLoading || isConcluindoOs}
+                  disabled={isLoading || isDespachandoCq || isExcluindoOs}
                   loading={isLoading}
                   leftIcon={<Play className="w-3.5 h-3.5 fill-current" />}
                   className="shadow-glow-success font-bold"
@@ -513,7 +547,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                   variant="primary"
                   size="sm"
                   onClick={() => handleSubmit('SALVAR_BANCADA')}
-                  disabled={isLoading || isConcluindoOs}
+                  disabled={isLoading || isDespachandoCq || isExcluindoOs}
                   loading={isLoading}
                   leftIcon={<Save className="w-3.5 h-3.5" />}
                   className="shadow-glow-primary font-bold"
@@ -525,7 +559,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                   variant="success"
                   size="sm"
                   onClick={() => handleSubmit('DESPACHAR_CQ')}
-                  disabled={isLoading || isConcluindoOs}
+                  disabled={isLoading || isDespachandoCq || isExcluindoOs}
                   loading={isLoading}
                   leftIcon={<Send className="w-3.5 h-3.5" />}
                   className="shadow-glow-success font-bold"
@@ -1113,56 +1147,102 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
       </form>
     </Drawer>
 
-    {confirmConcluirModalOpen && (
+    {confirmDespacharModalOpen && (
       <Modal
-        isOpen={confirmConcluirModalOpen}
-        onClose={() => setConfirmConcluirModalOpen(false)}
-        title={`Concluir Ordem de Serviço #${numeroOS}`}
-        subtitle="Finalização definitiva da OS"
+        isOpen={confirmDespacharModalOpen}
+        onClose={() => setConfirmDespacharModalOpen(false)}
+        title={`Mandar OS #${numeroOS} para o CQ`}
+        subtitle="Envio dos equipamentos reparados para a bancada do tester de qualidade"
         size="md"
         footer={
           <>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setConfirmConcluirModalOpen(false)}
-              disabled={isConcluindoOs}
+              onClick={() => setConfirmDespacharModalOpen(false)}
+              disabled={isDespachandoCq}
             >
               Cancelar
             </Button>
             <Button
-              variant="danger"
+              variant="success"
               size="sm"
-              onClick={handleConcluirOS}
-              loading={isConcluindoOs}
-              disabled={isConcluindoOs}
-              leftIcon={<CheckCheck className="w-4 h-4" />}
+              onClick={handleDespacharCQ}
+              loading={isDespachandoCq}
+              disabled={isDespachandoCq}
+              leftIcon={<Send className="w-4 h-4" />}
+              className="shadow-glow-success font-bold"
             >
-              Confirmar Conclusão da OS
+              Confirmar Envio ao CQ
             </Button>
           </>
         }
       >
         <div className="space-y-3 text-sm text-gray-300">
           <p>
-            Você está prestes a <strong>concluir</strong> a OS #{numeroOS}.
+            Você está prestes a enviar a <strong>OS #{numeroOS}</strong> para o Controle de Qualidade (CQ).
           </p>
-          <p className="text-xs text-gray-400">
-            {totalHoje > 0
-              ? `A produção informada hoje (${totalReparados} rep, ${totalSemDefeito} sem def, ${totalSucata} sucata) será salva e o status da OS será alterado para CONCLUÍDO.`
-              : 'O status da OS será alterado para CONCLUÍDO e ela sairá da sua lista de OSs em andamento.'}
+          <p className="text-xs text-sky-300 bg-sky-950/40 p-2.5 rounded border border-sky-800/40">
+            ℹ️ A produção informada hoje ({totalReparados} rep{totalSemDefeito ? `, ${totalSemDefeito} sem def` : ''}{totalSucata ? `, ${totalSucata} suc` : ''}) será salva e a OS será encaminhada para os <strong>testes do CQ</strong>.
           </p>
-          <div className="space-y-1 pt-2">
+          <div className="space-y-1 pt-1">
             <label className="text-xs font-semibold text-gray-400 block">
-              Observações finais (opcional):
+              Observações / Instruções para o testador CQ (opcional):
             </label>
             <textarea
               rows={2}
-              value={concluirObservacao}
-              onChange={(e) => setConcluirObservacao(e.target.value)}
-              placeholder="Ex: Lote finalizado 100%, todos os equipamentos testados e entregues."
+              value={despacharObservacao}
+              onChange={(e) => setDespacharObservacao(e.target.value)}
+              placeholder="Ex: Lote revisado, trocados conectores óticos da porta PON. Pronto para teste de potência."
               className="w-full bg-surface-base border border-surface-border rounded-lg p-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 resize-none"
             />
+          </div>
+        </div>
+      </Modal>
+    )}
+
+    {confirmExcluirModalOpen && (
+      <Modal
+        isOpen={confirmExcluirModalOpen}
+        onClose={() => setConfirmExcluirModalOpen(false)}
+        title={`Excluir OS #${numeroOS}`}
+        subtitle="Remoção de Ordem de Serviço lançada por engano"
+        size="md"
+        footer={
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setConfirmExcluirModalOpen(false)}
+              disabled={isExcluindoOs}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={handleExcluirOS}
+              loading={isExcluindoOs}
+              disabled={isExcluindoOs}
+              leftIcon={<Trash2 className="w-4 h-4" />}
+              className="font-bold"
+            >
+              Sim, Excluir OS
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3 text-sm text-gray-300">
+          <div className="p-3 rounded-lg bg-red-950/30 border border-red-800/50 text-xs text-red-200 space-y-2">
+            <p className="font-bold text-red-300 flex items-center gap-1.5">
+              <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" /> Atenção: Esta ação é definitiva!
+            </p>
+            <p>
+              Tem certeza de que deseja excluir a <strong>OS #{numeroOS}</strong>?
+            </p>
+            <p className="text-gray-400">
+              Esta ação removerá a OS e todos os seus apontamentos do banco de dados. Utilize apenas se a OS foi criada por engano.
+            </p>
           </div>
         </div>
       </Modal>

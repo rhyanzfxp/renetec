@@ -265,5 +265,72 @@ export async function concluirOrdemServico(
   return osConcluida;
 }
 
+// ─── Despachar Ordem de Serviço para o CQ (Controle de Qualidade) ─────────────
+export async function despacharOrdemServicoParaCQ(
+  osIdOrNumero: string | number,
+  tecnicoId: string,
+  tecnicoNome: string,
+  observacao?: string
+) {
+  const os = await repo.despacharOrdemServicoParaCQ(osIdOrNumero, tecnicoId, observacao);
+
+  // Broadcast em tempo real para o inspetor de CQ, TV e dashboard
+  realtimeService.broadcast('qualidade:novo_lote', {
+    os,
+    tecnico: { id: tecnicoId, nome: tecnicoNome },
+  });
+  realtimeService.broadcast('os:despachada_cq', {
+    osId: os.id,
+    numeroOS: os.numeroOS,
+    tecnicoId,
+    tecnicoNome,
+  });
+  realtimeService.broadcast('os:atualizada', {
+    osId: os.id,
+    numeroOS: os.numeroOS,
+    status: 'AGUARDANDO_TESTE',
+  });
+  realtimeService.broadcast('dashboard:atualizado', { osId: os.id });
+
+  log({
+    acao: 'OS_DESPACHADA_CQ',
+    usuarioId: tecnicoId,
+    entidade: 'OrdemServico',
+    entidadeId: os.id,
+    descricao: `Técnico ${tecnicoNome} despachou a OS #${os.numeroOS} (${os.itens.length} equipamentos) para teste de CQ.`,
+    detalhes: { numeroOS: os.numeroOS, observacao },
+  }).catch(() => {});
+
+  return os;
+}
+
+// ─── Excluir Ordem de Serviço Incorreta / Lançada por Engano ──────────────────
+export async function excluirOrdemServico(
+  osIdOrNumero: string | number,
+  usuarioId: string
+) {
+  const deleted = await repo.excluirOrdemServico(osIdOrNumero, usuarioId);
+
+  // Notifica todos os clientes em tempo real para remover a OS das listas
+  realtimeService.broadcast('os:deletada', {
+    osId: deleted.id,
+    numeroOS: deleted.numeroOS,
+    usuarioId,
+  });
+  realtimeService.broadcast('dashboard:atualizado', { osId: deleted.id });
+
+  log({
+    acao: 'OS_EXCLUIDA',
+    usuarioId,
+    entidade: 'OrdemServico',
+    entidadeId: deleted.id,
+    descricao: `Ordem de Serviço #${deleted.numeroOS} foi excluída pelo usuário.`,
+    detalhes: { numeroOS: deleted.numeroOS },
+  }).catch(() => {});
+
+  return deleted;
+}
+
+
 
 
