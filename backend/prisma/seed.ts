@@ -100,12 +100,20 @@ async function main() {
   console.log('⚡ Criando catálogo de equipamentos oficiais da tabela de pontuação...');
   const equipamentos = [
     { nome: 'ONU simples', marca: 'Geral', modelo: 'Reparo padrão (1.0 pt)', tempoEstimadoMinutos: 30 },
-    { nome: 'Roteador GIGA/ONT/', marca: 'Geral', modelo: 'Reparo/manutenção (1.5 pts)', tempoEstimadoMinutos: 45 },
-    { nome: 'Rádio / SXT / Nano / Airgrid / LiteBeam', marca: 'Ubiquiti/MikroTik', modelo: 'Reparo/manutenção (1.5 pts)', tempoEstimadoMinutos: 45 },
-    { nome: 'RB/BASEBOX/', marca: 'MikroTik', modelo: 'Conforme avaliação (2.0 pts)', tempoEstimadoMinutos: 60 },
-    { nome: 'Placa / PACPON', marca: 'Geral', modelo: 'Reparo/manutenção (2.0 pts)', tempoEstimadoMinutos: 60 },
-    { nome: 'CCR/MIMOSAS/RADIOS AC', marca: 'MikroTik/Mimosa', modelo: 'Equipamento de maior complexidade (2.5 pts)', tempoEstimadoMinutos: 75 },
-    { nome: 'OLT/SWITCH/NE E OUTROS', marca: 'Huawei/ZTE/Datacom', modelo: 'Equipamento complexo (3.0 pts)', tempoEstimadoMinutos: 90 },
+    { nome: 'Roteador GIGA', marca: 'Weg / TP-Link / Intelbras', modelo: 'Reparo/manutenção (1.5 pts)', tempoEstimadoMinutos: 45 },
+    { nome: 'ONT', marca: 'Huawei / ZTE / Geral', modelo: 'Reparo/manutenção (1.5 pts)', tempoEstimadoMinutos: 45 },
+    { nome: 'SXT', marca: 'MikroTik', modelo: 'Reparo/manutenção (1.5 pts)', tempoEstimadoMinutos: 45 },
+    { nome: 'Nano / LiteBeam / AirGrid', marca: 'Ubiquiti', modelo: 'Reparo/manutenção (1.5 pts)', tempoEstimadoMinutos: 45 },
+    { nome: 'Rádio 5GHz', marca: 'MikroTik / Ubiquiti', modelo: 'Reparo/manutenção (1.5 pts)', tempoEstimadoMinutos: 45 },
+    { nome: 'RouterBoard (RB)', marca: 'MikroTik', modelo: 'Conforme avaliação (2.0 pts)', tempoEstimadoMinutos: 60 },
+    { nome: 'BaseBox', marca: 'MikroTik', modelo: 'Reparo/manutenção (2.0 pts)', tempoEstimadoMinutos: 60 },
+    { nome: 'Placa de Controle', marca: 'Diversas', modelo: 'Reparo/manutenção (2.0 pts)', tempoEstimadoMinutos: 60 },
+    { nome: 'Fonte PACPON / Nobreak DC', marca: 'Diversas', modelo: 'Reparo de fonte (2.0 pts)', tempoEstimadoMinutos: 60 },
+    { nome: 'CCR / Roteador de Borda', marca: 'MikroTik', modelo: 'Equipamento de maior complexidade (2.5 pts)', tempoEstimadoMinutos: 75 },
+    { nome: 'Mimosa / Rádios AC', marca: 'Mimosa / Ubiquiti', modelo: 'Equipamento avançado (2.5 pts)', tempoEstimadoMinutos: 75 },
+    { nome: 'OLT', marca: 'Huawei / Fiberhome / ZTE', modelo: 'Equipamento complexo (3.0 pts)', tempoEstimadoMinutos: 90 },
+    { nome: 'Switch', marca: 'Huawei / Cisco / Datacom', modelo: 'Switch gerenciável (3.0 pts)', tempoEstimadoMinutos: 90 },
+    { nome: 'NE / Outros', marca: 'Diversas', modelo: 'Equipamento especial (3.0 pts)', tempoEstimadoMinutos: 90 },
     { nome: 'Reparo eletrônico / diagnóstico complexo', marca: 'Especializado', modelo: 'Serviço especial (3.0 pts)', tempoEstimadoMinutos: 90 },
   ];
 

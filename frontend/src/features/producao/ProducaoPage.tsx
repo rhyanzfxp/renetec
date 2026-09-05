@@ -372,7 +372,16 @@ export const ProducaoPage: React.FC = () => {
 
                     <div className="flex items-center justify-between text-xs text-gray-300 py-1.5 border-y border-surface-border/50 bg-[#0d121c] px-2.5 rounded-lg">
                       <span>Lote: <strong className="text-emerald-400 tabular-nums">{item.quantidade} un</strong></span>
-                      <span className="text-amber-400 font-bold tabular-nums">~{((Number(item.quantidade) || 0) * (equip?.pontos || 1)).toFixed(1)} pts</span>
+                      {(() => {
+                        const def = (item.defeitoRelatado || '').toLowerCase();
+                        const matchRep = def.match(/(\d+)\s*rep/i);
+                        const isSemDef = def.includes('sem defeito aparente') || (def.includes('sem def') && !matchRep);
+                        if (isSemDef) {
+                          return <span className="text-gray-400 font-semibold tabular-nums text-[11px]">0.0 pts (Sem Defeito)</span>;
+                        }
+                        const repQtd = matchRep ? parseInt(matchRep[1]) : (Number(item.quantidade) || 0);
+                        return <span className="text-amber-400 font-bold tabular-nums">~{(repQtd * (equip?.pontos || 1.5)).toFixed(1)} pts</span>;
+                      })()}
                     </div>
 
                     {item.defeitoRelatado && (

@@ -71,20 +71,144 @@ export async function ensureDatabaseSeeded(): Promise<void> {
     }
 
     // 3. CATÁLOGO OFICIAL DE EQUIPAMENTOS
+    // Migração de compatibilidade: desmembra TODOS os equipamentos que estavam agrupados com barras
+    
+    // A. Roteador GIGA e ONT
+    const legadoRoteador = await prisma.tipoEquipamento.findFirst({
+      where: { nome: { contains: 'Roteador GIGA/ONT', mode: 'insensitive' } },
+    });
+    if (legadoRoteador) {
+      await prisma.tipoEquipamento.update({
+        where: { id: legadoRoteador.id },
+        data: { nome: 'Roteador GIGA', marca: 'Weg / TP-Link / Intelbras', modelo: 'Reparo/manutenção (1.5 pts)', tempoEstimadoMinutos: 45 },
+      });
+      const ontExiste = await prisma.tipoEquipamento.findFirst({ where: { nome: { equals: 'ONT', mode: 'insensitive' } } });
+      if (!ontExiste) {
+        await prisma.tipoEquipamento.create({
+          data: { nome: 'ONT', marca: 'Huawei / ZTE / Geral', modelo: 'Reparo/manutenção (1.5 pts)', tempoEstimadoMinutos: 45 },
+        });
+      }
+    }
+
+    // B. RB e BaseBox
+    const legadoRb = await prisma.tipoEquipamento.findFirst({
+      where: { nome: { contains: 'RB/BASEBOX', mode: 'insensitive' } },
+    });
+    if (legadoRb) {
+      await prisma.tipoEquipamento.update({
+        where: { id: legadoRb.id },
+        data: { nome: 'RouterBoard (RB)', marca: 'MikroTik', modelo: 'Reparo/manutenção (2.0 pts)', tempoEstimadoMinutos: 60 },
+      });
+      const baseBoxExiste = await prisma.tipoEquipamento.findFirst({ where: { nome: { equals: 'BaseBox', mode: 'insensitive' } } });
+      if (!baseBoxExiste) {
+        await prisma.tipoEquipamento.create({
+          data: { nome: 'BaseBox', marca: 'MikroTik', modelo: 'Reparo/manutenção (2.0 pts)', tempoEstimadoMinutos: 60 },
+        });
+      }
+    }
+
+    // C. Placa e PACPON
+    const legadoPlaca = await prisma.tipoEquipamento.findFirst({
+      where: { nome: { contains: 'Placa / PACPON', mode: 'insensitive' } },
+    });
+    if (legadoPlaca) {
+      await prisma.tipoEquipamento.update({
+        where: { id: legadoPlaca.id },
+        data: { nome: 'Placa de Controle', marca: 'Diversas', modelo: 'Reparo/manutenção (2.0 pts)', tempoEstimadoMinutos: 60 },
+      });
+      const pacponExiste = await prisma.tipoEquipamento.findFirst({ where: { nome: { contains: 'PACPON', mode: 'insensitive' } } });
+      if (!pacponExiste) {
+        await prisma.tipoEquipamento.create({
+          data: { nome: 'Fonte PACPON / Nobreak DC', marca: 'Diversas', modelo: 'Reparo de fonte (2.0 pts)', tempoEstimadoMinutos: 60 },
+        });
+      }
+    }
+
+    // D. CCR e Mimosa / Rádios AC
+    const legadoCcr = await prisma.tipoEquipamento.findFirst({
+      where: { nome: { contains: 'CCR/MIMOSAS', mode: 'insensitive' } },
+    });
+    if (legadoCcr) {
+      await prisma.tipoEquipamento.update({
+        where: { id: legadoCcr.id },
+        data: { nome: 'CCR / Roteador de Borda', marca: 'MikroTik', modelo: 'Reparo avançado (2.5 pts)', tempoEstimadoMinutos: 75 },
+      });
+      const mimosaExiste = await prisma.tipoEquipamento.findFirst({ where: { nome: { contains: 'Mimosa', mode: 'insensitive' } } });
+      if (!mimosaExiste) {
+        await prisma.tipoEquipamento.create({
+          data: { nome: 'Mimosa / Rádios AC', marca: 'Mimosa / Ubiquiti', modelo: 'Reparo de RF (2.5 pts)', tempoEstimadoMinutos: 75 },
+        });
+      }
+    }
+
+    // E. OLT, Switch e NE
+    const legadoOlt = await prisma.tipoEquipamento.findFirst({
+      where: { nome: { contains: 'OLT/SWITCH', mode: 'insensitive' } },
+    });
+    if (legadoOlt) {
+      await prisma.tipoEquipamento.update({
+        where: { id: legadoOlt.id },
+        data: { nome: 'OLT', marca: 'Huawei / Fiberhome / ZTE', modelo: 'Equipamento complexo (3.0 pts)', tempoEstimadoMinutos: 90 },
+      });
+      const switchExiste = await prisma.tipoEquipamento.findFirst({ where: { nome: { equals: 'Switch', mode: 'insensitive' } } });
+      if (!switchExiste) {
+        await prisma.tipoEquipamento.create({
+          data: { nome: 'Switch', marca: 'Huawei / Cisco / Datacom', modelo: 'Switch gerenciável (3.0 pts)', tempoEstimadoMinutos: 90 },
+        });
+      }
+      const neExiste = await prisma.tipoEquipamento.findFirst({ where: { nome: { equals: 'NE / Outros', mode: 'insensitive' } } });
+      if (!neExiste) {
+        await prisma.tipoEquipamento.create({
+          data: { nome: 'NE / Outros', marca: 'Diversas', modelo: 'Equipamento especial (3.0 pts)', tempoEstimadoMinutos: 90 },
+        });
+      }
+    }
+
+    // F. Rádio, SXT, Nano / LiteBeam / Airgrid
+    const legadoRadio = await prisma.tipoEquipamento.findFirst({
+      where: { nome: { contains: 'SXT / Nano', mode: 'insensitive' } },
+    });
+    if (legadoRadio) {
+      await prisma.tipoEquipamento.update({
+        where: { id: legadoRadio.id },
+        data: { nome: 'Rádio 5GHz', marca: 'MikroTik / Ubiquiti', modelo: 'Reparo/manutenção (1.5 pts)', tempoEstimadoMinutos: 45 },
+      });
+      const sxtExiste = await prisma.tipoEquipamento.findFirst({ where: { nome: { equals: 'SXT', mode: 'insensitive' } } });
+      if (!sxtExiste) {
+        await prisma.tipoEquipamento.create({
+          data: { nome: 'SXT', marca: 'MikroTik', modelo: 'Reparo/manutenção (1.5 pts)', tempoEstimadoMinutos: 45 },
+        });
+      }
+      const nanoExiste = await prisma.tipoEquipamento.findFirst({ where: { nome: { contains: 'Nano', mode: 'insensitive' } } });
+      if (!nanoExiste) {
+        await prisma.tipoEquipamento.create({
+          data: { nome: 'Nano / LiteBeam / AirGrid', marca: 'Ubiquiti', modelo: 'Reparo/manutenção (1.5 pts)', tempoEstimadoMinutos: 45 },
+        });
+      }
+    }
+
     const equipamentosBase = [
-      { nome: 'ONU simples', marca: 'Geral / Huawei / ZTE', modelo: 'Reparo padrão', tempoEstimadoMinutos: 30 },
-      { nome: 'Roteador GIGA/ONT/', marca: 'Weg / TP-Link / Intelbras', modelo: 'Reparo/manutenção', tempoEstimadoMinutos: 45 },
-      { nome: 'Rádio / SXT / Nano / Airgrid / LiteBeam', marca: 'MikroTik / Ubiquiti', modelo: 'Reparo/manutenção', tempoEstimadoMinutos: 45 },
-      { nome: 'RB/BASEBOX/', marca: 'MikroTik', modelo: 'Conforme avaliação', tempoEstimadoMinutos: 60 },
-      { nome: 'Placa / PACPON', marca: 'Diversas', modelo: 'Reparo/manutenção', tempoEstimadoMinutos: 60 },
-      { nome: 'CCR/MIMOSAS/RADIOS AC', marca: 'MikroTik / Mimosa', modelo: 'Equipamento de maior complexidade', tempoEstimadoMinutos: 75 },
-      { nome: 'OLT/SWITCH/NE E OUTROS', marca: 'Huawei / Cisco / Fiberhome', modelo: 'Equipamento complexo', tempoEstimadoMinutos: 90 },
-      { nome: 'Reparo eletrônico / diagnóstico complexo', marca: 'Especial', modelo: 'Serviço especial', tempoEstimadoMinutos: 90 },
+      { nome: 'ONU simples', marca: 'Geral / Huawei / ZTE', modelo: 'Reparo padrão (1.0 pt)', tempoEstimadoMinutos: 30 },
+      { nome: 'Roteador GIGA', marca: 'Weg / TP-Link / Intelbras', modelo: 'Reparo/manutenção (1.5 pts)', tempoEstimadoMinutos: 45 },
+      { nome: 'ONT', marca: 'Huawei / ZTE / Geral', modelo: 'Reparo/manutenção (1.5 pts)', tempoEstimadoMinutos: 45 },
+      { nome: 'SXT', marca: 'MikroTik', modelo: 'Reparo/manutenção (1.5 pts)', tempoEstimadoMinutos: 45 },
+      { nome: 'Nano / LiteBeam / AirGrid', marca: 'Ubiquiti', modelo: 'Reparo/manutenção (1.5 pts)', tempoEstimadoMinutos: 45 },
+      { nome: 'Rádio 5GHz', marca: 'MikroTik / Ubiquiti', modelo: 'Reparo/manutenção (1.5 pts)', tempoEstimadoMinutos: 45 },
+      { nome: 'RouterBoard (RB)', marca: 'MikroTik', modelo: 'Conforme avaliação (2.0 pts)', tempoEstimadoMinutos: 60 },
+      { nome: 'BaseBox', marca: 'MikroTik', modelo: 'Reparo/manutenção (2.0 pts)', tempoEstimadoMinutos: 60 },
+      { nome: 'Placa de Controle', marca: 'Diversas', modelo: 'Reparo/manutenção (2.0 pts)', tempoEstimadoMinutos: 60 },
+      { nome: 'Fonte PACPON / Nobreak DC', marca: 'Diversas', modelo: 'Reparo/manutenção (2.0 pts)', tempoEstimadoMinutos: 60 },
+      { nome: 'CCR / Roteador de Borda', marca: 'MikroTik', modelo: 'Equipamento de maior complexidade (2.5 pts)', tempoEstimadoMinutos: 75 },
+      { nome: 'Mimosa / Rádios AC', marca: 'Mimosa / Ubiquiti', modelo: 'Equipamento avançado (2.5 pts)', tempoEstimadoMinutos: 75 },
+      { nome: 'OLT', marca: 'Huawei / Fiberhome / ZTE', modelo: 'Equipamento complexo (3.0 pts)', tempoEstimadoMinutos: 90 },
+      { nome: 'Switch', marca: 'Huawei / Cisco / Datacom', modelo: 'Switch gerenciável (3.0 pts)', tempoEstimadoMinutos: 90 },
+      { nome: 'NE / Outros', marca: 'Diversas', modelo: 'Equipamento especial (3.0 pts)', tempoEstimadoMinutos: 90 },
+      { nome: 'Reparo eletrônico / diagnóstico complexo', marca: 'Especial', modelo: 'Serviço especial (3.0 pts)', tempoEstimadoMinutos: 90 },
     ];
 
     for (const eq of equipamentosBase) {
       const existe = await prisma.tipoEquipamento.findFirst({
-        where: { nome: { contains: eq.nome.split('/')[0].trim(), mode: 'insensitive' } },
+        where: { nome: { equals: eq.nome, mode: 'insensitive' } },
       });
       if (!existe) {
         await prisma.tipoEquipamento.create({ data: eq });

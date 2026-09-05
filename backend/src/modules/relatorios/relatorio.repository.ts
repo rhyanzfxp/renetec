@@ -1,4 +1,5 @@
 import { prisma } from '../../database/prisma.js';
+import { getPontosUnitarios } from '../meta/meta.repository.js';
 
 export interface FiltrosRelatorio {
   dataInicio?: string;
@@ -89,7 +90,7 @@ export const relatorioRepository = {
       const item = p.itemOrdemServico;
       const os = item?.ordemServico;
       const equip = item?.tipoEquipamento;
-      const ptsUnit = equip?.tempoEstimadoMinutos ? Math.max(1, equip.tempoEstimadoMinutos / 60) : 1.0;
+      const ptsUnit = getPontosUnitarios(equip?.nome);
 
       // Parsing de detalhes a partir do histórico/defeito relatado
       const textoDefeito = item?.defeitoRelatado || '';
@@ -112,11 +113,12 @@ export const relatorioRepository = {
       const matchCaixa = (textoDefeito + ' ' + textoServico).match(/Caixa(?: Total)?:\s*(\d+)/i);
       const totalCaixa = matchCaixa ? parseInt(matchCaixa[1]) : (reparadas + semDefeito + sucata || p.quantidadeProduzida);
 
-      const categoria = (textoDefeito.includes('Sem defeito') || semDefeito > 0 && reparadas === 0)
+      const categoria = (textoDefeito.includes('Sem defeito') || (semDefeito > 0 && reparadas === 0))
         ? 'SEM_DEFEITO'
         : (textoDefeito.includes('Retrabalho') ? 'RETRABALHO' : 'REPARADO');
 
-      const pontosEstimados = (reparadas + semDefeito) * ptsUnit;
+      // REGRA OFICIAL: "Sem defeito" NÃO CONTA PONTO! Apenas peças reparadas contam pontos.
+      const pontosEstimados = categoria === 'SEM_DEFEITO' ? 0 : Number((reparadas * ptsUnit).toFixed(1));
 
       return {
         id: p.id,
@@ -245,8 +247,17 @@ export const relatorioRepository = {
       const tecDestino = retrabalho?.tecnicoResponsavel?.nome || tecReparo;
       const motivo = retrabalho?.motivoReprovacao?.descricao || (t.quantidadeReprovada > 0 ? 'Não-conformidade' : null);
 
-      const ptsUnit = equip?.tempoEstimadoMinutos ? Math.max(1, equip.tempoEstimadoMinutos / 60) : 1.0;
-      const pontosGanhos = t.quantidadeAprovada * ptsUnit;
+      const ptsUnit = getPontosUnitarios(equip?.nome);
+
+      // REGRA: Sem defeito NÃO gera pontos de CQ. Apenas peças reparadas aprovadas geram pontos.
+      const textoDef = (item?.defeitoRelatado || '').toLowerCase();
+      const textoServ = (t.producao?.servicoRealizado || '').toLowerCase();
+      const textoCompleto = `${textoDef} ${textoServ}`;
+      const isSemDef = textoCompleto.includes('categoria: sem_defeito') || textoCompleto.includes('sem defeito aparente');
+      const matchRep = textoCompleto.match(/(\d+)\s*rep/i);
+      const repQtd = isSemDef ? 0 : (matchRep ? parseInt(matchRep[1]) : (t.producao?.quantidadeProduzida || t.quantidadeAprovada));
+      const qtdAprovadaReparada = Math.min(t.quantidadeAprovada, repQtd);
+      const pontosGanhos = Number((qtdAprovadaReparada * ptsUnit).toFixed(1));
 
       return {
         id: t.id,

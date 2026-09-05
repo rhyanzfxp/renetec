@@ -112,7 +112,7 @@ function getPontosUnitarios(nome?: string): number {
   if (n.includes('ccr') || n.includes('mimosa') || n.includes('ac')) return 2.5;
   if (n.includes('olt') || n.includes('switch') || n.includes('especial')) return 3.0;
   if (n.includes('rb') || n.includes('basebox') || n.includes('placa') || n.includes('pacpon')) return 2.0;
-  if (n.includes('ont') || n.includes('giga') || n.includes('radio') || n.includes('sxt') || n.includes('nano') || n.includes('litebeam')) return 1.5;
+  if (n.includes('ont') || n.includes('giga') || n.includes('roteador') || n.includes('radio') || n.includes('sxt') || n.includes('nano') || n.includes('litebeam')) return 1.5;
   if (n.includes('onu')) return 1.0;
   return 1.5;
 }
@@ -216,7 +216,10 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
 
   if (isDatabaseReady()) {
     try {
-      const inicioDia = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), 0, 0, 0);
+      // Janela de 24 horas para o Painel Renetec (TV da Fábrica):
+      // Garante ciclo de 24h contínuas para não zerar após 2 horas devido ao fuso horário UTC
+      const limite24Horas = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
       const [ativas, finalizadas, filaItens, testes] = await Promise.all([
         prisma.producao.findMany({
           where: { status: 'EM_ANDAMENTO' },
@@ -235,7 +238,7 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
         prisma.producao.findMany({
           where: {
             status: 'FINALIZADO',
-            dataFim: { gte: inicioDia },
+            dataFim: { gte: limite24Horas },
           },
           include: {
             itemOrdemServico: {
@@ -258,7 +261,7 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
           take: 5,
         }),
         prisma.teste.findMany({
-          where: { dataTeste: { gte: inicioDia } },
+          where: { dataTeste: { gte: limite24Horas } },
           include: {
             inspetor: true,
             producao: {
@@ -362,8 +365,18 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
           const qtdAprov = t.quantidadeAprovada || 0;
           const qtdTest = t.quantidadeTestada || 1;
           const ptsUnit = getPontosUnitarios(eqNome);
-          if (qtdAprov > 0) {
-            ptsHoje += qtdAprov * ptsUnit;
+
+          // REGRA: Sem defeito NÃO conta ponto! Apenas peças reparadas aprovadas
+          const textoDef = ((t as any).producao?.itemOrdemServico?.defeitoRelatado || '').toLowerCase();
+          const textoServ = ((t as any).producao?.servicoRealizado || '').toLowerCase();
+          const textoCompleto = `${textoDef} ${textoServ}`;
+          const isSemDef = textoCompleto.includes('categoria: sem_defeito') || textoCompleto.includes('sem defeito aparente');
+          const matchRep = textoCompleto.match(/(\d+)\s*rep/i);
+          const repQtd = isSemDef ? 0 : (matchRep ? parseInt(matchRep[1]) : ((t as any).producao?.quantidadeProduzida || qtdAprov));
+          const qtdPontuavel = Math.min(qtdAprov, repQtd);
+
+          if (qtdPontuavel > 0) {
+            ptsHoje += qtdPontuavel * ptsUnit;
           }
           qtdTestadaHoje += qtdTest;
           qtdAprovadaHoje += qtdAprov;
@@ -390,8 +403,18 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
           const eqNome = prod?.itemOrdemServico?.tipoEquipamento?.nome || '';
           const qtdAprov = t.quantidadeAprovada || 0;
           const ptsUnit = getPontosUnitarios(eqNome);
-          if (qtdAprov > 0) {
-            ptsHoje += qtdAprov * ptsUnit;
+
+          // REGRA: Sem defeito NÃO conta ponto! Apenas peças reparadas aprovadas
+          const textoDef = (prod?.itemOrdemServico?.defeitoRelatado || '').toLowerCase();
+          const textoServ = (prod?.servicoRealizado || '').toLowerCase();
+          const textoCompleto = `${textoDef} ${textoServ}`;
+          const isSemDef = textoCompleto.includes('categoria: sem_defeito') || textoCompleto.includes('sem defeito aparente');
+          const matchRep = textoCompleto.match(/(\d+)\s*rep/i);
+          const repQtd = isSemDef ? 0 : (matchRep ? parseInt(matchRep[1]) : (prod?.quantidadeProduzida || qtdAprov));
+          const qtdPontuavel = Math.min(qtdAprov, repQtd);
+
+          if (qtdPontuavel > 0) {
+            ptsHoje += qtdPontuavel * ptsUnit;
           }
           qtdTestadaHoje += t.quantidadeTestada || 0;
           qtdAprovadaHoje += qtdAprov;
@@ -528,8 +551,17 @@ export async function getGerencialData(periodo: string = 'mes_atual'): Promise<G
 
   // Produtividade da equipe: se o período for 'hoje', usa ptsHoje da bancada; se for 'mes_atual', usa os pontos reais acumulados no mês da meta!
   const isHoje = periodo === 'hoje';
+
+  // Pontos reais de produção da equipe hoje (exclui inspeção do CQ para não duplicar pontos)
+  const pontosProducaoEquipeHoje = Number(
+    tvData.bancadas
+      .filter((b) => !b.funcao.toLowerCase().includes('qualidade'))
+      .reduce((a, b) => a + (b.pontosHoje || 0), 0)
+      .toFixed(1)
+  );
+
   const totalPts = isHoje
-    ? (tvData.bancadas.reduce((a, b) => a + (b.pontosHoje || 0), 0) || 1)
+    ? (pontosProducaoEquipeHoje || 1)
     : (tvData.meta.pontosRealizados || 1);
 
   const colaboradoresLista =
@@ -566,9 +598,7 @@ export async function getGerencialData(periodo: string = 'mes_atual'): Promise<G
     periodo,
     faturamentoEstimado: tvData.meta.faturamentoLancado || 0.0,
     totalOsAtivas,
-    pontosTotaisRealizados: isHoje
-      ? tvData.bancadas.reduce((a, b) => a + (b.pontosHoje || 0), 0)
-      : tvData.meta.pontosRealizados,
+    pontosTotaisRealizados: isHoje ? pontosProducaoEquipeHoje : tvData.meta.pontosRealizados,
     metaAlvoPeriodo: tvData.meta.metaAlvo,
     fpyGeral: tvData.fpyHoje.fpyPercentual,
     taxaRetrabalho: tvData.meta.taxaRetrabalho,

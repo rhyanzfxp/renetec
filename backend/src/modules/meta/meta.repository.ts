@@ -61,14 +61,22 @@ export interface HistoricoMetaRecord {
 
 // ─── Tabela Oficial de Pontuação Renetec ──────────────────────────────────────
 export const TABELA_PONTUACAO_OFICIAL: TabelaPontuacaoItem[] = [
-  { id: 'pt-01', equipamentoServico: 'ONU / Reparo Básico', tempoEstimadoMinutos: 25, pontos: 1.0, categoria: 'Básico', observacoes: 'Troca de conector, limpeza óptica, regravação de firmware básica.' },
-  { id: 'pt-02', equipamentoServico: 'ONT Wi-Fi / Roteador Giga', tempoEstimadoMinutos: 40, pontos: 1.5, categoria: 'Padrão', observacoes: 'Troca de chipset Wi-Fi, reparo em portas GbE, substituição de capacitores.' },
-  { id: 'pt-03', equipamentoServico: 'Rádio 5GHz (SXT, Nano, LiteBeam)', tempoEstimadoMinutos: 40, pontos: 1.5, categoria: 'Padrão', observacoes: 'Reparo de RF, proteção ESD, troca de PoE interno.' },
-  { id: 'pt-04', equipamentoServico: 'RouterBoard / BaseBox / Placa', tempoEstimadoMinutos: 55, pontos: 2.0, categoria: 'Intermediário', observacoes: 'Troca de reguladores de tensão, portas Ether com defeito.' },
+  { id: 'pt-01', equipamentoServico: 'ONU', tempoEstimadoMinutos: 25, pontos: 1.0, categoria: 'Básico', observacoes: 'Troca de conector, limpeza óptica, regravação de firmware básica.' },
+  { id: 'pt-02', equipamentoServico: 'Roteador Giga', tempoEstimadoMinutos: 40, pontos: 1.5, categoria: 'Padrão', observacoes: 'Troca de chipset Wi-Fi, reparo em portas GbE, substituição de capacitores.' },
+  { id: 'pt-09', equipamentoServico: 'ONT Wi-Fi', tempoEstimadoMinutos: 40, pontos: 1.5, categoria: 'Padrão', observacoes: 'Reparo em portas ópticas/GbE, troca de capacitores, regravação de firmware.' },
+  { id: 'pt-03', equipamentoServico: 'SXT', tempoEstimadoMinutos: 40, pontos: 1.5, categoria: 'Padrão', observacoes: 'Reparo de RF, proteção ESD, troca de PoE interno.' },
+  { id: 'pt-10', equipamentoServico: 'Nano / LiteBeam / AirGrid', tempoEstimadoMinutos: 40, pontos: 1.5, categoria: 'Padrão', observacoes: 'Reparo de placa de RF e portas Ethernet.' },
+  { id: 'pt-11', equipamentoServico: 'Rádio 5GHz', tempoEstimadoMinutos: 40, pontos: 1.5, categoria: 'Padrão', observacoes: 'Manutenção de RF e circuito de alimentação.' },
+  { id: 'pt-04', equipamentoServico: 'RouterBoard (RB)', tempoEstimadoMinutos: 55, pontos: 2.0, categoria: 'Intermediário', observacoes: 'Troca de reguladores de tensão, portas Ether com defeito.' },
+  { id: 'pt-12', equipamentoServico: 'BaseBox', tempoEstimadoMinutos: 55, pontos: 2.0, categoria: 'Intermediário', observacoes: 'Reparo de conectores SMA, portas e alimentação.' },
+  { id: 'pt-13', equipamentoServico: 'Placa de Controle', tempoEstimadoMinutos: 55, pontos: 2.0, categoria: 'Intermediário', observacoes: 'Reparo de trilhas, substituição de componentes SMD.' },
   { id: 'pt-05', equipamentoServico: 'Fonte PACPON / Nobreak DC', tempoEstimadoMinutos: 55, pontos: 2.0, categoria: 'Intermediário', observacoes: 'Reparo de circuito primário/secundário, troca de MOSFETs e relés.' },
-  { id: 'pt-06', equipamentoServico: 'CCR / Roteador de Borda (Básico)', tempoEstimadoMinutos: 75, pontos: 2.5, categoria: 'Avançado', observacoes: 'Reparo de fonte redundante, cooler, slots SFP.' },
-  { id: 'pt-07', equipamentoServico: 'Rádio PTP Alto Desempenho (Mimosa/AC)', tempoEstimadoMinutos: 75, pontos: 2.5, categoria: 'Avançado', observacoes: 'Reparo complexo de RF MIMO, substituição de amplificadores de potência.' },
-  { id: 'pt-08', equipamentoServico: 'OLT / Switch Core / Especial', tempoEstimadoMinutos: 90, pontos: 3.0, categoria: 'Especial', observacoes: 'Placas de controle OLT, fontes industriais, reparo multilayer.' },
+  { id: 'pt-06', equipamentoServico: 'CCR / Roteador de Borda', tempoEstimadoMinutos: 75, pontos: 2.5, categoria: 'Avançado', observacoes: 'Reparo de fonte redundante, cooler, slots SFP.' },
+  { id: 'pt-07', equipamentoServico: 'Mimosa / Rádios AC', tempoEstimadoMinutos: 75, pontos: 2.5, categoria: 'Avançado', observacoes: 'Reparo complexo de RF MIMO, substituição de amplificadores de potência.' },
+  { id: 'pt-08', equipamentoServico: 'OLT', tempoEstimadoMinutos: 90, pontos: 3.0, categoria: 'Especial', observacoes: 'Placas de controle OLT, fontes industriais, reparo multilayer.' },
+  { id: 'pt-14', equipamentoServico: 'Switch', tempoEstimadoMinutos: 90, pontos: 3.0, categoria: 'Especial', observacoes: 'Reparo em fontes, portas PoE e portas SFP+.' },
+  { id: 'pt-15', equipamentoServico: 'NE / Outros', tempoEstimadoMinutos: 90, pontos: 3.0, categoria: 'Especial', observacoes: 'Equipamentos industriais e especiais de telecom.' },
+  { id: 'pt-16', equipamentoServico: 'Reparo eletrônico / diagnóstico complexo', tempoEstimadoMinutos: 90, pontos: 3.0, categoria: 'Especial', observacoes: 'Diagnóstico avançado e reballing/BGA.' },
 ];
 
 export const GUIA_COMO_USAR: GuiaComoUsarItem[] = [
@@ -111,13 +119,13 @@ let inMemoryMetaParamOverrides: {
   diasUteis?: number;
 } = {};
 
-function getPontosUnitarios(nome?: string): number {
+export function getPontosUnitarios(nome?: string): number {
   if (!nome) return 1.5;
   const n = nome.toLowerCase();
   if (n.includes('ccr') || n.includes('mimosa') || n.includes('ac')) return 2.5;
-  if (n.includes('olt') || n.includes('switch') || n.includes('especial')) return 3.0;
-  if (n.includes('rb') || n.includes('basebox') || n.includes('placa') || n.includes('pacpon')) return 2.0;
-  if (n.includes('ont') || n.includes('giga') || n.includes('radio') || n.includes('sxt') || n.includes('nano') || n.includes('litebeam')) return 1.5;
+  if (n.includes('olt') || n.includes('switch') || n.includes('especial') || n.includes('ne') || n.includes('eletrônico') || n.includes('eletronico')) return 3.0;
+  if (n.includes('rb') || n.includes('routerboard') || n.includes('basebox') || n.includes('placa') || n.includes('pacpon') || n.includes('nobreak')) return 2.0;
+  if (n.includes('ont') || n.includes('giga') || n.includes('roteador') || n.includes('radio') || n.includes('rádio') || n.includes('sxt') || n.includes('nano') || n.includes('litebeam') || n.includes('airgrid')) return 1.5;
   if (n.includes('onu')) return 1.0;
   return 1.5;
 }
@@ -190,10 +198,33 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
 
           // REGRA OFICIAL DE PONTUAÇÃO:
           // 1. A pontuação SÓ É CONTABILIZADA quando a peça/lote for APROVADO no teste de CQ.
-          // 2. Se foi para retrabalho e DEPOIS for APROVADO no re-teste, contabiliza os pontos normalmente.
-          // 3. Se foi testado e REPROVOU (não deu certo), NÃO CONTABILIZA NENHUM PONTO.
-          if (qtdAprovada > 0) {
-            const pontosLoteAprovado = qtdAprovada * ptsUnit;
+          // 2. Peças SEM DEFEITO NÃO CONTAM PONTOS! Apenas peças reparadas aprovadas e retrabalhos aprovados.
+          // 3. Se foi para retrabalho e DEPOIS for APROVADO no re-teste, contabiliza os pontos normalmente.
+          // 4. Se foi testado e REPROVOU (não deu certo), NÃO CONTABILIZA NENHUM PONTO.
+          const textoDef = (t.producao?.itemOrdemServico?.defeitoRelatado || '').toLowerCase();
+          const textoServ = (t.producao?.servicoRealizado || '').toLowerCase();
+          const textoObs = (t.producao?.observacao || '').toLowerCase();
+          const textoCompleto = `${textoDef} ${textoServ} ${textoObs}`;
+
+          const isSemDefeitoTotal =
+            textoCompleto.includes('categoria: sem_defeito') ||
+            textoCompleto.includes('sem defeito aparente') ||
+            textoDef.startsWith('sem defeito');
+
+          if (isSemDefeitoTotal) {
+            // Lote de triagem sem defeito: ZERO pontos!
+            continue;
+          }
+
+          // Se for lote misto (reparadas + sem defeito), extrai a quantidade reparada
+          const matchRep = textoCompleto.match(/(\d+)\s*rep/i);
+          const repQtd = matchRep ? parseInt(matchRep[1]) : (t.producao?.quantidadeProduzida || qtdAprovada);
+
+          // Apenas peças reparadas aprovadas geram pontos (sem defeito nunca pontua)
+          const qtdPontuavel = Math.min(qtdAprovada, repQtd);
+
+          if (qtdPontuavel > 0) {
+            const pontosLoteAprovado = Number((qtdPontuavel * ptsUnit).toFixed(1));
             ptsProducaoAprovada += pontosLoteAprovado;
 
             // Se veio de retrabalho com técnico responsável definido, credita a ele; senão ao técnico da produção/alocado

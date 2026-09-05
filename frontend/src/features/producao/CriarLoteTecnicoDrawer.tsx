@@ -216,7 +216,8 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
   const pontuacaoEstimada = itens.reduce((acc, it) => {
     const eq = tiposEquipamento.find((e) => e.id === it.tipoEquipamentoId);
     const pts = eq?.pontos || 1.0;
-    const qtdPronta = (Number(it.quantidadeReparada) || 0) + (Number(it.quantidadeSemDefeito) || 0);
+    // REGRA OFICIAL: Sem defeito NÃO conta ponto! Apenas peças reparadas contam pontos
+    const qtdPronta = Number(it.quantidadeReparada) || 0;
     return acc + qtdPronta * pts;
   }, 0);
 
