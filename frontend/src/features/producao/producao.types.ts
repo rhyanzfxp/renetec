@@ -137,11 +137,12 @@ export interface OsEmAndamentoEquipamento {
   totalSemDefeito: number;
   totalSucata: number;
   totalAcumulado: number;
+  acumuladoReparado?: number;
   hojeReparadas: number;
   hojeSemDefeito: number;
   hojeSucata: number;
   hojeTotal: number;
-  historicoDias: {
+  historicoDias?: {
     id: string;
     dataProducao: string;
     quantidadeReparada: number;
@@ -162,24 +163,37 @@ export interface OsEmAndamentoData {
     id: string;
     nomeRazaoSocial: string;
   };
+  clienteNome?: string;
   prioridade: PrioridadeOS;
   status: StatusOS;
+  dataCriacao?: string;
   dataEntrada: string;
   dataConclusao?: string | null;
   ultimaAtividade: string;
   observacoes?: string | null;
   totalReparados: number;
+  totalGeralReparado?: number;
   totalSemDefeito: number;
+  totalGeralSemDefeito?: number;
   totalSucata: number;
+  totalGeralSucata?: number;
   totalProcessado: number;
+  totalGeralEquipamentos?: number;
   hojeReparados: number;
   hojeSemDefeito: number;
   hojeSucata: number;
   hojeProcessado: number;
   equipamentos: OsEmAndamentoEquipamento[];
+  historicoDias?: {
+    data: string;
+    totalReparado: number;
+    totalSemDefeito: number;
+    totalSucata: number;
+  }[];
 }
 
 export interface ProducaoHojeResumo {
+  data?: string;
   totalReparados: number;
   totalSemDefeito: number;
   totalSucata: number;

@@ -1,5 +1,6 @@
 export type RealtimeEventType =
   | 'os:criada'
+  | 'os:concluida'
   | 'producao:lote_enviado_teste'
   | 'qualidade:novo_lote'
   | 'retrabalho:criado'

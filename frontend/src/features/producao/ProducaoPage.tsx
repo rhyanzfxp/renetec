@@ -27,8 +27,6 @@ import {
   Sparkles,
   CheckCheck,
   Calendar,
-  ChevronRight,
-  ArrowRight,
 } from 'lucide-react';
 
 export const ProducaoPage: React.FC = () => {
@@ -395,9 +393,9 @@ export const ProducaoPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <h4 className="text-sm font-bold text-white line-clamp-1">{os.clienteNome}</h4>
+                    <h4 className="text-sm font-bold text-white line-clamp-1">{os.clienteNome || os.cliente?.nomeRazaoSocial}</h4>
                     <p className="text-xs text-gray-400">
-                      Aberta em: {new Date(os.dataCriacao).toLocaleDateString('pt-BR')}
+                      Aberta em: {new Date(os.dataCriacao || os.dataEntrada).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
 
@@ -408,27 +406,27 @@ export const ProducaoPage: React.FC = () => {
                     </span>
                     <div className="flex flex-wrap items-center gap-2 text-xs">
                       <span className="font-bold text-emerald-400 tabular-nums">
-                        {os.totalGeralReparado} rep
+                        {os.totalGeralReparado ?? os.totalReparados ?? 0} rep
                       </span>
-                      {os.totalGeralSemDefeito > 0 && (
+                      {(os.totalGeralSemDefeito ?? os.totalSemDefeito ?? 0) > 0 && (
                         <>
                           <span className="text-gray-600">•</span>
                           <span className="font-bold text-sky-400 tabular-nums">
-                            {os.totalGeralSemDefeito} sem def
+                            {os.totalGeralSemDefeito ?? os.totalSemDefeito} sem def
                           </span>
                         </>
                       )}
-                      {os.totalGeralSucata > 0 && (
+                      {(os.totalGeralSucata ?? os.totalSucata ?? 0) > 0 && (
                         <>
                           <span className="text-gray-600">•</span>
                           <span className="font-bold text-red-400 tabular-nums">
-                            {os.totalGeralSucata} suc
+                            {os.totalGeralSucata ?? os.totalSucata} suc
                           </span>
                         </>
                       )}
                       <span className="text-gray-600">•</span>
                       <span className="text-gray-300 font-semibold tabular-nums">
-                        {os.totalGeralEquipamentos} un total
+                        {os.totalGeralEquipamentos ?? os.totalProcessado ?? 0} un total
                       </span>
                     </div>
                   </div>
@@ -449,7 +447,7 @@ export const ProducaoPage: React.FC = () => {
                               {eq.tipoEquipamentoNome}
                             </span>
                             <span className="text-amber-300 font-mono tabular-nums font-semibold">
-                              {eq.totalAcumulado} un ({eq.acumuladoReparado} rep)
+                              {eq.totalAcumulado} un ({eq.acumuladoReparado ?? eq.totalReparadas ?? 0} rep)
                             </span>
                           </div>
                         ))}
@@ -464,7 +462,7 @@ export const ProducaoPage: React.FC = () => {
                         Trabalhado em {os.historicoDias.length} dias:
                       </span>
                       <div className="flex flex-wrap gap-1.5">
-                        {os.historicoDias.map((d, idx) => (
+                        {os.historicoDias.map((d: { data: string; totalReparado: number }, idx: number) => (
                           <span key={idx} className="bg-surface-elevated px-1.5 py-0.5 rounded border border-surface-border font-mono text-gray-300">
                             {d.data.split('-').slice(1).reverse().join('/')}: <strong className="text-emerald-400">{d.totalReparado} rep</strong>
                           </span>
@@ -852,14 +850,14 @@ export const ProducaoPage: React.FC = () => {
         >
           <div className="space-y-3 text-sm text-gray-300">
             <p>
-              Você está prestes a concluir a <strong>OS #{osParaConcluir.numeroOS}</strong> ({osParaConcluir.clienteNome}).
+              Você está prestes a concluir a <strong>OS #{osParaConcluir.numeroOS}</strong> ({osParaConcluir.clienteNome || osParaConcluir.cliente?.nomeRazaoSocial}).
             </p>
             <div className="p-3 rounded-lg bg-surface-base border border-surface-border text-xs space-y-1">
               <span className="font-semibold text-gray-300 block">Resumo acumulado:</span>
-              <span className="text-emerald-400 font-bold">{osParaConcluir.totalGeralReparado} reparadas</span>
-              {osParaConcluir.totalGeralSemDefeito > 0 && <span className="text-sky-400 font-bold"> • {osParaConcluir.totalGeralSemDefeito} sem defeito</span>}
-              {osParaConcluir.totalGeralSucata > 0 && <span className="text-red-400 font-bold"> • {osParaConcluir.totalGeralSucata} sucata</span>}
-              <span className="text-gray-400"> ({osParaConcluir.totalGeralEquipamentos} equipamentos no total)</span>
+              <span className="text-emerald-400 font-bold">{osParaConcluir.totalGeralReparado ?? osParaConcluir.totalReparados ?? 0} reparadas</span>
+              {(osParaConcluir.totalGeralSemDefeito ?? osParaConcluir.totalSemDefeito ?? 0) > 0 && <span className="text-sky-400 font-bold"> • {osParaConcluir.totalGeralSemDefeito ?? osParaConcluir.totalSemDefeito} sem defeito</span>}
+              {(osParaConcluir.totalGeralSucata ?? osParaConcluir.totalSucata ?? 0) > 0 && <span className="text-red-400 font-bold"> • {osParaConcluir.totalGeralSucata ?? osParaConcluir.totalSucata} sucata</span>}
+              <span className="text-gray-400"> ({osParaConcluir.totalGeralEquipamentos ?? osParaConcluir.totalProcessado ?? 0} equipamentos no total)</span>
             </div>
             <p className="text-xs text-gray-400">
               O status da OS será alterado para CONCLUÍDO e ela sairá da sua lista de OSs em andamento.

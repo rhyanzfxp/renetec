@@ -100,7 +100,7 @@ export const producaoApiService = {
   },
 
   // Conclui uma Ordem de Serviço definitivamente
-  async concluirOs(osIdOrNumero: string, observacao?: string) {
+  async concluirOs(osIdOrNumero: string | number, observacao?: string) {
     const response = await api.post<{ success: boolean; data: any; message: string }>(
       `/producao/os/${osIdOrNumero}/concluir`,
       { observacao }
