@@ -218,7 +218,9 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
 
           // Se for lote misto (reparadas + sem defeito), extrai a quantidade reparada
           const matchRep = textoCompleto.match(/(\d+)\s*rep/i);
-          const repQtd = matchRep ? parseInt(matchRep[1]) : (t.producao?.quantidadeProduzida || qtdAprovada);
+          const repQtd = (t.producao?.quantidadeReparada !== undefined && t.producao?.quantidadeReparada > 0)
+            ? t.producao.quantidadeReparada
+            : (matchRep ? parseInt(matchRep[1]) : (t.producao?.quantidadeProduzida || qtdAprovada));
 
           // Apenas peças reparadas aprovadas geram pontos (sem defeito nunca pontua)
           const qtdPontuavel = Math.min(qtdAprovada, repQtd);

@@ -367,12 +367,16 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
           const ptsUnit = getPontosUnitarios(eqNome);
 
           // REGRA: Sem defeito NÃO conta ponto! Apenas peças reparadas aprovadas
-          const textoDef = ((t as any).producao?.itemOrdemServico?.defeitoRelatado || '').toLowerCase();
-          const textoServ = ((t as any).producao?.servicoRealizado || '').toLowerCase();
+          const prodObj = (t as any).producao;
+          const textoDef = (prodObj?.itemOrdemServico?.defeitoRelatado || '').toLowerCase();
+          const textoServ = (prodObj?.servicoRealizado || '').toLowerCase();
           const textoCompleto = `${textoDef} ${textoServ}`;
           const isSemDef = textoCompleto.includes('categoria: sem_defeito') || textoCompleto.includes('sem defeito aparente');
           const matchRep = textoCompleto.match(/(\d+)\s*rep/i);
-          const repQtd = isSemDef ? 0 : (matchRep ? parseInt(matchRep[1]) : ((t as any).producao?.quantidadeProduzida || qtdAprov));
+          
+          const repQtd = (prodObj?.quantidadeReparada !== undefined && prodObj?.quantidadeReparada > 0)
+            ? prodObj.quantidadeReparada
+            : (isSemDef ? 0 : (matchRep ? parseInt(matchRep[1]) : (prodObj?.quantidadeProduzida || qtdAprov)));
           const qtdPontuavel = Math.min(qtdAprov, repQtd);
 
           if (qtdPontuavel > 0) {
@@ -410,7 +414,10 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
           const textoCompleto = `${textoDef} ${textoServ}`;
           const isSemDef = textoCompleto.includes('categoria: sem_defeito') || textoCompleto.includes('sem defeito aparente');
           const matchRep = textoCompleto.match(/(\d+)\s*rep/i);
-          const repQtd = isSemDef ? 0 : (matchRep ? parseInt(matchRep[1]) : (prod?.quantidadeProduzida || qtdAprov));
+          
+          const repQtd = (prod?.quantidadeReparada !== undefined && prod?.quantidadeReparada > 0)
+            ? prod.quantidadeReparada
+            : (isSemDef ? 0 : (matchRep ? parseInt(matchRep[1]) : (prod?.quantidadeProduzida || qtdAprov)));
           const qtdPontuavel = Math.min(qtdAprov, repQtd);
 
           if (qtdPontuavel > 0) {

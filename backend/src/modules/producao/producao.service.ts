@@ -228,4 +228,42 @@ export async function despacharItemParaCQ(itemOrdemServicoId: string, tecnicoId:
   return item;
 }
 
+// ─── Listar Minhas OS em Andamento (com histórico e separação por tipo) ────────
+export async function getMinhasOsEmAndamento(tecnicoId: string) {
+  return repo.getMinhasOsEmAndamento(tecnicoId);
+}
+
+// ─── Listar Produção de Hoje do Técnico ───────────────────────────────────────
+export async function getProducaoHoje(tecnicoId: string) {
+  return repo.getProducaoHojeTecnico(tecnicoId);
+}
+
+// ─── Concluir Ordem de Serviço Definitivamente ────────────────────────────────
+export async function concluirOrdemServico(
+  osIdOrNumero: string,
+  tecnicoId: string,
+  tecnicoNome: string,
+  observacao?: string
+) {
+  const osConcluida = await repo.concluirOrdemServico(osIdOrNumero, tecnicoId, observacao);
+
+  realtimeService.broadcast('os:concluida', {
+    os: osConcluida,
+    tecnicoNome,
+  });
+  realtimeService.broadcast('dashboard:atualizado', { osId: osConcluida.id });
+
+  log({
+    acao: 'OS_CONCLUIDA',
+    usuarioId: tecnicoId,
+    entidade: 'OrdemServico',
+    entidadeId: osConcluida.id,
+    descricao: `Técnico ${tecnicoNome} concluiu a OS #${osConcluida.numeroOS} definitivamente.`,
+    detalhes: { numeroOS: osConcluida.numeroOS, observacao },
+  }).catch(() => {});
+
+  return osConcluida;
+}
+
+
 

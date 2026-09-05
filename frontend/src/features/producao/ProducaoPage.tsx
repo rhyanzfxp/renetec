@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { producaoApiService } from './producao.service';
-import type { FilaItemData, ProducaoAtivaData, ProducaoHistoricoItem } from './producao.types';
+import type { FilaItemData, ProducaoAtivaData, ProducaoHistoricoItem, ProducaoHojeResumo, OsEmAndamentoData } from './producao.types';
 import { usePageData } from '../../hooks/usePageData';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
 import { FinalizarProducaoDrawer } from './FinalizarProducaoDrawer';
 import { CriarLoteTecnicoDrawer } from './CriarLoteTecnicoDrawer';
 import {
@@ -20,12 +21,24 @@ import {
   Package,
   Play,
   Pause,
+  Wrench,
+  ShieldCheck,
+  XCircle,
+  Sparkles,
+  CheckCheck,
+  Calendar,
+  ChevronRight,
+  ArrowRight,
 } from 'lucide-react';
 
 export const ProducaoPage: React.FC = () => {
   const [caixas, setCaixas] = useState<FilaItemData[]>([]);
   const [producaoAtiva, setProducaoAtiva] = useState<ProducaoAtivaData | null>(null);
   const [historico, setHistorico] = useState<ProducaoHistoricoItem[]>([]);
+  const [producaoHoje, setProducaoHoje] = useState<ProducaoHojeResumo | null>(null);
+  const [osEmAndamento, setOsEmAndamento] = useState<OsEmAndamentoData[]>([]);
+  const [selectedOsParaContinuar, setSelectedOsParaContinuar] = useState<OsEmAndamentoData | null>(null);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCriarLoteOpen, setIsCriarLoteOpen] = useState(false);
@@ -37,33 +50,54 @@ export const ProducaoPage: React.FC = () => {
   const [isStarting, setIsStarting] = useState<string | null>(null);
   const [isDispatching, setIsDispatching] = useState<string | null>(null);
 
-  // Carrega todas as caixas e dados de produção do técnico
+  // Modal para Concluir OS
+  const [concluirOsModalOpen, setConcluirOsModalOpen] = useState(false);
+  const [osParaConcluir, setOsParaConcluir] = useState<OsEmAndamentoData | null>(null);
+  const [concluirOsObservacao, setConcluirOsObservacao] = useState('');
+  const [isConcluindoOs, setIsConcluindoOs] = useState(false);
+
+  // Carrega todas as caixas, produção de hoje e OS em andamento do técnico
   const loadData = useCallback(async () => {
     try {
       setErrorMessage(null);
-      const [caixasData, ativaData, histData] = await Promise.all([
-        producaoApiService.getMinhasCaixas(),
-        producaoApiService.getProducaoAtiva(),
-        producaoApiService.getHistorico(1, 10),
+      const [caixasData, ativaData, histData, hojeData, emAndamentoData] = await Promise.all([
+        producaoApiService.getMinhasCaixas().catch(() => []),
+        producaoApiService.getProducaoAtiva().catch(() => null),
+        producaoApiService.getHistorico(1, 10).catch(() => ({ data: [] })),
+        producaoApiService.getProducaoHoje().catch(() => null),
+        producaoApiService.getMinhasOsEmAndamento().catch(() => []),
       ]);
       setCaixas(Array.isArray(caixasData) ? caixasData : []);
       setProducaoAtiva(ativaData || null);
       setHistorico(Array.isArray(histData?.data) ? histData.data : []);
+      setProducaoHoje(hojeData || null);
+      setOsEmAndamento(Array.isArray(emAndamentoData) ? emAndamentoData : []);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } }; message?: string };
       setErrorMessage(e.response?.data?.message || 'Erro ao carregar dados do chão de fábrica.');
       setCaixas([]);
       setProducaoAtiva(null);
       setHistorico([]);
+      setProducaoHoje(null);
+      setOsEmAndamento([]);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Recarrega apenas em eventos de produção e qualidade (debounce 400ms)
+  // Recarrega em eventos de produção, qualidade e OS concluída (debounce 400ms)
   usePageData({
     loadData,
-    realtimeEvents: ['producao:iniciada', 'producao:finalizada', 'producao:pausada', 'producao:salva', 'qualidade:aprovado', 'qualidade:reprovado', 'qualidade:novo_lote'],
+    realtimeEvents: [
+      'producao:iniciada',
+      'producao:finalizada',
+      'producao:pausada',
+      'producao:salva',
+      'qualidade:aprovado',
+      'qualidade:reprovado',
+      'qualidade:novo_lote',
+      'os:concluida',
+    ],
     debounceMs: 400,
   });
 
@@ -144,9 +178,36 @@ export const ProducaoPage: React.FC = () => {
     }
   };
 
+  // Concluir OS definitivamente
+  const handleConcluirOS = async () => {
+    if (!osParaConcluir || isConcluindoOs) return;
+    try {
+      setIsConcluindoOs(true);
+      setErrorMessage(null);
+      await producaoApiService.concluirOs(osParaConcluir.numeroOS, concluirOsObservacao.trim() || undefined);
+      setSuccessMessage(`OS #${osParaConcluir.numeroOS} concluída com sucesso!`);
+      setTimeout(() => setSuccessMessage(null), 5000);
+      setConcluirOsModalOpen(false);
+      setOsParaConcluir(null);
+      setConcluirOsObservacao('');
+      await loadData();
+    } catch (err: any) {
+      setErrorMessage(err.response?.data?.message || 'Erro ao concluir ordem de serviço.');
+    } finally {
+      setIsConcluindoOs(false);
+    }
+  };
+
+  const handleContinuarOS = (os: OsEmAndamentoData) => {
+    setSelectedOsParaContinuar(os);
+    setEditingItem(null);
+    setIsCriarLoteOpen(true);
+  };
+
   // Reabrir OS para continuar apontamento de unidades
   const handleReabrirOS = (item: FilaItemData) => {
     setEditingItem(item);
+    setSelectedOsParaContinuar(null);
     setIsCriarLoteOpen(true);
   };
 
@@ -196,6 +257,7 @@ export const ProducaoPage: React.FC = () => {
           size="md"
           onClick={() => {
             setEditingItem(null);
+            setSelectedOsParaContinuar(null);
             setIsCriarLoteOpen(true);
           }}
           leftIcon={<PlusCircle className="w-4 h-4" />}
@@ -203,6 +265,247 @@ export const ProducaoPage: React.FC = () => {
         >
           Novo Apontamento / Minha OS
         </Button>
+      </div>
+
+      {/* ─── BARRA SUPERIOR: MINHA PRODUÇÃO DE HOJE ─────────────────── */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+            <Sparkles className="w-4 h-4 text-brand-400" /> Minha Produção de Hoje
+          </h3>
+          <span className="text-[11px] text-gray-400 font-mono flex items-center gap-1">
+            <Calendar className="w-3.5 h-3.5 text-gray-500" />
+            {producaoHoje?.data ? new Date(producaoHoje.data + 'T12:00:00Z').toLocaleDateString('pt-BR') : 'Hoje'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {/* Card Reparados Hoje */}
+          <div className="p-4 rounded-xl bg-surface-card border border-emerald-500/30 shadow-sm relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Wrench className="w-3.5 h-3.5 text-emerald-400" /> Reparados
+              </span>
+              <span className="text-[10px] text-emerald-400/80 bg-emerald-500/10 px-1.5 py-0.5 rounded font-mono font-bold">HOJE</span>
+            </div>
+            <div className="mt-2 flex items-baseline gap-1.5">
+              <span className="text-2xl sm:text-3xl font-extrabold text-white font-mono tabular-nums">
+                {producaoHoje?.totalReparados ?? 0}
+              </span>
+              <span className="text-xs text-gray-400">un</span>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-1">Equipamentos consertados hoje</p>
+          </div>
+
+          {/* Card Sem Defeito Hoje */}
+          <div className="p-4 rounded-xl bg-surface-card border border-sky-500/30 shadow-sm relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-sky-400" /> Sem Defeito
+              </span>
+              <span className="text-[10px] text-sky-400/80 bg-sky-500/10 px-1.5 py-0.5 rounded font-mono font-bold">TRIAGEM</span>
+            </div>
+            <div className="mt-2 flex items-baseline gap-1.5">
+              <span className="text-2xl sm:text-3xl font-extrabold text-white font-mono tabular-nums">
+                {producaoHoje?.totalSemDefeito ?? 0}
+              </span>
+              <span className="text-xs text-gray-400">un</span>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-1">Aprovados em triagem rápida</p>
+          </div>
+
+          {/* Card Sucata Hoje */}
+          <div className="p-4 rounded-xl bg-surface-card border border-red-500/30 shadow-sm relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-red-400 uppercase tracking-wider flex items-center gap-1.5">
+                <XCircle className="w-3.5 h-3.5 text-red-400" /> Sucata
+              </span>
+              <span className="text-[10px] text-red-400/80 bg-red-500/10 px-1.5 py-0.5 rounded font-mono font-bold">PERDA</span>
+            </div>
+            <div className="mt-2 flex items-baseline gap-1.5">
+              <span className="text-2xl sm:text-3xl font-extrabold text-white font-mono tabular-nums">
+                {producaoHoje?.totalSucata ?? 0}
+              </span>
+              <span className="text-xs text-gray-400">un</span>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-1">Sem possibilidade de reparo</p>
+          </div>
+
+          {/* Card Pontos Estimados Hoje */}
+          <div className="p-4 rounded-xl bg-surface-card border border-amber-500/30 shadow-sm relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Pontos Hoje
+              </span>
+              <span className="text-[10px] text-amber-400/80 bg-amber-500/10 px-1.5 py-0.5 rounded font-mono font-bold">PONTOS</span>
+            </div>
+            <div className="mt-2 flex items-baseline gap-1.5">
+              <span className="text-2xl sm:text-3xl font-extrabold text-amber-400 font-mono tabular-nums">
+                {(producaoHoje?.totalPontos ?? 0).toFixed(1)}
+              </span>
+              <span className="text-xs text-gray-400">pts</span>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-1">Crédito de peças reparadas</p>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── SEÇÃO: MINHAS ORDENS DE SERVIÇO EM ANDAMENTO ────────────── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <Layers className="w-4 h-4 text-brand-400" /> Minhas OS em Andamento ({osEmAndamento.length})
+            </h3>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Ordens de serviço abertas atribuídas a você. Continue apontando sua produção diária ou finalize a OS quando concluída.
+            </p>
+          </div>
+          <Button variant="ghost" size="sm" onClick={loadData} leftIcon={<RefreshCw className="w-3.5 h-3.5" />}>
+            Atualizar
+          </Button>
+        </div>
+
+        {osEmAndamento.length === 0 ? (
+          <div className="p-6 rounded-xl bg-surface-card border border-surface-border text-center space-y-2">
+            <CheckCircle2 className="w-7 h-7 text-emerald-400 mx-auto" />
+            <h4 className="text-sm font-bold text-white">Nenhuma OS em andamento no momento</h4>
+            <p className="text-xs text-gray-400 max-w-sm mx-auto">
+              Clique em <strong>"Novo Apontamento / Minha OS"</strong> acima para registrar uma nova OS na bancada.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {osEmAndamento.map((os) => (
+              <div
+                key={os.id}
+                className="p-4 rounded-xl bg-surface-card border border-brand-500/30 hover:border-brand-500/60 transition-all duration-150 flex flex-col justify-between space-y-4 shadow-sm relative overflow-hidden"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-white tabular-nums flex items-center gap-1.5">
+                      <Package className="w-3.5 h-3.5 text-brand-400" /> OS #{os.numeroOS}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold uppercase">
+                        Em Andamento
+                      </span>
+                      {os.prioridade && <StatusBadge prioridade={os.prioridade as any} size="sm" />}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-sm font-bold text-white line-clamp-1">{os.clienteNome}</h4>
+                    <p className="text-xs text-gray-400">
+                      Aberta em: {new Date(os.dataCriacao).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+
+                  {/* Resumo Acumulado na OS */}
+                  <div className="p-2.5 rounded-lg bg-[#0d121c] border border-surface-border/60 space-y-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">
+                      Total Acumulado nesta OS:
+                    </span>
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span className="font-bold text-emerald-400 tabular-nums">
+                        {os.totalGeralReparado} rep
+                      </span>
+                      {os.totalGeralSemDefeito > 0 && (
+                        <>
+                          <span className="text-gray-600">•</span>
+                          <span className="font-bold text-sky-400 tabular-nums">
+                            {os.totalGeralSemDefeito} sem def
+                          </span>
+                        </>
+                      )}
+                      {os.totalGeralSucata > 0 && (
+                        <>
+                          <span className="text-gray-600">•</span>
+                          <span className="font-bold text-red-400 tabular-nums">
+                            {os.totalGeralSucata} suc
+                          </span>
+                        </>
+                      )}
+                      <span className="text-gray-600">•</span>
+                      <span className="text-gray-300 font-semibold tabular-nums">
+                        {os.totalGeralEquipamentos} un total
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Detalhe por tipo de equipamento */}
+                  {os.equipamentos && os.equipamentos.length > 0 && (
+                    <div className="space-y-1 pt-0.5">
+                      <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide block">
+                        Equipamentos ({os.equipamentos.length}):
+                      </span>
+                      <div className="space-y-1 max-h-24 overflow-y-auto pr-1">
+                        {os.equipamentos.map((eq) => (
+                          <div
+                            key={eq.tipoEquipamentoId}
+                            className="flex items-center justify-between text-[11px] p-1.5 rounded bg-surface-base border border-surface-border/40"
+                          >
+                            <span className="text-gray-200 font-medium truncate max-w-[150px]" title={eq.tipoEquipamentoNome}>
+                              {eq.tipoEquipamentoNome}
+                            </span>
+                            <span className="text-amber-300 font-mono tabular-nums font-semibold">
+                              {eq.totalAcumulado} un ({eq.acumuladoReparado} rep)
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Mini-histórico de dias se trabalhado em mais de 1 dia */}
+                  {os.historicoDias && os.historicoDias.length > 1 && (
+                    <div className="p-2 rounded-lg bg-surface-base/60 border border-surface-border/40 text-[10px] text-gray-400">
+                      <span className="font-semibold text-gray-300 block mb-1">
+                        Trabalhado em {os.historicoDias.length} dias:
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {os.historicoDias.map((d, idx) => (
+                          <span key={idx} className="bg-surface-elevated px-1.5 py-0.5 rounded border border-surface-border font-mono text-gray-300">
+                            {d.data.split('-').slice(1).reverse().join('/')}: <strong className="text-emerald-400">{d.totalReparado} rep</strong>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Ações da OS */}
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-surface-border/50">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handleContinuarOS(os)}
+                    leftIcon={<Play className="w-3.5 h-3.5 fill-current" />}
+                    className="w-full font-bold text-xs"
+                    title="Continuar apontando a produção de hoje nesta OS"
+                  >
+                    Continuar OS
+                  </Button>
+
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => {
+                      setOsParaConcluir(os);
+                      setConcluirOsObservacao('');
+                      setConcluirOsModalOpen(true);
+                    }}
+                    leftIcon={<CheckCheck className="w-3.5 h-3.5" />}
+                    className="w-full font-bold text-xs"
+                    title="Marcar esta OS como concluída definitivamente"
+                  >
+                    Concluir OS
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ─── 1. CARD DE PRODUÇÃO EM ANDAMENTO (CRONÔMETRO AO VIVO) ─────────── */}
@@ -510,13 +813,82 @@ export const ProducaoPage: React.FC = () => {
         </div>
       )}
 
+      {/* Modal de Conclusão Definitiva de OS */}
+      {concluirOsModalOpen && osParaConcluir && (
+        <Modal
+          isOpen={concluirOsModalOpen}
+          onClose={() => {
+            setConcluirOsModalOpen(false);
+            setOsParaConcluir(null);
+          }}
+          title={`Concluir Ordem de Serviço #${osParaConcluir.numeroOS}`}
+          subtitle="Finalização definitiva da OS"
+          size="md"
+          footer={
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setConcluirOsModalOpen(false);
+                  setOsParaConcluir(null);
+                }}
+                disabled={isConcluindoOs}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={handleConcluirOS}
+                loading={isConcluindoOs}
+                disabled={isConcluindoOs}
+                leftIcon={<CheckCheck className="w-4 h-4" />}
+              >
+                Confirmar Conclusão da OS
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-3 text-sm text-gray-300">
+            <p>
+              Você está prestes a concluir a <strong>OS #{osParaConcluir.numeroOS}</strong> ({osParaConcluir.clienteNome}).
+            </p>
+            <div className="p-3 rounded-lg bg-surface-base border border-surface-border text-xs space-y-1">
+              <span className="font-semibold text-gray-300 block">Resumo acumulado:</span>
+              <span className="text-emerald-400 font-bold">{osParaConcluir.totalGeralReparado} reparadas</span>
+              {osParaConcluir.totalGeralSemDefeito > 0 && <span className="text-sky-400 font-bold"> • {osParaConcluir.totalGeralSemDefeito} sem defeito</span>}
+              {osParaConcluir.totalGeralSucata > 0 && <span className="text-red-400 font-bold"> • {osParaConcluir.totalGeralSucata} sucata</span>}
+              <span className="text-gray-400"> ({osParaConcluir.totalGeralEquipamentos} equipamentos no total)</span>
+            </div>
+            <p className="text-xs text-gray-400">
+              O status da OS será alterado para CONCLUÍDO e ela sairá da sua lista de OSs em andamento.
+            </p>
+            <div className="space-y-1 pt-1">
+              <label className="text-xs font-semibold text-gray-400 block">
+                Observações finais de conclusão (opcional):
+              </label>
+              <textarea
+                rows={2}
+                value={concluirOsObservacao}
+                onChange={(e) => setConcluirOsObservacao(e.target.value)}
+                placeholder="Ex: Todos os equipamentos testados e embalados para entrega."
+                className="w-full bg-surface-base border border-surface-border rounded-lg p-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 resize-none"
+              />
+            </div>
+          </div>
+        </Modal>
+      )}
+
       {/* Drawer de Auto-apontamento do Técnico */}
       <CriarLoteTecnicoDrawer
         isOpen={isCriarLoteOpen}
         initialItem={editingItem}
+        initialOs={selectedOsParaContinuar}
         onClose={() => {
           setIsCriarLoteOpen(false);
           setEditingItem(null);
+          setSelectedOsParaContinuar(null);
         }}
         onSuccess={() => {
           setSuccessMessage('Apontamento de OS registrado com sucesso!');

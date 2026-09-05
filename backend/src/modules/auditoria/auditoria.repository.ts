@@ -3,6 +3,7 @@ import { ensureUsuarioDbId } from '../../database/db-utils.js';
 
 export type AuditAcao =
   | 'OS_CRIADA'
+  | 'OS_CONCLUIDA'
   | 'OS_STATUS_ALTERADO'
   | 'CLIENTE_CRIADO'
   | 'PRODUCAO_INICIADA'

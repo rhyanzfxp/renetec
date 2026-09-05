@@ -205,6 +205,61 @@ export const producaoRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
+  // ─── GET /producao/em-andamento ──────────────────────────────────────────
+  // Lista todas as OSs em andamento do técnico com histórico e totais separados
+  fastify.get(
+    '/producao/em-andamento',
+    { preHandler: [authenticate, authorize(['TECNICO', 'ADMIN'])] },
+    async (request, reply) => {
+      const user = request.user as UserJwtPayload;
+      const osList = await service.getMinhasOsEmAndamento(user.sub);
+      return reply.send({ success: true, data: osList });
+    }
+  );
+
+  // ─── GET /producao/resumo-hoje ────────────────────────────────────────────
+  // Retorna a produção estrita de hoje do técnico logado
+  fastify.get(
+    '/producao/resumo-hoje',
+    { preHandler: [authenticate, authorize(['TECNICO', 'ADMIN'])] },
+    async (request, reply) => {
+      const user = request.user as UserJwtPayload;
+      const resumo = await service.getProducaoHoje(user.sub);
+      return reply.send({ success: true, data: resumo });
+    }
+  );
+
+  // ─── POST /producao/os/:id/concluir ───────────────────────────────────────
+  // Conclui a OS definitivamente
+  fastify.post(
+    '/producao/os/:id/concluir',
+    { preHandler: [authenticate, authorize(['TECNICO', 'ADMIN'])] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const body = request.body as { observacao?: string } | undefined;
+      const user = request.user as UserJwtPayload;
+
+      try {
+        const osConcluida = await service.concluirOrdemServico(
+          id,
+          user.sub,
+          user.nome || 'Técnico',
+          body?.observacao
+        );
+        return reply.send({
+          success: true,
+          message: `OS #${osConcluida.numeroOS} concluída com sucesso!`,
+          data: osConcluida,
+        });
+      } catch (err: any) {
+        return reply.status(400).send({
+          success: false,
+          message: err.message || 'Erro ao concluir OS.',
+        });
+      }
+    }
+  );
+
   // ─── GET /producao/historico ──────────────────────────────────────────────
   // Histórico de produções do técnico logado
   fastify.get(

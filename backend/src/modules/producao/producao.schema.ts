@@ -44,6 +44,8 @@ export const ApontamentoLoteSchema = z.object({
   numeroOS: z.coerce.number().int().positive().optional(),
   clienteId: z.string().optional().default('cli-01'),
   dataEntrada: z.string().optional(),
+  dataProducao: z.string().optional(),
+  idempotencyKey: z.string().optional(),
   prioridade: z.enum(['BAIXA', 'MEDIA', 'ALTA', 'URGENTE']).default('MEDIA'),
   observacoes: z.string().optional(),
   enviarDiretoTeste: z.boolean().default(true),
@@ -52,10 +54,15 @@ export const ApontamentoLoteSchema = z.object({
   itens: z.array(ApontamentoLoteItemSchema).min(1, 'Adicione ao menos 1 equipamento no lote'),
 });
 
+export const ConcluirOsSchema = z.object({
+  observacao: z.string().max(1000).optional(),
+});
+
 export type IniciarProducaoInput = z.infer<typeof IniciarProducaoSchema>;
 export type FinalizarProducaoInput = z.infer<typeof FinalizarProducaoSchema>;
 export type PausarProducaoInput = z.infer<typeof PausarProducaoSchema>;
 export type ApontamentoLoteItemInput = z.infer<typeof ApontamentoLoteItemSchema>;
 export type ApontamentoLoteInput = z.infer<typeof ApontamentoLoteSchema>;
+export type ConcluirOsInput = z.infer<typeof ConcluirOsSchema>;
 
 

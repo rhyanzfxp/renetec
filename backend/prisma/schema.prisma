@@ -84,6 +84,7 @@ model Usuario {
   testes                Teste[]
   retrabalhos           Retrabalho[]
   itensAlocados         ItemOrdemServico[] @relation("TecnicoAlocado")
+  ordensServicoResponsavel OrdemServico[]  @relation("OsTecnicoResponsavel")
   historicosAlterados   HistoricoStatus[]
   auditorias            AuditoriaLog[]
 
@@ -144,17 +145,21 @@ model OrdemServico {
   status         StatusOS       @default(RECEBIDO)
   valorOrcamento Decimal?       @map("valor_orcamento") @db.Decimal(10, 2)
   observacoes    String?        @db.Text
+  dataConclusao  DateTime?      @map("data_conclusao")
+  tecnicoResponsavelId String?  @map("tecnico_responsavel_id")
   createdAt      DateTime       @default(now()) @map("created_at")
   updatedAt      DateTime       @updatedAt @map("updated_at")
 
   // Relacionamentos
   cliente        Cliente        @relation(fields: [clienteId], references: [id], onDelete: Restrict)
+  tecnicoResponsavel Usuario?   @relation("OsTecnicoResponsavel", fields: [tecnicoResponsavelId], references: [id], onDelete: SetNull)
   itens          ItemOrdemServico[]
   historicos     HistoricoStatus[]
 
   @@index([status])
   @@index([clienteId])
   @@index([dataEntrada])
+  @@index([tecnicoResponsavelId])
   @@map("ordens_servico")
 }
 
@@ -199,12 +204,17 @@ model Producao {
   tecnicoId           String         @map("tecnico_id")
   dataInicio          DateTime       @default(now()) @map("data_inicio")
   dataFim             DateTime?      @map("data_fim")
-  quantidadeProduzida Int            @default(1) @map("quantidade_produzida")
-  servicoRealizado    String?        @map("servico_realizado") @db.Text
-  observacao          String?        @db.Text
-  status              StatusProducao @default(EM_ANDAMENTO)
-  createdAt           DateTime       @default(now()) @map("created_at")
-  updatedAt           DateTime       @updatedAt @map("updated_at")
+  quantidadeProduzida   Int            @default(1) @map("quantidade_produzida")
+  quantidadeReparada    Int            @default(0) @map("quantidade_reparada")
+  quantidadeSemDefeito  Int            @default(0) @map("quantidade_sem_defeito")
+  quantidadeSucata      Int            @default(0) @map("quantidade_sucata")
+  dataProducao          DateTime       @default(now()) @map("data_producao")
+  idempotencyKey        String?        @unique @map("idempotency_key")
+  servicoRealizado      String?        @map("servico_realizado") @db.Text
+  observacao            String?        @db.Text
+  status                StatusProducao @default(EM_ANDAMENTO)
+  createdAt             DateTime       @default(now()) @map("created_at")
+  updatedAt             DateTime       @updatedAt @map("updated_at")
 
   // Relacionamentos
   itemOrdemServico    ItemOrdemServico @relation(fields: [itemOrdemServicoId], references: [id], onDelete: Cascade)
@@ -215,6 +225,8 @@ model Producao {
   @@index([tecnicoId])
   @@index([status])
   @@index([dataInicio])
+  @@index([dataProducao])
+  @@index([tecnicoId, dataProducao])
   @@map("producoes")
 }
 

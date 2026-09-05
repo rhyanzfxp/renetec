@@ -2,6 +2,7 @@ import { prisma, isDatabaseReady } from '../../database/prisma.js';
 import { getTecnicoAliasIds, ensureUsuarioDbId, isValidUuid } from '../../database/db-utils.js';
 import type { FinalizarProducaoInput } from './producao.schema.js';
 import { StatusOS, PrioridadeOS } from '@prisma/client';
+import { getPontosUnitarios } from '../meta/meta.repository.js';
 
 export interface ProducaoRecord {
   id: string;
@@ -129,11 +130,20 @@ export async function getMinhasCaixas(tecnicoId: string) {
                 dataEntrada: true,
                 observacoes: true,
                 cliente: { select: { id: true, nomeRazaoSocial: true } },
-                itens: { select: { id: true, quantidade: true, statusItem: true } },
               },
             },
             tipoEquipamento: {
               select: { id: true, nome: true, marca: true, modelo: true, tempoEstimadoMinutos: true },
+            },
+            producoes: {
+              select: {
+                id: true,
+                quantidadeProduzida: true,
+                quantidadeReparada: true,
+                quantidadeSemDefeito: true,
+                quantidadeSucata: true,
+                dataProducao: true,
+              },
             },
           },
         },
@@ -148,16 +158,26 @@ export async function getMinhasCaixas(tecnicoId: string) {
     for (const prod of producoes) {
       if (prod.itemOrdemServico && !seenItemIds.has(prod.itemOrdemServico.id)) {
         seenItemIds.add(prod.itemOrdemServico.id);
-        const osItens = prod.itemOrdemServico.ordemServico?.itens || [];
-        const totalAcumulado = osItens.reduce((acc: number, it: any) => acc + Number(it.quantidade || 0), 0) || prod.itemOrdemServico.quantidade;
+        const itemProds = prod.itemOrdemServico.producoes || [];
+        
+        const totalRep = itemProds.reduce((acc, p) => acc + (p.quantidadeReparada || 0), 0);
+        const totalSemDef = itemProds.reduce((acc, p) => acc + (p.quantidadeSemDefeito || 0), 0);
+        const totalSuc = itemProds.reduce((acc, p) => acc + (p.quantidadeSucata || 0), 0);
+        const totalAcumulado = (totalRep + totalSemDef + totalSuc) || prod.itemOrdemServico.quantidade;
 
         itens.push({
           ...prod.itemOrdemServico,
           quantidade: prod.quantidadeProduzida || prod.itemOrdemServico.quantidade,
+          quantidadeReparada: prod.quantidadeReparada || 0,
+          quantidadeSemDefeito: prod.quantidadeSemDefeito || 0,
+          quantidadeSucata: prod.quantidadeSucata || 0,
           defeitoRelatado: prod.observacao || prod.servicoRealizado || prod.itemOrdemServico.defeitoRelatado,
           producaoId: prod.id,
           producaoStatus: prod.status,
           totalAcumuladoCaixa: totalAcumulado,
+          totalReparadasCaixa: totalRep,
+          totalSemDefeitoCaixa: totalSemDef,
+          totalSucataCaixa: totalSuc,
           anterioresNaCaixa: Math.max(0, totalAcumulado - (prod.quantidadeProduzida || prod.itemOrdemServico.quantidade)),
         });
       }
@@ -473,6 +493,8 @@ export async function criarApontamentoLote(
     numeroOS?: number;
     clienteId?: string;
     dataEntrada?: string;
+    dataProducao?: string;
+    idempotencyKey?: string;
     prioridade?: 'BAIXA' | 'MEDIA' | 'ALTA' | 'URGENTE';
     observacoes?: string;
     enviarDiretoTeste?: boolean;
@@ -497,6 +519,7 @@ export async function criarApontamentoLote(
 ) {
   const agora = new Date();
   const dataRegistro = dados.dataEntrada ? new Date(dados.dataEntrada) : agora;
+  const dataProd = dados.dataProducao ? new Date(dados.dataProducao) : (dados.dataEntrada ? new Date(dados.dataEntrada) : agora);
   
   const isAoVivo = dados.modoOperacao === 'INICIAR_PRODUCAO' || dados.iniciarProducaoAoVivo === true;
   const isDiretoCQ = dados.modoOperacao === 'DESPACHAR_CQ' || (dados.enviarDiretoTeste === true && !isAoVivo && dados.modoOperacao !== 'SALVAR_BANCADA');
@@ -505,6 +528,39 @@ export async function criarApontamentoLote(
 
   // 1. Garantir ID de usuário válido no PostgreSQL para chave estrangeira
   const tecnicoDbId = await ensureUsuarioDbId(tecnicoId || tecnicoNome, 'TECNICO');
+
+  // 1.1 Proteção de Idempotência: se idempotencyKey foi fornecido e já existe, retorna o resultado prévio
+  if (dados.idempotencyKey) {
+    const existingProd = await prisma.producao.findFirst({
+      where: { idempotencyKey: { startsWith: dados.idempotencyKey } },
+      include: {
+        itemOrdemServico: {
+          include: {
+            ordemServico: { include: { cliente: true } },
+            tipoEquipamento: true,
+          },
+        },
+      },
+    });
+
+    if (existingProd?.itemOrdemServico?.ordemServico) {
+      const os = existingProd.itemOrdemServico.ordemServico;
+      const osRecord = {
+        id: os.id,
+        numeroOS: os.numeroOS,
+        prioridade: os.prioridade,
+        status: os.status,
+        dataEntrada: new Date(os.dataEntrada).toISOString(),
+        cliente: { id: os.cliente.id, nomeRazaoSocial: os.cliente.nomeRazaoSocial },
+        observacoes: os.observacoes,
+      };
+      return {
+        ordemServico: osRecord,
+        itens: [existingProd.itemOrdemServico],
+        producoes: [existingProd],
+      };
+    }
+  }
 
   // 2. Garantir que o cliente existe no banco (padrão MARANET se não informado)
   let clienteDb = await prisma.cliente.findFirst({
@@ -550,7 +606,7 @@ export async function criarApontamentoLote(
     tiposDbMap[it.tipoEquipamentoId] = tipoDb;
   }
 
-  // 4. Criar ou reutilizar a Ordem de Serviço no banco
+  // 4. Criar ou reutilizar a Ordem de Serviço no banco (UMA OS = UM REGISTRO)
   let osDb: any = null;
   if (dados.numeroOS && Number(dados.numeroOS) > 0) {
     const num = Number(dados.numeroOS);
@@ -565,35 +621,39 @@ export async function criarApontamentoLote(
         prioridade: (dados.prioridade || 'MEDIA') as PrioridadeOS,
         status: initialStatus,
         dataEntrada: dataRegistro,
+        tecnicoResponsavelId: tecnicoDbId,
         observacoes: dados.observacoes || `OS criada pelo técnico ${tecnicoNome}`,
         valorOrcamento: null,
       },
     });
   } else {
-    // Atualiza status se necessário
+    // Mantém a OS em andamento ou atualiza para initialStatus sem sobrescrever dados mestre
     await prisma.ordemServico.update({
       where: { id: osDb.id },
-      data: { status: initialStatus },
+      data: {
+        status: initialStatus,
+        tecnicoResponsavelId: osDb.tecnicoResponsavelId || tecnicoDbId,
+      },
     });
   }
 
-  // 5. Criar os itens e produções no banco
+  // 5. Criar ou atualizar os itens e produções no banco (SEM DUPLICAÇÃO DE ITENS)
   const createdItens: any[] = [];
   const createdProducoes: any[] = [];
 
-  for (const it of dados.itens) {
+  for (let idx = 0; idx < dados.itens.length; idx++) {
+    const it = dados.itens[idx];
     const tipoDb = tiposDbMap[it.tipoEquipamentoId];
     const categoria = it.tipoCategoria || 'REPARADO';
     const rep = Number(it.quantidadeReparada) || 0;
     const semDef = Number((it as any).quantidadeSemDefeito) || 0;
     const suc = Number((it as any).quantidadeSucata) || 0;
     const totalHoje = rep + semDef + suc;
-    const totalCaixa = Number((it as any).quantidadeTotalCaixa) || totalHoje || it.quantidade;
-    const qtdProntaCQ = (rep + semDef) > 0 ? (rep + semDef) : (it.quantidade || totalHoje || 1);
+    const totalCaixaInformado = Number((it as any).quantidadeTotalCaixa) || 0;
+    const qtdProntaCQ = (rep + semDef) > 0 ? (rep + semDef) : (totalHoje > 0 ? totalHoje : (it.quantidade || 1));
 
-    // Descrição detalhada do lote/caixa
-    const infoCaixa = ` [Caixa Total: ${totalCaixa} un | Hoje: ${rep} rep, ${semDef} sem def, ${suc} sucata]`;
-
+    // Descrição do serviço e defeito
+    const infoCaixa = ` [Hoje: ${rep} rep, ${semDef} sem def, ${suc} sucata]`;
     const defeito = it.defeitoRelatado || (
       categoria === 'SEM_DEFEITO'
         ? `Sem defeito aparente (Triagem)${infoCaixa}`
@@ -605,15 +665,12 @@ export async function criarApontamentoLote(
         : `Reparo efetuado (${rep} un reparadas${semDef ? `, ${semDef} sem defeito` : ''})${suc ? ` | ${suc} un sucata` : ''}`
     );
 
-    // Cria o item da produção atual
-    const itemDb = await prisma.itemOrdemServico.create({
-      data: {
+    // REGRA DE OURO: Localiza item de OS EXISTENTE deste tipo de equipamento na OS!
+    // Não cria itens duplicados nem saldo restante fictício.
+    let itemDb = await prisma.itemOrdemServico.findFirst({
+      where: {
         ordemServicoId: osDb.id,
         tipoEquipamentoId: tipoDb.id,
-        quantidade: qtdProntaCQ,
-        defeitoRelatado: defeito,
-        statusItem: initialStatus,
-        tecnicoAlocadoId: tecnicoDbId,
       },
       include: {
         tipoEquipamento: true,
@@ -622,45 +679,14 @@ export async function criarApontamentoLote(
       },
     });
 
-    createdItens.push({
-      ...itemDb,
-      quantidadeReparada: rep,
-      quantidadeSemDefeito: semDef,
-      quantidadeSucata: suc,
-      quantidadeTotalCaixa: totalCaixa,
-    });
-
-    // Criar registro de produção para o lote trabalhado
-    const prodDb = await prisma.producao.create({
-      data: {
-        itemOrdemServicoId: itemDb.id,
-        tecnicoId: tecnicoDbId,
-        dataInicio: dataRegistro,
-        dataFim: isAoVivo ? null : agora,
-        quantidadeProduzida: qtdProntaCQ,
-        servicoRealizado: servico,
-        observacao: isDiretoCQ
-          ? `Apontamento técnico despachado ao CQ por ${tecnicoNome}. Categoria: ${categoria}${infoCaixa}`
-          : isAoVivo
-          ? `Produção iniciada ao vivo na bancada por ${tecnicoNome}. Categoria: ${categoria}${infoCaixa}`
-          : `Progresso de caixa salvo na bancada por ${tecnicoNome}. Categoria: ${categoria}${infoCaixa}`,
-        status: isAoVivo ? 'EM_ANDAMENTO' : 'FINALIZADO',
-      },
-    });
-
-    createdProducoes.push(prodDb);
-
-    // Se houver saldo restante registrado na caixa para reparar depois,
-    // cria automaticamente o saldo restante na bancada do técnico em AGUARDANDO_PRODUCAO
-    const qtdRestante = (it as any).quantidadeRestante;
-    if (isDiretoCQ && qtdRestante && Number(qtdRestante) > 0) {
-      const itemRestanteDb = await prisma.itemOrdemServico.create({
+    if (!itemDb) {
+      itemDb = await prisma.itemOrdemServico.create({
         data: {
           ordemServicoId: osDb.id,
           tipoEquipamentoId: tipoDb.id,
-          quantidade: Number(qtdRestante),
-          defeitoRelatado: `Saldo restante da caixa (${qtdRestante} un pendentes de conserto)`,
-          statusItem: 'AGUARDANDO_PRODUCAO',
+          quantidade: totalCaixaInformado || qtdProntaCQ,
+          defeitoRelatado: defeito,
+          statusItem: initialStatus,
           tecnicoAlocadoId: tecnicoDbId,
         },
         include: {
@@ -669,8 +695,60 @@ export async function criarApontamentoLote(
           ordemServico: { include: { cliente: true } },
         },
       });
-      createdItens.push(itemRestanteDb);
+    } else {
+      // Atualiza status do item e a quantidade para refletir o total acumulado ou planejado
+      const prevTotal = itemDb.quantidade || 0;
+      const novoTotal = Math.max(prevTotal, totalCaixaInformado, prevTotal + totalHoje);
+      itemDb = await prisma.itemOrdemServico.update({
+        where: { id: itemDb.id },
+        data: {
+          statusItem: initialStatus,
+          quantidade: novoTotal,
+          tecnicoAlocadoId: itemDb.tecnicoAlocadoId || tecnicoDbId,
+        },
+        include: {
+          tipoEquipamento: true,
+          tecnicoAlocado: { select: { id: true, nome: true } },
+          ordemServico: { include: { cliente: true } },
+        },
+      });
     }
+
+    // Chave única para este apontamento nesta data/item
+    const itemKey = dados.idempotencyKey
+      ? `${dados.idempotencyKey}-${tipoDb.id}-${idx}`
+      : null;
+
+    // Criar registro de produção tipado para a produção realizada hoje
+    const prodDb = await prisma.producao.create({
+      data: {
+        itemOrdemServicoId: itemDb.id,
+        tecnicoId: tecnicoDbId,
+        dataInicio: dataRegistro,
+        dataFim: isAoVivo ? null : agora,
+        dataProducao: dataProd,
+        quantidadeProduzida: qtdProntaCQ,
+        quantidadeReparada: rep,
+        quantidadeSemDefeito: semDef,
+        quantidadeSucata: suc,
+        idempotencyKey: itemKey,
+        servicoRealizado: servico,
+        observacao: isDiretoCQ
+          ? `Apontamento despachado ao CQ por ${tecnicoNome}. Categoria: ${categoria}${infoCaixa}`
+          : isAoVivo
+          ? `Produção iniciada ao vivo na bancada por ${tecnicoNome}. Categoria: ${categoria}${infoCaixa}`
+          : `Progresso de OS salvo na bancada por ${tecnicoNome}. Categoria: ${categoria}${infoCaixa}`,
+        status: isAoVivo ? 'EM_ANDAMENTO' : 'FINALIZADO',
+      },
+    });
+
+    createdItens.push({
+      ...itemDb,
+      quantidadeReparada: rep,
+      quantidadeSemDefeito: semDef,
+      quantidadeSucata: suc,
+    });
+    createdProducoes.push(prodDb);
   }
 
   const osRecord = {
@@ -684,6 +762,363 @@ export async function criarApontamentoLote(
   };
 
   return { ordemServico: osRecord, itens: createdItens, producoes: createdProducoes };
+}
+
+// ─── Busca todas as OSs em andamento do técnico com histórico e totais ────────
+export async function getMinhasOsEmAndamento(tecnicoId: string) {
+  if (!isDatabaseReady()) return [];
+  try {
+    const aliasIds = await getTecnicoAliasIds(tecnicoId);
+    const clean = tecnicoId.replace(/usr-|colab-/g, '');
+
+    const ordens = await prisma.ordemServico.findMany({
+      where: {
+        status: { notIn: ['CONCLUIDO', 'CANCELADO', 'SEM_REPARO'] },
+        OR: [
+          { tecnicoResponsavelId: { in: aliasIds } },
+          { itens: { some: { tecnicoAlocadoId: { in: aliasIds } } } },
+          { itens: { some: { tecnicoAlocado: { nome: { contains: clean, mode: 'insensitive' } } } } },
+          { itens: { some: { producoes: { some: { tecnicoId: { in: aliasIds } } } } } },
+          { itens: { some: { producoes: { some: { tecnico: { nome: { contains: clean, mode: 'insensitive' } } } } } } },
+        ],
+      },
+      include: {
+        cliente: true,
+        itens: {
+          include: {
+            tipoEquipamento: true,
+            tecnicoAlocado: true,
+            producoes: {
+              orderBy: { dataProducao: 'desc' },
+              include: {
+                tecnico: { select: { id: true, nome: true } },
+              },
+            },
+          },
+        },
+      },
+      orderBy: [
+        { prioridade: 'desc' },
+        { dataEntrada: 'asc' },
+      ],
+    });
+
+    const hojeStart = new Date();
+    hojeStart.setHours(0, 0, 0, 0);
+    const hojeEnd = new Date();
+    hojeEnd.setHours(23, 59, 59, 999);
+
+    return ordens.map((os) => {
+      let osReparadosTotal = 0;
+      let osSemDefeitoTotal = 0;
+      let osSucataTotal = 0;
+
+      let osReparadosHoje = 0;
+      let osSemDefeitoHoje = 0;
+      let osSucataHoje = 0;
+
+      let ultimaAtividade: Date = os.dataEntrada;
+
+      const equipamentosResumo = os.itens.map((it) => {
+        let repTotal = 0;
+        let semDefTotal = 0;
+        let sucTotal = 0;
+
+        let repHoje = 0;
+        let semDefHoje = 0;
+        let sucHoje = 0;
+
+        const historicoDias: any[] = [];
+
+        for (const p of it.producoes) {
+          const dProd = new Date(p.dataProducao || p.dataFim || p.dataInicio || p.createdAt);
+          if (dProd > ultimaAtividade) {
+            ultimaAtividade = dProd;
+          }
+
+          const r = p.quantidadeReparada || 0;
+          const sd = p.quantidadeSemDefeito || 0;
+          const s = p.quantidadeSucata || 0;
+
+          repTotal += r;
+          semDefTotal += sd;
+          sucTotal += s;
+
+          const isHoje = dProd >= hojeStart && dProd <= hojeEnd;
+          if (isHoje) {
+            repHoje += r;
+            semDefHoje += sd;
+            sucHoje += s;
+          }
+
+          historicoDias.push({
+            id: p.id,
+            dataProducao: dProd.toISOString(),
+            quantidadeReparada: r,
+            quantidadeSemDefeito: sd,
+            quantidadeSucata: s,
+            quantidadeProduzida: p.quantidadeProduzida,
+            servicoRealizado: p.servicoRealizado,
+            observacao: p.observacao,
+            tecnicoNome: p.tecnico?.nome || 'Técnico',
+            status: p.status,
+          });
+        }
+
+        osReparadosTotal += repTotal;
+        osSemDefeitoTotal += semDefTotal;
+        osSucataTotal += sucTotal;
+
+        osReparadosHoje += repHoje;
+        osSemDefeitoHoje += semDefHoje;
+        osSucataHoje += sucHoje;
+
+        return {
+          itemId: it.id,
+          tipoEquipamentoId: it.tipoEquipamentoId,
+          tipoEquipamentoNome: it.tipoEquipamento.nome,
+          tipoEquipamentoMarca: it.tipoEquipamento.marca,
+          statusItem: it.statusItem,
+          quantidadePrevista: it.quantidade,
+          // Acumulado da OS para este equipamento
+          totalReparadas: repTotal,
+          totalSemDefeito: semDefTotal,
+          totalSucata: sucTotal,
+          totalAcumulado: repTotal + semDefTotal + sucTotal,
+          // Produção realizada hoje para este equipamento
+          hojeReparadas: repHoje,
+          hojeSemDefeito: semDefHoje,
+          hojeSucata: sucHoje,
+          hojeTotal: repHoje + semDefHoje + sucHoje,
+          historicoDias,
+        };
+      });
+
+      return {
+        id: os.id,
+        numeroOS: os.numeroOS,
+        clienteNome: os.cliente.nomeRazaoSocial,
+        clienteId: os.cliente.id,
+        cliente: {
+          id: os.cliente.id,
+          nomeRazaoSocial: os.cliente.nomeRazaoSocial,
+        },
+        prioridade: os.prioridade,
+        status: os.status,
+        dataCriacao: os.dataEntrada.toISOString(),
+        dataEntrada: os.dataEntrada.toISOString(),
+        dataConclusao: os.dataConclusao?.toISOString() || null,
+        ultimaAtividade: ultimaAtividade.toISOString(),
+        observacoes: os.observacoes,
+        // Totais acumulados da OS
+        totalReparados: osReparadosTotal,
+        totalGeralReparado: osReparadosTotal,
+        totalSemDefeito: osSemDefeitoTotal,
+        totalGeralSemDefeito: osSemDefeitoTotal,
+        totalSucata: osSucataTotal,
+        totalGeralSucata: osSucataTotal,
+        totalProcessado: osReparadosTotal + osSemDefeitoTotal + osSucataTotal,
+        totalGeralEquipamentos: osReparadosTotal + osSemDefeitoTotal + osSucataTotal,
+        // Totais de hoje desta OS
+        hojeReparados: osReparadosHoje,
+        hojeSemDefeito: osSemDefeitoHoje,
+        hojeSucata: osSucataHoje,
+        hojeProcessado: osReparadosHoje + osSemDefeitoHoje + osSucataHoje,
+        equipamentos: equipamentosResumo,
+        historicoDias: Array.from(
+          equipamentosResumo.reduce((acc: Map<string, any>, it: any) => {
+            for (const h of it.historicoDias || []) {
+              const dia = (h.dataProducao || '').split('T')[0];
+              if (!dia) continue;
+              const existing = acc.get(dia) || { data: dia, totalReparado: 0, totalSemDefeito: 0, totalSucata: 0 };
+              existing.totalReparado += h.quantidadeReparada || 0;
+              existing.totalSemDefeito += h.quantidadeSemDefeito || 0;
+              existing.totalSucata += h.quantidadeSucata || 0;
+              acc.set(dia, existing);
+            }
+            return acc;
+          }, new Map()).values()
+        ),
+      };
+    });
+  } catch (err) {
+    console.error('[getMinhasOsEmAndamento] Erro ao consultar OSs em andamento:', err);
+    return [];
+  }
+}
+
+// ─── Busca a Produção de Hoje do Técnico (Consolidada e por OS) ───────────────
+export async function getProducaoHojeTecnico(tecnicoId: string) {
+  if (!isDatabaseReady()) {
+    return {
+      totalReparados: 0,
+      totalSemDefeito: 0,
+      totalSucata: 0,
+      totalProcessado: 0,
+      totalPontos: 0,
+      itensPorOs: [],
+    };
+  }
+
+  try {
+    const aliasIds = await getTecnicoAliasIds(tecnicoId);
+    const clean = tecnicoId.replace(/usr-|colab-/g, '');
+
+    const hojeStart = new Date();
+    hojeStart.setHours(0, 0, 0, 0);
+    const hojeEnd = new Date();
+    hojeEnd.setHours(23, 59, 59, 999);
+
+    const producoes = await prisma.producao.findMany({
+      where: {
+        OR: [
+          { tecnicoId: { in: aliasIds } },
+          { tecnico: { nome: { contains: clean, mode: 'insensitive' } } },
+        ],
+        dataProducao: { gte: hojeStart, lte: hojeEnd },
+      },
+      include: {
+        itemOrdemServico: {
+          include: {
+            ordemServico: { select: { id: true, numeroOS: true, cliente: { select: { nomeRazaoSocial: true } } } },
+            tipoEquipamento: true,
+          },
+        },
+      },
+      orderBy: { dataProducao: 'desc' },
+    });
+
+    let totalRep = 0;
+    let totalSemDef = 0;
+    let totalSuc = 0;
+    let totalPontos = 0;
+
+    const itensPorOs: any[] = [];
+
+    for (const p of producoes) {
+      const rep = p.quantidadeReparada || 0;
+      const semDef = p.quantidadeSemDefeito || 0;
+      const suc = p.quantidadeSucata || 0;
+      const eqNome = p.itemOrdemServico?.tipoEquipamento?.nome || '';
+      const ptsUnit = getPontosUnitarios(eqNome);
+
+      totalRep += rep;
+      totalSemDef += semDef;
+      totalSuc += suc;
+      // REGRA OFICIAL: Apenas reparadas contam pontos! Sem defeito não conta ponto
+      totalPontos += rep * ptsUnit;
+
+      itensPorOs.push({
+        producaoId: p.id,
+        osId: p.itemOrdemServico?.ordemServico?.id,
+        numeroOS: p.itemOrdemServico?.ordemServico?.numeroOS,
+        clienteNome: p.itemOrdemServico?.ordemServico?.cliente?.nomeRazaoSocial || 'Cliente',
+        tipoEquipamentoNome: eqNome,
+        quantidadeReparada: rep,
+        quantidadeSemDefeito: semDef,
+        quantidadeSucata: suc,
+        quantidadeTotal: rep + semDef + suc,
+        pontosGanhos: rep * ptsUnit,
+        hora: p.dataProducao,
+        servicoRealizado: p.servicoRealizado,
+      });
+    }
+
+    return {
+      totalReparados: totalRep,
+      totalSemDefeito: totalSemDef,
+      totalSucata: totalSuc,
+      totalProcessado: totalRep + totalSemDef + totalSuc,
+      totalPontos,
+      itensPorOs,
+    };
+  } catch (err) {
+    console.error('[getProducaoHojeTecnico] Erro ao consultar produção de hoje:', err);
+    return {
+      totalReparados: 0,
+      totalSemDefeito: 0,
+      totalSucata: 0,
+      totalProcessado: 0,
+      totalPontos: 0,
+      itensPorOs: [],
+    };
+  }
+}
+
+// ─── Conclui a Ordem de Serviço Definitivamente ───────────────────────────────
+export async function concluirOrdemServico(osIdOrNumero: string | number, tecnicoId: string, observacao?: string) {
+  if (!isDatabaseReady()) throw new Error('Banco de dados indisponível.');
+
+  const str = String(osIdOrNumero);
+  const num = parseInt(str.replace(/\D/g, ''));
+  const isUuid = str.length > 20 && str.includes('-');
+
+  const osDb = await prisma.ordemServico.findFirst({
+    where: isUuid
+      ? { id: str }
+      : !isNaN(num) && num > 0
+      ? { OR: [{ id: str }, { numeroOS: num }] }
+      : { id: str },
+    include: {
+      itens: {
+        include: { tipoEquipamento: true },
+      },
+      cliente: true,
+    },
+  });
+
+  if (!osDb) {
+    throw new Error('Ordem de Serviço não encontrada.');
+  }
+
+  if (osDb.status === 'CONCLUIDO') {
+    return osDb;
+  }
+
+  const agora = new Date();
+  const obsAtualizada = observacao
+    ? `${osDb.observacoes ? osDb.observacoes + ' | ' : ''}Concluída em ${agora.toLocaleDateString('pt-BR')}: ${observacao}`
+    : osDb.observacoes;
+
+  const updatedOs = await prisma.$transaction(async (tx) => {
+    // 1. Atualiza OS para CONCLUIDO e salva dataConclusao
+    const osAtualizada = await tx.ordemServico.update({
+      where: { id: osDb.id },
+      data: {
+        status: 'CONCLUIDO',
+        dataConclusao: agora,
+        observacoes: obsAtualizada,
+      },
+      include: {
+        cliente: true,
+        itens: {
+          include: { tipoEquipamento: true },
+        },
+      },
+    });
+
+    // 2. Atualiza todos os itens da OS para CONCLUIDO
+    await tx.itemOrdemServico.updateMany({
+      where: { ordemServicoId: osDb.id },
+      data: { statusItem: 'CONCLUIDO' },
+    });
+
+    // 3. Finaliza produções ativas que ainda estejam em andamento nesta OS
+    await tx.producao.updateMany({
+      where: {
+        itemOrdemServico: { ordemServicoId: osDb.id },
+        status: 'EM_ANDAMENTO',
+      },
+      data: {
+        status: 'FINALIZADO',
+        dataFim: agora,
+      },
+    });
+
+    return osAtualizada;
+  });
+
+  return updatedOs;
 }
 
 // ─── Despacha um item de bancada (EM_PRODUCAO) para teste no CQ ──────────────
@@ -728,4 +1163,5 @@ export async function despacharItemParaCQ(itemOrdemServicoId: string, tecnicoId:
 
   return updatedItem;
 }
+
 

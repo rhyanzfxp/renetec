@@ -82,6 +82,32 @@ export const producaoApiService = {
     );
     return response.data;
   },
+
+  // Busca todas as OSs em andamento do técnico com histórico e detalhamento
+  async getMinhasOsEmAndamento() {
+    const response = await api.get<{ success: boolean; data: import('./producao.types').OsEmAndamentoData[] }>(
+      '/producao/em-andamento'
+    );
+    return Array.isArray(response.data?.data) ? response.data.data : [];
+  },
+
+  // Busca o resumo da produção de hoje do técnico logado
+  async getProducaoHoje() {
+    const response = await api.get<{ success: boolean; data: import('./producao.types').ProducaoHojeResumo }>(
+      '/producao/resumo-hoje'
+    );
+    return response.data?.data || null;
+  },
+
+  // Conclui uma Ordem de Serviço definitivamente
+  async concluirOs(osIdOrNumero: string, observacao?: string) {
+    const response = await api.post<{ success: boolean; data: any; message: string }>(
+      `/producao/os/${osIdOrNumero}/concluir`,
+      { observacao }
+    );
+    return response.data;
+  },
 };
+
 
 

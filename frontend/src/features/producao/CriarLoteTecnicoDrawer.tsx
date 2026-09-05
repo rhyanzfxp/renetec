@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Drawer } from '../../components/ui/Drawer';
 import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
 import { osApiService } from '../os/os.service';
 import { producaoApiService } from './producao.service';
 import type { TipoEquipamentoOption, ClienteOption } from '../os/os.types';
@@ -23,8 +24,8 @@ import {
   ShieldCheck,
   RotateCcw,
   Play,
+  CheckCheck,
 } from 'lucide-react';
-
 
 interface EquipamentoLinha {
   tipoEquipamentoId: string;
@@ -32,6 +33,9 @@ interface EquipamentoLinha {
   quantidadeSemDefeito: number;
   quantidadeSucata: number;
   anterioresNaCaixa?: number;
+  anterioresReparadas?: number;
+  anterioresSemDefeito?: number;
+  anterioresSucata?: number;
   tipoCategoria: 'REPARADO' | 'SEM_DEFEITO' | 'RETRABALHO';
   servicoRealizado: string;
 }
@@ -41,6 +45,7 @@ interface CriarLoteTecnicoDrawerProps {
   onClose: () => void;
   onSuccess: () => void;
   initialItem?: any;
+  initialOs?: any;
 }
 
 export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
@@ -48,6 +53,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
   onClose,
   onSuccess,
   initialItem,
+  initialOs,
 }) => {
   const { user } = useAuth();
   const [tiposEquipamento, setTiposEquipamento] = useState<TipoEquipamentoOption[]>([]);
@@ -60,7 +66,10 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
   const [isSavingCliente, setIsSavingCliente] = useState(false);
   const [clienteSuccessMsg, setClienteSuccessMsg] = useState<string | null>(null);
 
-  const [modoOperacao, setModoOperacao] = useState<'INICIAR_PRODUCAO' | 'DESPACHAR_CQ' | 'SALVAR_BANCADA'>('INICIAR_PRODUCAO');
+  const [modoOperacao, setModoOperacao] = useState<'INICIAR_PRODUCAO' | 'DESPACHAR_CQ' | 'SALVAR_BANCADA'>('SALVAR_BANCADA');
+  const [isConcluindoOs, setIsConcluindoOs] = useState(false);
+  const [confirmConcluirModalOpen, setConfirmConcluirModalOpen] = useState(false);
+  const [concluirObservacao, setConcluirObservacao] = useState('');
 
   const [numeroOS, setNumeroOS] = useState<string>('');
   const [clienteId, setClienteId] = useState<string>('');
@@ -127,8 +136,47 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
           setTiposEquipamento(equipamentos);
           setClientes(clientesList);
 
-          if (initialItem) {
-            // Reabertura de OS existente para continuar apontamento de novos dias
+          if (initialOs) {
+            // Continuação de OS em andamento (Minhas OS em Andamento)
+            setNumeroOS(initialOs.numeroOS ? String(initialOs.numeroOS) : '');
+            setClienteId(initialOs.clienteId || (clientesList[0]?.id || ''));
+            setPrioridade(initialOs.prioridade || 'MEDIA');
+            setObservacoes('');
+            setModoOperacao('SALVAR_BANCADA');
+
+            if (initialOs.equipamentos && initialOs.equipamentos.length > 0) {
+              setItens(
+                initialOs.equipamentos.map((eq: any) => ({
+                  tipoEquipamentoId: eq.tipoEquipamentoId,
+                  quantidadeReparada: 0,
+                  quantidadeSemDefeito: 0,
+                  quantidadeSucata: 0,
+                  anterioresNaCaixa: eq.totalAcumulado || 0,
+                  anterioresReparadas: eq.acumuladoReparado || 0,
+                  anterioresSemDefeito: eq.acumuladoSemDefeito || 0,
+                  anterioresSucata: eq.acumuladoSucata || 0,
+                  tipoCategoria: 'REPARADO',
+                  servicoRealizado: 'Reparo de bancada efetuado',
+                }))
+              );
+            } else if (equipamentos.length > 0) {
+              setItens([
+                {
+                  tipoEquipamentoId: equipamentos[0].id,
+                  quantidadeReparada: 0,
+                  quantidadeSemDefeito: 0,
+                  quantidadeSucata: 0,
+                  anterioresNaCaixa: 0,
+                  anterioresReparadas: 0,
+                  anterioresSemDefeito: 0,
+                  anterioresSucata: 0,
+                  tipoCategoria: 'REPARADO',
+                  servicoRealizado: 'Reparo de bancada efetuado',
+                },
+              ]);
+            }
+          } else if (initialItem) {
+            // Reabertura de item de bancada existente
             const os = initialItem.ordemServico || initialItem;
             const equip = initialItem.tipoEquipamento;
             const qtdAnterior = Number(initialItem.totalAcumuladoCaixa) || Number(initialItem.quantidade) || 0;
@@ -137,7 +185,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
             setClienteId(os.cliente?.id || os.clienteId || (clientesList[0]?.id || ''));
             setPrioridade(os.prioridade || 'MEDIA');
             setObservacoes(os.observacoes || '');
-            setModoOperacao(initialItem.statusItem === 'EM_PRODUCAO' ? 'INICIAR_PRODUCAO' : 'DESPACHAR_CQ');
+            setModoOperacao(initialItem.statusItem === 'EM_PRODUCAO' ? 'SALVAR_BANCADA' : 'DESPACHAR_CQ');
 
             setItens([
               {
@@ -146,6 +194,9 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                 quantidadeSemDefeito: 0,
                 quantidadeSucata: 0,
                 anterioresNaCaixa: qtdAnterior,
+                anterioresReparadas: 0,
+                anterioresSemDefeito: 0,
+                anterioresSucata: 0,
                 tipoCategoria: 'REPARADO',
                 servicoRealizado: initialItem.defeitoRelatado || 'Reparo de bancada efetuado',
               },
@@ -155,7 +206,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
             setNumeroOS('');
             setObservacoes('');
             setPrioridade('MEDIA');
-            setModoOperacao('INICIAR_PRODUCAO');
+            setModoOperacao('SALVAR_BANCADA');
             if (clientesList.length > 0) {
               setClienteId(clientesList[0].id);
             }
@@ -167,6 +218,9 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                   quantidadeSemDefeito: 0,
                   quantidadeSucata: 0,
                   anterioresNaCaixa: 0,
+                  anterioresReparadas: 0,
+                  anterioresSemDefeito: 0,
+                  anterioresSucata: 0,
                   tipoCategoria: 'REPARADO',
                   servicoRealizado: '',
                 },
@@ -176,7 +230,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
         })
         .catch(() => {});
     }
-  }, [isOpen, initialItem]);
+  }, [isOpen, initialItem, initialOs]);
 
   const handleAddItem = () => {
     const defaultId = tiposEquipamento[0]?.id || 'pt-01';
@@ -258,6 +312,8 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
         numeroOS: numParsed && !isNaN(numParsed) ? numParsed : undefined,
         clienteId: clienteId || (clientes[0]?.id || 'cli-01'),
         dataEntrada: timestampISO,
+        dataProducao: timestampISO,
+        idempotencyKey: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `lote-${Date.now()}-${Math.random()}`,
         prioridade,
         observacoes: observacoes.trim() || undefined,
         enviarDiretoTeste: isDiretoCQ,
@@ -307,110 +363,207 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
     }
   };
 
-  return (
-    <Drawer
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Apontamento de Lote / Minha OS"
-      subtitle={`Técnico: ${user?.nome || 'Operador'} — Inicie a produção ou relate a quantidade reparada`}
-      width="max-w-2xl"
-      footer={
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
-          <div className="flex flex-wrap items-center gap-2 text-xs text-gray-300">
-            {modoOperacao === 'INICIAR_PRODUCAO' ? (
-              <span className="font-bold text-amber-400 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                Cronômetro ao vivo no Painel Renetec (TV)
-              </span>
-            ) : (
-              <>
-                <span className="font-bold text-emerald-400 tabular-nums flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> {totalReparados} reparadas
-                </span>
-                {totalSemDefeito > 0 && (
-                  <>
-                    <span className="text-gray-500">•</span>
-                    <span className="text-sky-400 font-bold tabular-nums flex items-center gap-1">
-                      <ShieldCheck className="w-3.5 h-3.5 text-sky-400" /> {totalSemDefeito} sem defeito
-                    </span>
-                  </>
-                )}
-                {totalSucata > 0 && (
-                  <>
-                    <span className="text-gray-500">•</span>
-                    <span className="text-red-400 font-medium tabular-nums flex items-center gap-1">
-                      <XCircle className="w-3.5 h-3.5 text-red-400" /> {totalSucata} sucata
-                    </span>
-                  </>
-                )}
-                {totalAnteriores > 0 && (
-                  <>
-                    <span className="text-gray-500">•</span>
-                    <span className="text-gray-300 font-semibold tabular-nums">
-                      Total Caixa: <strong className="text-white">{totalGeralCaixa} un</strong>
-                    </span>
-                  </>
-                )}
-                <span className="text-gray-500">•</span>
-                <span className="text-amber-400 font-bold tabular-nums" title="Pontos creditados automaticamente após o testador (CQ) aprovar">
-                  ~{pontuacaoEstimada.toFixed(1)} pts
-                </span>
-              </>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={onClose} disabled={isLoading}>
-              Cancelar
-            </Button>
-            {modoOperacao === 'INICIAR_PRODUCAO' ? (
-              <Button
-                variant="success"
-                size="sm"
-                onClick={() => handleSubmit('INICIAR_PRODUCAO')}
-                disabled={isLoading}
-                loading={isLoading}
-                leftIcon={<Play className="w-3.5 h-3.5 fill-current" />}
-                className="shadow-glow-success font-bold"
-              >
-                Iniciar Produção Ao Vivo
-              </Button>
-            ) : modoOperacao === 'SALVAR_BANCADA' ? (
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => handleSubmit('SALVAR_BANCADA')}
-                disabled={isLoading}
-                loading={isLoading}
-                leftIcon={<Save className="w-3.5 h-3.5" />}
-                className="shadow-glow-primary font-bold"
-              >
-                Salvar na Minha Bancada
-              </Button>
-            ) : (
-              <Button
-                variant="success"
-                size="sm"
-                onClick={() => handleSubmit('DESPACHAR_CQ')}
-                disabled={isLoading}
-                loading={isLoading}
-                leftIcon={<Send className="w-3.5 h-3.5" />}
-                className="shadow-glow-success font-bold"
-              >
-                Concluir e Despachar ao CQ
-              </Button>
-            )}
-          </div>
-        </div>
+  const handleConcluirOS = async () => {
+    if (!numeroOS || isConcluindoOs) return;
+    try {
+      setIsConcluindoOs(true);
+      setError(null);
+      const numParsed = parseInt(numeroOS.replace(/\D/g, ''));
+      // Se o técnico informou quantidades hoje antes de clicar em concluir, salva a produção primeiro
+      if (totalHoje > 0) {
+        let timestampISO: string;
+        if (dataRegistro && horaRegistro) {
+          const [ano, mes, dia] = dataRegistro.split('-').map(Number);
+          const [horas, minutos] = horaRegistro.split(':').map(Number);
+          const dataLocal = new Date(ano, mes - 1, dia, horas || 0, minutos || 0, 0);
+          timestampISO = isNaN(dataLocal.getTime()) ? new Date().toISOString() : dataLocal.toISOString();
+        } else {
+          timestampISO = new Date().toISOString();
+        }
+        await producaoApiService.apontarLote({
+          numeroOS: numParsed,
+          clienteId: clienteId || (clientes[0]?.id || 'cli-01'),
+          dataEntrada: timestampISO,
+          dataProducao: timestampISO,
+          idempotencyKey: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `lote-${Date.now()}-${Math.random()}`,
+          prioridade,
+          observacoes: observacoes.trim() || undefined,
+          enviarDiretoTeste: false,
+          iniciarProducaoAoVivo: false,
+          modoOperacao: 'SALVAR_BANCADA',
+          itens: itens.map((it) => {
+            const rep = Number(it.quantidadeReparada) || 0;
+            const semDef = Number(it.quantidadeSemDefeito) || 0;
+            const suc = Number(it.quantidadeSucata) || 0;
+            const ant = Number(it.anterioresNaCaixa) || 0;
+            const totalNaCaixa = ant + rep + semDef + suc;
+            return {
+              tipoEquipamentoId: it.tipoEquipamentoId,
+              quantidade: (rep + semDef) > 0 ? (rep + semDef) : (totalNaCaixa || 1),
+              quantidadeTotalCaixa: totalNaCaixa,
+              quantidadeReparada: rep,
+              quantidadeSemDefeito: semDef,
+              quantidadeSucata: suc,
+              quantidadeRestante: 0,
+              tipoCategoria: it.tipoCategoria || 'REPARADO',
+              defeitoRelatado: `Produção diária final [${rep} rep, ${semDef} sem def, ${suc} suc]`,
+              servicoRealizado: it.servicoRealizado.trim() || `Manutenção finalizada`,
+            };
+          }),
+        });
       }
-    >
-      <form onSubmit={(e) => { e.preventDefault(); handleSubmit(modoOperacao); }} className="space-y-5 text-sm">
-        {error && (
-          <div className="p-3.5 rounded-lg bg-red-950/40 border border-red-800/40 flex items-start gap-2.5 text-xs text-red-300">
-            <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-            <span>{error}</span>
+      await producaoApiService.concluirOs(numParsed, concluirObservacao.trim() || undefined);
+      setConfirmConcluirModalOpen(false);
+      onSuccess();
+      onClose();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Erro ao concluir ordem de serviço.');
+    } finally {
+      setIsConcluindoOs(false);
+    }
+  };
+
+  return (
+    <>
+      <Drawer
+        isOpen={isOpen}
+        onClose={onClose}
+        title={initialOs ? `Continuar OS #${initialOs.numeroOS}` : "Apontamento de Lote / Minha OS"}
+        subtitle={initialOs ? `Técnico: ${user?.nome || 'Operador'} — OS em Andamento. Registre a produção de hoje.` : `Técnico: ${user?.nome || 'Operador'} — Inicie a produção ou relate a quantidade reparada`}
+        width="max-w-2xl"
+        footer={
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-gray-300">
+              {modoOperacao === 'INICIAR_PRODUCAO' ? (
+                <span className="font-bold text-amber-400 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                  Cronômetro ao vivo no Painel Renetec (TV)
+                </span>
+              ) : (
+                <>
+                  <span className="font-bold text-emerald-400 tabular-nums flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> {totalReparados} reparadas hoje
+                  </span>
+                  {totalSemDefeito > 0 && (
+                    <>
+                      <span className="text-gray-500">•</span>
+                      <span className="text-sky-400 font-bold tabular-nums flex items-center gap-1">
+                        <ShieldCheck className="w-3.5 h-3.5 text-sky-400" /> {totalSemDefeito} sem defeito
+                      </span>
+                    </>
+                  )}
+                  {totalSucata > 0 && (
+                    <>
+                      <span className="text-gray-500">•</span>
+                      <span className="text-red-400 font-medium tabular-nums flex items-center gap-1">
+                        <XCircle className="w-3.5 h-3.5 text-red-400" /> {totalSucata} sucata
+                      </span>
+                    </>
+                  )}
+                  {totalAnteriores > 0 && (
+                    <>
+                      <span className="text-gray-500">•</span>
+                      <span className="text-gray-300 font-semibold tabular-nums">
+                        Total OS: <strong className="text-white">{totalGeralCaixa} un</strong>
+                      </span>
+                    </>
+                  )}
+                  <span className="text-gray-500">•</span>
+                  <span className="text-amber-400 font-bold tabular-nums" title="Pontos creditados automaticamente após o testador (CQ) aprovar">
+                    ~{pontuacaoEstimada.toFixed(1)} pts
+                  </span>
+                </>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={onClose} disabled={isLoading || isConcluindoOs}>
+                Cancelar
+              </Button>
+
+              {numeroOS && (
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="sm"
+                  onClick={() => setConfirmConcluirModalOpen(true)}
+                  disabled={isLoading || isConcluindoOs}
+                  leftIcon={<CheckCheck className="w-3.5 h-3.5" />}
+                  className="font-bold text-xs"
+                  title="Finalizar e concluir definitivamente esta OS"
+                >
+                  Concluir OS
+                </Button>
+              )}
+
+              {modoOperacao === 'INICIAR_PRODUCAO' ? (
+                <Button
+                  variant="success"
+                  size="sm"
+                  onClick={() => handleSubmit('INICIAR_PRODUCAO')}
+                  disabled={isLoading || isConcluindoOs}
+                  loading={isLoading}
+                  leftIcon={<Play className="w-3.5 h-3.5 fill-current" />}
+                  className="shadow-glow-success font-bold"
+                >
+                  Iniciar Produção Ao Vivo
+                </Button>
+              ) : modoOperacao === 'SALVAR_BANCADA' ? (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => handleSubmit('SALVAR_BANCADA')}
+                  disabled={isLoading || isConcluindoOs}
+                  loading={isLoading}
+                  leftIcon={<Save className="w-3.5 h-3.5" />}
+                  className="shadow-glow-primary font-bold"
+                >
+                  Salvar Produção de Hoje
+                </Button>
+              ) : (
+                <Button
+                  variant="success"
+                  size="sm"
+                  onClick={() => handleSubmit('DESPACHAR_CQ')}
+                  disabled={isLoading || isConcluindoOs}
+                  loading={isLoading}
+                  leftIcon={<Send className="w-3.5 h-3.5" />}
+                  className="shadow-glow-success font-bold"
+                >
+                  Despachar Lote ao CQ
+                </Button>
+              )}
+            </div>
           </div>
-        )}
+        }
+      >
+        <form onSubmit={(e) => { e.preventDefault(); handleSubmit(modoOperacao); }} className="space-y-5 text-sm">
+          {error && (
+            <div className="p-3.5 rounded-lg bg-red-950/40 border border-red-800/40 flex items-start gap-2.5 text-xs text-red-300">
+              <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {initialOs && (
+            <div className="p-3.5 rounded-xl bg-amber-950/30 border border-amber-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
+                    OS #{initialOs.numeroOS} — Em Andamento
+                  </span>
+                  <span className="text-gray-400">•</span>
+                  <span className="text-xs text-gray-200 font-semibold">{initialOs.clienteNome}</span>
+                </div>
+                <p className="text-xs text-gray-300">
+                  Total acumulado anterior: <strong className="text-emerald-400">{initialOs.totalGeralReparado} reparadas</strong>
+                  {initialOs.totalGeralSemDefeito > 0 && <>, <strong className="text-sky-300">{initialOs.totalGeralSemDefeito} sem def</strong></>}
+                  {initialOs.totalGeralSucata > 0 && <>, <strong className="text-red-400">{initialOs.totalGeralSucata} sucata</strong></>}
+                  {' '}({initialOs.totalGeralEquipamentos} un no total da OS).
+                </p>
+              </div>
+            </div>
+          )}
 
         <div className="space-y-2">
           <label className="text-xs font-bold text-gray-300 uppercase tracking-wider block">
@@ -816,33 +969,43 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                   </div>
 
                   {/* CONTABILIDADE DINÂMICA DA CAIXA E DIAS ANTERIORES */}
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 p-2.5 rounded-lg bg-surface-elevated/50 border border-surface-border/50 text-xs">
-                    <span className="text-gray-400 font-semibold flex items-center gap-1">
-                      <Package className="w-3.5 h-3.5 text-amber-400" /> Contabilidade da Caixa:
-                    </span>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-bold text-emerald-400 tabular-nums flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> {repHoje} reparadas hoje
+                  <div className="flex flex-col gap-2 p-2.5 rounded-lg bg-surface-elevated/50 border border-surface-border/50 text-xs">
+                    {item.anterioresReparadas !== undefined && (item.anterioresReparadas > 0 || (item.anterioresSemDefeito || 0) > 0 || (item.anterioresSucata || 0) > 0) && (
+                      <div className="flex flex-wrap items-center justify-between gap-1.5 pb-2 border-b border-surface-border/40 text-[11px]">
+                        <span className="text-gray-400 font-medium">Acumulado anterior nesta OS:</span>
+                        <span className="text-amber-300 font-semibold tabular-nums">
+                          {item.anterioresReparadas || 0} rep • {item.anterioresSemDefeito || 0} sem def • {item.anterioresSucata || 0} suc ({item.anterioresNaCaixa || 0} un total)
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+                      <span className="text-gray-400 font-semibold flex items-center gap-1">
+                        <Package className="w-3.5 h-3.5 text-amber-400" /> Produção de Hoje:
                       </span>
-                      {semDefHoje > 0 && (
-                        <span className="text-sky-300 tabular-nums flex items-center gap-1 font-semibold">
-                          <ShieldCheck className="w-3.5 h-3.5 text-sky-400" /> {semDefHoje} sem defeito
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-bold text-emerald-400 tabular-nums flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> {repHoje} reparadas hoje
                         </span>
-                      )}
-                      {sucHoje > 0 && (
-                        <span className="text-red-400 tabular-nums flex items-center gap-1">
-                          <XCircle className="w-3.5 h-3.5" /> {sucHoje} sucata
-                        </span>
-                      )}
-                      {antHoje > 0 ? (
-                        <span className="font-bold text-amber-300 tabular-nums bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 flex items-center gap-1">
-                          +{antHoje} anteriores = <strong className="text-white">{totalItemCaixa} un total na caixa</strong>
-                        </span>
-                      ) : (
-                        <span className="font-bold text-gray-200 tabular-nums bg-surface-base px-2 py-0.5 rounded border border-surface-border">
-                          Total na Caixa: {hojeSoma} un
-                        </span>
-                      )}
+                        {semDefHoje > 0 && (
+                          <span className="text-sky-300 tabular-nums flex items-center gap-1 font-semibold">
+                            <ShieldCheck className="w-3.5 h-3.5 text-sky-400" /> {semDefHoje} sem defeito
+                          </span>
+                        )}
+                        {sucHoje > 0 && (
+                          <span className="text-red-400 tabular-nums flex items-center gap-1">
+                            <XCircle className="w-3.5 h-3.5" /> {sucHoje} sucata
+                          </span>
+                        )}
+                        {antHoje > 0 ? (
+                          <span className="font-bold text-amber-300 tabular-nums bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 flex items-center gap-1">
+                            Total OS: <strong className="text-white">{totalItemCaixa} un</strong>
+                          </span>
+                        ) : (
+                          <span className="font-bold text-gray-200 tabular-nums bg-surface-base px-2 py-0.5 rounded border border-surface-border">
+                            Total: {hojeSoma} un
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -949,5 +1112,61 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
         </div>
       </form>
     </Drawer>
+
+    {confirmConcluirModalOpen && (
+      <Modal
+        isOpen={confirmConcluirModalOpen}
+        onClose={() => setConfirmConcluirModalOpen(false)}
+        title={`Concluir Ordem de Serviço #${numeroOS}`}
+        subtitle="Finalização definitiva da OS"
+        size="md"
+        footer={
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setConfirmConcluirModalOpen(false)}
+              disabled={isConcluindoOs}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={handleConcluirOS}
+              loading={isConcluindoOs}
+              disabled={isConcluindoOs}
+              leftIcon={<CheckCheck className="w-4 h-4" />}
+            >
+              Confirmar Conclusão da OS
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3 text-sm text-gray-300">
+          <p>
+            Você está prestes a <strong>concluir</strong> a OS #{numeroOS}.
+          </p>
+          <p className="text-xs text-gray-400">
+            {totalHoje > 0
+              ? `A produção informada hoje (${totalReparados} rep, ${totalSemDefeito} sem def, ${totalSucata} sucata) será salva e o status da OS será alterado para CONCLUÍDO.`
+              : 'O status da OS será alterado para CONCLUÍDO e ela sairá da sua lista de OSs em andamento.'}
+          </p>
+          <div className="space-y-1 pt-2">
+            <label className="text-xs font-semibold text-gray-400 block">
+              Observações finais (opcional):
+            </label>
+            <textarea
+              rows={2}
+              value={concluirObservacao}
+              onChange={(e) => setConcluirObservacao(e.target.value)}
+              placeholder="Ex: Lote finalizado 100%, todos os equipamentos testados e entregues."
+              className="w-full bg-surface-base border border-surface-border rounded-lg p-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 resize-none"
+            />
+          </div>
+        </div>
+      </Modal>
+    )}
+  </>
   );
 };

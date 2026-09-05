@@ -94,6 +94,8 @@ export interface ApontamentoLotePayload {
   numeroOS?: number;
   clienteId?: string;
   dataEntrada?: string;
+  dataProducao?: string;
+  idempotencyKey?: string;
   prioridade?: PrioridadeOS;
   observacoes?: string;
   enviarDiretoTeste?: boolean;
@@ -123,4 +125,77 @@ export interface ProducaoHistoricoItem {
     };
   };
 }
+
+export interface OsEmAndamentoEquipamento {
+  itemId: string;
+  tipoEquipamentoId: string;
+  tipoEquipamentoNome: string;
+  tipoEquipamentoMarca?: string | null;
+  statusItem: StatusOS;
+  quantidadePrevista: number;
+  totalReparadas: number;
+  totalSemDefeito: number;
+  totalSucata: number;
+  totalAcumulado: number;
+  hojeReparadas: number;
+  hojeSemDefeito: number;
+  hojeSucata: number;
+  hojeTotal: number;
+  historicoDias: {
+    id: string;
+    dataProducao: string;
+    quantidadeReparada: number;
+    quantidadeSemDefeito: number;
+    quantidadeSucata: number;
+    quantidadeProduzida: number;
+    servicoRealizado?: string | null;
+    observacao?: string | null;
+    tecnicoNome: string;
+    status: string;
+  }[];
+}
+
+export interface OsEmAndamentoData {
+  id: string;
+  numeroOS: number;
+  cliente: {
+    id: string;
+    nomeRazaoSocial: string;
+  };
+  prioridade: PrioridadeOS;
+  status: StatusOS;
+  dataEntrada: string;
+  dataConclusao?: string | null;
+  ultimaAtividade: string;
+  observacoes?: string | null;
+  totalReparados: number;
+  totalSemDefeito: number;
+  totalSucata: number;
+  totalProcessado: number;
+  hojeReparados: number;
+  hojeSemDefeito: number;
+  hojeSucata: number;
+  hojeProcessado: number;
+  equipamentos: OsEmAndamentoEquipamento[];
+}
+
+export interface ProducaoHojeResumo {
+  totalReparados: number;
+  totalSemDefeito: number;
+  totalSucata: number;
+  totalProcessado: number;
+  totalPontos: number;
+  itensPorOs: {
+    producaoId: string;
+    numeroOS: number;
+    clienteNome: string;
+    equipamentoNome: string;
+    quantidadeReparada: number;
+    quantidadeSemDefeito: number;
+    quantidadeSucata: number;
+    pontos: number;
+    dataProducao: string;
+  }[];
+}
+
 

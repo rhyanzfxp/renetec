@@ -96,19 +96,21 @@ export const relatorioRepository = {
       const textoDefeito = item?.defeitoRelatado || '';
       const textoServico = p.servicoRealizado || '';
 
-      // Tenta extrair sem defeito e sucata gravados no formato padrão
-      let semDefeito = 0;
-      let sucata = 0;
-      let reparadas = p.quantidadeProduzida;
+      // Usa diretamente as colunas tipadas persistidas
+      let semDefeito = p.quantidadeSemDefeito ?? 0;
+      let sucata = p.quantidadeSucata ?? 0;
+      let reparadas = p.quantidadeReparada ?? p.quantidadeProduzida;
 
-      const matchSemDef = (textoDefeito + ' ' + textoServico).match(/(\d+)\s*(?:sem def|sem defeito)/i);
-      if (matchSemDef) semDefeito = parseInt(matchSemDef[1]);
+      if (semDefeito === 0 && sucata === 0 && reparadas === p.quantidadeProduzida) {
+        const matchSemDef = (textoDefeito + ' ' + textoServico).match(/(\d+)\s*(?:sem def|sem defeito)/i);
+        if (matchSemDef) semDefeito = parseInt(matchSemDef[1]);
 
-      const matchSuc = (textoDefeito + ' ' + textoServico).match(/(\d+)\s*sucata/i);
-      if (matchSuc) sucata = parseInt(matchSuc[1]);
+        const matchSuc = (textoDefeito + ' ' + textoServico).match(/(\d+)\s*sucata/i);
+        if (matchSuc) sucata = parseInt(matchSuc[1]);
 
-      const matchRep = (textoDefeito + ' ' + textoServico).match(/(\d+)\s*rep/i);
-      if (matchRep) reparadas = parseInt(matchRep[1]);
+        const matchRep = (textoDefeito + ' ' + textoServico).match(/(\d+)\s*rep/i);
+        if (matchRep) reparadas = parseInt(matchRep[1]);
+      }
 
       const matchCaixa = (textoDefeito + ' ' + textoServico).match(/Caixa(?: Total)?:\s*(\d+)/i);
       const totalCaixa = matchCaixa ? parseInt(matchCaixa[1]) : (reparadas + semDefeito + sucata || p.quantidadeProduzida);
