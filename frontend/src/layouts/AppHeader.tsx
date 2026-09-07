@@ -42,19 +42,17 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, isTvMode 
           </button>
         )}
 
-        <div className="flex items-center gap-3 select-none">
-          <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center border border-brand-500/40 shadow-glow-primary bg-brand-50 dark:bg-[#050b2c] p-0.5 flex-shrink-0">
-            <img
-              src="/logo.png"
-              alt="Logo Renetec"
-              className="w-full h-full object-contain rounded-lg"
-            />
-          </div>
+        <div className="flex items-center gap-2.5 select-none">
+          <img
+            src="/logo-clean.png"
+            alt="Logo Renetec"
+            className="h-8 sm:h-9 w-auto object-contain flex-shrink-0 transition-transform duration-200 hover:scale-105"
+          />
           <div className="flex flex-col">
-            <span className="font-black text-lg tracking-wider text-gray-900 dark:text-white leading-none italic font-sans">
+            <span className="font-black text-lg sm:text-xl tracking-wider text-gray-900 dark:text-white leading-none italic font-sans">
               RENETEC
             </span>
-            <span className="text-[8.5px] sm:text-[9px] font-bold text-gray-500 dark:text-gray-300 tracking-[0.16em] uppercase mt-1 leading-none italic font-sans">
+            <span className="text-[8.5px] sm:text-[9px] font-bold text-gray-500 dark:text-gray-400 tracking-[0.16em] uppercase mt-1 leading-none italic font-sans">
               SERVIÇOS E TECNOLOGIA
             </span>
           </div>
