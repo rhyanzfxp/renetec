@@ -495,8 +495,8 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
               )}
             </div>
 
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={onClose} disabled={isLoading || isDespachandoCq || isExcluindoOs}>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={onClose} disabled={isLoading || isDespachandoCq || isExcluindoOs} className="whitespace-nowrap">
                 Cancelar
               </Button>
 
@@ -508,7 +508,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                   onClick={() => setConfirmExcluirModalOpen(true)}
                   disabled={isLoading || isDespachandoCq || isExcluindoOs}
                   leftIcon={<Trash2 className="w-3.5 h-3.5 text-red-400" />}
-                  className="text-red-400 hover:bg-red-500/10 font-medium text-xs"
+                  className="text-red-400 hover:bg-red-500/10 font-medium text-xs whitespace-nowrap"
                   title="Excluir esta OS lançada por engano"
                 >
                   Excluir OS
@@ -523,7 +523,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                   onClick={() => setConfirmDespacharModalOpen(true)}
                   disabled={isLoading || isDespachandoCq || isExcluindoOs}
                   leftIcon={<Send className="w-3.5 h-3.5" />}
-                  className="font-bold text-xs shadow-glow-success"
+                  className="font-bold text-xs shadow-glow-success whitespace-nowrap"
                   title="Enviar esta OS e equipamentos reparados para a fila de testes do CQ"
                 >
                   Mandar para o CQ
@@ -538,7 +538,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                   disabled={isLoading || isDespachandoCq || isExcluindoOs}
                   loading={isLoading}
                   leftIcon={<Play className="w-3.5 h-3.5 fill-current" />}
-                  className="shadow-glow-success font-bold"
+                  className="shadow-glow-success font-bold whitespace-nowrap"
                 >
                   Iniciar Produção Ao Vivo
                 </Button>
@@ -550,7 +550,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                   disabled={isLoading || isDespachandoCq || isExcluindoOs}
                   loading={isLoading}
                   leftIcon={<Save className="w-3.5 h-3.5" />}
-                  className="shadow-glow-primary font-bold"
+                  className="shadow-glow-primary font-bold whitespace-nowrap"
                 >
                   Salvar Produção de Hoje
                 </Button>
@@ -562,7 +562,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                   disabled={isLoading || isDespachandoCq || isExcluindoOs}
                   loading={isLoading}
                   leftIcon={<Send className="w-3.5 h-3.5" />}
-                  className="shadow-glow-success font-bold"
+                  className="shadow-glow-success font-bold whitespace-nowrap"
                 >
                   Despachar Lote ao CQ
                 </Button>

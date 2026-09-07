@@ -26,7 +26,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className }) => {
       }}
       tabIndex={0}
       className={clsx(
-        'relative inline-flex items-center h-8 w-[68px] p-0.5 rounded-full cursor-pointer select-none',
+        'relative inline-flex items-center h-8 w-16 rounded-full cursor-pointer select-none',
         'bg-surface-elevated border border-surface-border',
         'transition-all duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-1 focus:ring-offset-surface-base',
         'hover:border-surface-muted active:scale-95',
@@ -37,10 +37,10 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className }) => {
       <span
         aria-hidden="true"
         className={clsx(
-          'absolute top-0.5 bottom-0.5 w-[30px] rounded-full shadow-sm',
+          'absolute top-[3px] w-[26px] h-[26px] rounded-full shadow-sm',
           'transition-transform duration-200 ease-out',
           'bg-surface-card border border-surface-border/80',
-          isDark ? 'translate-x-[34px]' : 'translate-x-0'
+          isDark ? 'translate-x-[33px]' : 'translate-x-[3px]'
         )}
       />
 
@@ -53,7 +53,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className }) => {
           setTheme('light');
         }}
         className={clsx(
-          'relative z-10 w-[30px] h-full flex items-center justify-center rounded-full transition-colors duration-200',
+          'relative z-10 w-8 h-full flex items-center justify-center rounded-full transition-colors duration-200',
           !isDark ? 'text-amber-500' : 'text-gray-400 hover:text-gray-300'
         )}
       >
@@ -69,7 +69,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className }) => {
           setTheme('dark');
         }}
         className={clsx(
-          'relative z-10 w-[30px] h-full flex items-center justify-center rounded-full transition-colors duration-200',
+          'relative z-10 w-8 h-full flex items-center justify-center rounded-full transition-colors duration-200',
           isDark ? 'text-brand-400' : 'text-gray-500 hover:text-gray-700'
         )}
       >
