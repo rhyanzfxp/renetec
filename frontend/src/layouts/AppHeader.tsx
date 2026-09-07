@@ -26,7 +26,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, isTvMode 
   }, []);
 
   return (
-    <header className="h-16 border-b border-surface-border bg-surface-card/90 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between sticky top-0 z-40">
+    <header className="h-16 flex-shrink-0 border-b border-surface-border bg-surface-card/90 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between sticky top-0 z-40">
       {/* Lado Esquerdo: Logo Renetec + Texto Oficial */}
       <div className="flex items-center gap-3">
         {onToggleSidebar && (

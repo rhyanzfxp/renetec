@@ -10,6 +10,7 @@ import {
   Tv,
   ChevronRight,
   FileSpreadsheet,
+  X,
 } from 'lucide-react';
 
 import { clsx } from 'clsx';
@@ -107,15 +108,28 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       {/* Sidebar Container */}
       <aside
         className={clsx(
-          'top-0 bottom-0 left-0 z-50 w-64 bg-surface-card border-r border-surface-border flex flex-col transition-transform duration-200 ease-in-out',
+          'w-64 bg-surface-card border-r border-surface-border flex flex-col flex-shrink-0 transition-transform duration-200 ease-in-out',
           activeSection === 'tv_fabrica'
-            ? clsx('fixed', isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full')
-            : clsx('fixed lg:static', isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0')
+            ? clsx('fixed inset-y-0 left-0 z-50', isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full')
+            : clsx('fixed inset-y-0 left-0 z-50 lg:static lg:h-full lg:translate-x-0 lg:shadow-none', isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full')
         )}
       >
+        {/* Header mobile para fechar drawer */}
+        <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-surface-border">
+          <span className="font-bold text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">Navegação</span>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Fechar menu"
+            className="p-1 rounded-lg text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-surface-elevated transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
         {/* Navigation list */}
-        <div className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-          <div className="px-3 py-1 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+        <div className="flex-1 min-h-0 py-4 px-3 space-y-1 overflow-y-auto">
+          <div className="hidden lg:block px-3 py-1 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
             Navegação Operacional
           </div>
 
@@ -153,8 +167,8 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           })}
         </div>
 
-        {/* Mini Widget da Meta Coletiva Dinâmico no Rodapé da Sidebar */}
-        <div className="p-3 border-t border-surface-border bg-surface-base/40 m-2 rounded-xl border">
+        {/* Mini Widget da Meta Coletiva Dinâmico no Rodapé da Sidebar - Sempre visível e fixo na base */}
+        <div className="flex-shrink-0 p-3 border-t border-surface-border bg-surface-base/40 m-2 rounded-xl border mt-auto">
           <div className="flex items-center justify-between text-xs">
             <span className="font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
               <Target className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" /> Meta Alvo

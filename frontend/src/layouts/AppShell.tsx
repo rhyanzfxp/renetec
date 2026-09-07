@@ -89,14 +89,14 @@ export const AppShell: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen bg-surface-base text-gray-800 dark:text-gray-100 flex flex-col antialiased">
+    <div className="h-screen max-h-screen overflow-hidden bg-surface-base text-gray-800 dark:text-gray-100 flex flex-col antialiased">
       {/* Header Fixo */}
       <AppHeader
         onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
         isTvMode={activeSection === 'tv_fabrica'}
       />
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex min-h-0 overflow-hidden relative">
         {/* Sidebar Contextual */}
         <AppSidebar
           activeSection={activeSection}
@@ -109,8 +109,8 @@ export const AppShell: React.FC = () => {
         <main
           className={
             activeSection === 'tv_fabrica'
-              ? 'flex-1 overflow-y-auto p-2 sm:p-4 lg:p-5 space-y-4 pb-16 lg:pb-6'
-              : 'flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 pb-20 lg:pb-8'
+              ? 'flex-1 min-w-0 min-h-0 overflow-y-auto p-2 sm:p-4 lg:p-5 space-y-4 pb-16 lg:pb-6'
+              : 'flex-1 min-w-0 min-h-0 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 pb-20 lg:pb-8'
           }
         >
           {/* Header da Seção Atual (Ocultado no modo TV para dar 100% de foco no painel) */}
