@@ -24,11 +24,11 @@ export default {
           950: '#082f49',
         },
         surface: {
-          base: '#0b0f19',     // Fundo principal de alto contraste
-          card: '#111827',     // Fundo de cards/painéis
-          elevated: '#1f2937', // Modais, drawers e dropdowns
-          border: '#374151',   // Bordas sutis
-          muted: '#4b5563',    // Elementos secundários
+          base: 'rgb(var(--surface-base) / <alpha-value>)',     // Fundo principal dinâmico
+          card: 'rgb(var(--surface-card) / <alpha-value>)',     // Fundo de cards/painéis dinâmico
+          elevated: 'rgb(var(--surface-elevated) / <alpha-value>)', // Modais, drawers e dropdowns dinâmico
+          border: 'rgb(var(--surface-border) / <alpha-value>)',   // Bordas dinâmicas
+          muted: 'rgb(var(--surface-muted) / <alpha-value>)',    // Elementos secundários dinâmicos
         },
         status: {
           aprovado: {

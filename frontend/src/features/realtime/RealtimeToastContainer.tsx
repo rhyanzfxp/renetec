@@ -17,21 +17,21 @@ export const RealtimeToastContainer: React.FC = () => {
       {toasts.map((toast) => {
         const getBorderAndBg = () => {
           if (toast.type === 'success') {
-            return 'bg-surface-card/95 border-emerald-500/40 text-emerald-300 shadow-glow-primary';
+            return 'bg-surface-card/95 border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-300 shadow-glow-primary';
           }
           if (toast.type === 'warning') {
-            return 'bg-surface-card/95 border-amber-500/40 text-amber-300';
+            return 'bg-surface-card/95 border-amber-300 dark:border-amber-500/40 text-amber-800 dark:text-amber-300';
           }
           if (toast.type === 'danger') {
-            return 'bg-surface-card/95 border-red-500/40 text-red-300';
+            return 'bg-surface-card/95 border-red-300 dark:border-red-500/40 text-red-800 dark:text-red-300';
           }
-          return 'bg-surface-card/95 border-brand-500/40 text-brand-300';
+          return 'bg-surface-card/95 border-brand-300 dark:border-brand-500/40 text-brand-800 dark:text-brand-300';
         };
 
         const getIcon = () => {
-          if (toast.type === 'success') return <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />;
-          if (toast.type === 'warning') return <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />;
-          return <Info className="w-4 h-4 text-brand-400 flex-shrink-0" />;
+          if (toast.type === 'success') return <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />;
+          if (toast.type === 'warning') return <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />;
+          return <Info className="w-4 h-4 text-brand-600 dark:text-brand-400 flex-shrink-0" />;
         };
 
         return (
@@ -42,9 +42,9 @@ export const RealtimeToastContainer: React.FC = () => {
             <div className="flex items-start gap-2.5">
               <div className="mt-0.5">{getIcon()}</div>
               <div>
-                <h4 className="text-xs font-bold text-white">{toast.title}</h4>
-                <p className="text-[11px] text-gray-300 mt-0.5 leading-snug">{toast.message}</p>
-                <span className="text-[9px] text-gray-500 mt-1 block">
+                <h4 className="text-xs font-bold text-gray-900 dark:text-white">{toast.title}</h4>
+                <p className="text-[11px] text-gray-700 dark:text-gray-300 mt-0.5 leading-snug">{toast.message}</p>
+                <span className="text-[9px] text-gray-500 dark:text-gray-400 mt-1 block">
                   {toast.timestamp.toLocaleTimeString('pt-BR')}
                 </span>
               </div>
@@ -53,7 +53,7 @@ export const RealtimeToastContainer: React.FC = () => {
             <button
               type="button"
               onClick={() => removeToast(toast.id)}
-              className="text-gray-400 hover:text-white p-1 rounded transition-colors"
+              className="text-gray-400 hover:text-gray-700 dark:hover:text-white p-1 rounded transition-colors"
             >
               <X className="w-3.5 h-3.5" />
             </button>

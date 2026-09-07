@@ -78,8 +78,8 @@ export const DashboardGerencialPage: React.FC = () => {
           <AlertTriangle className="w-8 h-8" />
         </div>
         <div>
-          <h3 className="text-base font-bold text-white">Não foi possível carregar o dashboard</h3>
-          <p className="text-xs text-gray-400 mt-1 max-w-md">
+          <h3 className="text-base font-bold text-gray-900 dark:text-white">Não foi possível carregar o dashboard</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-md">
             Ocorreu uma instabilidade ao consultar os indicadores operacionais. Tente novamente em instantes.
           </p>
         </div>
@@ -109,10 +109,10 @@ export const DashboardGerencialPage: React.FC = () => {
       {/* ─── 1. SELETOR DE PERÍODO & AÇÕES ───────────────────────────────── */}
       <div className="p-4 rounded-2xl bg-surface-card border border-surface-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-base font-bold text-white uppercase tracking-wider flex items-center gap-2">
-            <BarChart2 className="w-5 h-5 text-brand-400" /> Indicadores Executivos e Operacionais — Renetec
+          <h2 className="text-base font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+            <BarChart2 className="w-5 h-5 text-brand-500 dark:text-brand-400" /> Indicadores Executivos e Operacionais — Renetec
           </h2>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
             Consolidado de faturamento, lead time, qualidade e rendimento em pontos da equipe técnica.
           </p>
         </div>
@@ -123,7 +123,9 @@ export const DashboardGerencialPage: React.FC = () => {
               type="button"
               onClick={() => setPeriodo('hoje')}
               className={`px-3 py-1.5 rounded-lg font-semibold transition-colors ${
-                periodo === 'hoje' ? 'bg-brand-600 text-white' : 'text-gray-400 hover:text-white'
+                periodo === 'hoje'
+                  ? 'bg-brand-600 text-white shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
               }`}
             >
               Hoje
@@ -132,7 +134,9 @@ export const DashboardGerencialPage: React.FC = () => {
               type="button"
               onClick={() => setPeriodo('7_dias')}
               className={`px-3 py-1.5 rounded-lg font-semibold transition-colors ${
-                periodo === '7_dias' ? 'bg-brand-600 text-white' : 'text-gray-400 hover:text-white'
+                periodo === '7_dias'
+                  ? 'bg-brand-600 text-white shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
               }`}
             >
               7 Dias
@@ -141,7 +145,9 @@ export const DashboardGerencialPage: React.FC = () => {
               type="button"
               onClick={() => setPeriodo('mes_atual')}
               className={`px-3 py-1.5 rounded-lg font-semibold transition-colors ${
-                periodo === 'mes_atual' ? 'bg-brand-600 text-white' : 'text-gray-400 hover:text-white'
+                periodo === 'mes_atual'
+                  ? 'bg-brand-600 text-white shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
               }`}
             >
               Mês Atual
@@ -150,7 +156,9 @@ export const DashboardGerencialPage: React.FC = () => {
               type="button"
               onClick={() => setPeriodo('ano')}
               className={`px-3 py-1.5 rounded-lg font-semibold transition-colors ${
-                periodo === 'ano' ? 'bg-brand-600 text-white' : 'text-gray-400 hover:text-white'
+                periodo === 'ano'
+                  ? 'bg-brand-600 text-white shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
               }`}
             >
               Ano 2026
@@ -202,10 +210,10 @@ export const DashboardGerencialPage: React.FC = () => {
         {/* Distribuição de Defeitos (Pareto de Retrabalhos) */}
         <div className="p-5 rounded-2xl bg-surface-card border border-surface-border space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <Layers className="w-4 h-4 text-rose-400" /> Distribuição de Defeitos (Retrabalhos)
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+              <Layers className="w-4 h-4 text-rose-500 dark:text-rose-400" /> Distribuição de Defeitos (Retrabalhos)
             </h3>
-            <span className="text-[11px] text-gray-400 font-mono">Taxa: {data.taxaRetrabalho}%</span>
+            <span className="text-[11px] text-gray-500 dark:text-gray-400 font-mono">Taxa: {data.taxaRetrabalho}%</span>
           </div>
 
           {data.distribuicaoDefeitos && data.distribuicaoDefeitos.length > 0 ? (
@@ -213,8 +221,8 @@ export const DashboardGerencialPage: React.FC = () => {
               {data.distribuicaoDefeitos.slice(0, 5).map((def, idx) => (
                 <div key={idx} className="space-y-1">
                   <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-gray-300 truncate">{def.motivo}</span>
-                    <span className="text-rose-400 tabular-nums font-mono">{def.quantidade} un ({def.percentual}%)</span>
+                    <span className="text-gray-700 dark:text-gray-300 truncate">{def.motivo}</span>
+                    <span className="text-rose-600 dark:text-rose-400 tabular-nums font-mono">{def.quantidade} un ({def.percentual}%)</span>
                   </div>
                   <div className="w-full bg-surface-elevated rounded-full h-2 overflow-hidden">
                     <div
@@ -226,7 +234,7 @@ export const DashboardGerencialPage: React.FC = () => {
               ))}
             </div>
           ) : (
-            <div className="p-6 text-center text-xs text-gray-400 bg-surface-elevated/40 rounded-xl border border-surface-border">
+            <div className="p-6 text-center text-xs text-gray-500 dark:text-gray-400 bg-surface-elevated/40 rounded-xl border border-surface-border">
               Nenhum defeito registrado no período selecionado. Excelente controle de qualidade!
             </div>
           )}
@@ -235,10 +243,10 @@ export const DashboardGerencialPage: React.FC = () => {
         {/* Lead Time por Tipo de Equipamento */}
         <div className="p-5 rounded-2xl bg-surface-card border border-surface-border space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <Cpu className="w-4 h-4 text-cyan-400" /> Lead Time por Equipamento
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+              <Cpu className="w-4 h-4 text-cyan-600 dark:text-cyan-400" /> Lead Time por Equipamento
             </h3>
-            <span className="text-[11px] text-gray-400 font-mono">Média: {data.leadTimeMedioGeralMinutos} min</span>
+            <span className="text-[11px] text-gray-500 dark:text-gray-400 font-mono">Média: {data.leadTimeMedioGeralMinutos} min</span>
           </div>
 
           {data.leadTimePorEquipamento && data.leadTimePorEquipamento.length > 0 ? (
@@ -246,8 +254,8 @@ export const DashboardGerencialPage: React.FC = () => {
               {data.leadTimePorEquipamento.slice(0, 5).map((eq, idx) => (
                 <div key={idx} className="space-y-1">
                   <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-gray-300 truncate">{eq.tipoEquipamentoNome}</span>
-                    <span className="text-cyan-400 tabular-nums font-mono">{eq.tempoMedioMinutos} min ({eq.quantidadeConcluida} un)</span>
+                    <span className="text-gray-700 dark:text-gray-300 truncate">{eq.tipoEquipamentoNome}</span>
+                    <span className="text-cyan-600 dark:text-cyan-400 tabular-nums font-mono">{eq.tempoMedioMinutos} min ({eq.quantidadeConcluida} un)</span>
                   </div>
                   <div className="w-full bg-surface-elevated rounded-full h-2 overflow-hidden">
                     <div
@@ -259,7 +267,7 @@ export const DashboardGerencialPage: React.FC = () => {
               ))}
             </div>
           ) : (
-            <div className="p-6 text-center text-xs text-gray-400 bg-surface-elevated/40 rounded-xl border border-surface-border">
+            <div className="p-6 text-center text-xs text-gray-500 dark:text-gray-400 bg-surface-elevated/40 rounded-xl border border-surface-border">
               Aguardando conclusão de ordens de serviço para cálculo de lead time por modelo.
             </div>
           )}
@@ -269,17 +277,17 @@ export const DashboardGerencialPage: React.FC = () => {
       {/* ─── 4. RANKING DE PRODUTIVIDADE DOS TÉCNICOS ──────────────────────── */}
       <div className="p-5 rounded-2xl bg-surface-card border border-surface-border space-y-4">
         <div>
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-            <Users className="w-4 h-4 text-emerald-400" /> Produtividade e Rendimento da Equipe Renetec
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+            <Users className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Produtividade e Rendimento da Equipe Renetec
           </h3>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
             Acompanhamento individual de pontos realizados, participação e peso de bônus.
           </p>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-xs text-left">
-            <thead className="bg-surface-elevated/60 text-gray-400 font-semibold border-b border-surface-border">
+            <thead className="bg-surface-elevated/60 text-gray-600 dark:text-gray-400 font-semibold border-b border-surface-border">
               <tr>
                 <th className="py-2.5 px-3">Colaborador</th>
                 <th className="py-2.5 px-3">Função</th>
@@ -293,24 +301,24 @@ export const DashboardGerencialPage: React.FC = () => {
               {data.produtividadeTecnicos && data.produtividadeTecnicos.length > 0 ? (
                 data.produtividadeTecnicos.map((tec) => (
                   <tr key={tec.tecnicoId} className="hover:bg-surface-elevated/30 transition-colors">
-                    <td className="py-3 px-3 font-bold text-white flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                    <td className="py-3 px-3 font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
                       {tec.tecnicoNome}
                     </td>
-                    <td className="py-3 px-3 text-gray-300">{tec.funcao ?? 'Produção'}</td>
-                    <td className="py-3 px-3 text-right font-black text-amber-300 tabular-nums">
+                    <td className="py-3 px-3 text-gray-700 dark:text-gray-300">{tec.funcao ?? 'Produção'}</td>
+                    <td className="py-3 px-3 text-right font-black text-amber-600 dark:text-amber-300 tabular-nums">
                       {tec.pontosRealizados ?? tec.totalProduzido ?? 0} pts
                     </td>
-                    <td className="py-3 px-3 text-right font-semibold text-gray-300 tabular-nums">
+                    <td className="py-3 px-3 text-right font-semibold text-gray-700 dark:text-gray-300 tabular-nums">
                       {tec.percentualTotal ?? 0}%
                     </td>
                     <td className="py-3 px-3 text-center">
-                      <span className="px-2 py-0.5 rounded bg-surface-elevated text-gray-300 font-semibold border border-surface-border">
+                      <span className="px-2 py-0.5 rounded bg-surface-elevated text-gray-700 dark:text-gray-300 font-semibold border border-surface-border">
                         {tec.pesoBonus ? `${(tec.pesoBonus * 100).toFixed(0)}%` : '—'}
                       </span>
                     </td>
                     <td className="py-3 px-3 text-center">
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 font-bold border border-emerald-500/30">
+                      <span className="px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-500/30">
                         {tec.taxaAprovacao}%
                       </span>
                     </td>
@@ -318,7 +326,7 @@ export const DashboardGerencialPage: React.FC = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="py-4 text-center text-gray-400">
+                  <td colSpan={6} className="py-4 text-center text-gray-500 dark:text-gray-400">
                     Nenhum colaborador registrado no período.
                   </td>
                 </tr>

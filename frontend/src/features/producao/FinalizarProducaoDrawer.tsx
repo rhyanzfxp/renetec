@@ -120,8 +120,8 @@ export const FinalizarProducaoDrawer: React.FC<FinalizarProducaoDrawerProps> = (
     >
       <form onSubmit={(e) => e.preventDefault()} className="space-y-5 text-sm">
         {errorMessage && (
-          <div className="p-3 rounded-lg bg-red-950/40 border border-red-800/40 flex items-start gap-2.5 text-xs text-red-300">
-            <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="p-3 rounded-lg bg-red-100 dark:bg-red-950/40 border border-red-300 dark:border-red-800/40 flex items-start gap-2.5 text-xs text-red-700 dark:text-red-300">
+            <AlertCircle className="w-4 h-4 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
             <span>{errorMessage}</span>
           </div>
         )}
@@ -129,25 +129,25 @@ export const FinalizarProducaoDrawer: React.FC<FinalizarProducaoDrawerProps> = (
         {/* Resumo do Lote em Execução */}
         <div className="p-3.5 rounded-lg bg-surface-elevated border border-surface-border space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-400">Equipamento em Bancada</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">Equipamento em Bancada</span>
             <StatusBadge prioridade={item.ordemServico.prioridade} size="sm" />
           </div>
-          <p className="text-sm font-bold text-white">
+          <p className="text-sm font-bold text-gray-900 dark:text-white">
             {item.tipoEquipamento.nome} {item.tipoEquipamento.marca ? `(${item.tipoEquipamento.marca})` : ''}
           </p>
-          <div className="flex justify-between text-xs text-gray-300 pt-1 border-t border-surface-border/50">
+          <div className="flex justify-between text-xs text-gray-700 dark:text-gray-300 pt-1 border-t border-surface-border/50">
             <span>Tempo em Execução:</span>
-            <span className="text-amber-400 font-bold tabular-nums">{tempoDecorrido}</span>
+            <span className="text-amber-600 dark:text-amber-400 font-bold tabular-nums">{tempoDecorrido}</span>
           </div>
         </div>
 
         {/* Defeito que havia sido relatado */}
         {item.defeitoRelatado && (
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Defeito Inicial Relatado
             </label>
-            <div className="p-2.5 rounded-lg bg-surface-base border border-surface-border text-xs text-gray-300">
+            <div className="p-2.5 rounded-lg bg-surface-base border border-surface-border text-xs text-gray-700 dark:text-gray-300">
               {item.defeitoRelatado}
             </div>
           </div>
@@ -155,8 +155,8 @@ export const FinalizarProducaoDrawer: React.FC<FinalizarProducaoDrawerProps> = (
 
         {/* Quantidade Concluída */}
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold uppercase text-gray-300 tracking-wider">
-            Quantidade Concluída no Lote (unidades) <span className="text-red-400">*</span>
+          <label className="block text-xs font-semibold uppercase text-gray-700 dark:text-gray-300 tracking-wider">
+            Quantidade Concluída no Lote (unidades) <span className="text-red-500 dark:text-red-400">*</span>
           </label>
           <Input
             type="number"
@@ -173,8 +173,8 @@ export const FinalizarProducaoDrawer: React.FC<FinalizarProducaoDrawerProps> = (
 
         {/* Serviço Realizado */}
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold uppercase text-gray-300 tracking-wider">
-            Serviço Realizado / Reparos Feitos <span className="text-red-400">*</span>
+          <label className="block text-xs font-semibold uppercase text-gray-700 dark:text-gray-300 tracking-wider">
+            Serviço Realizado / Reparos Feitos <span className="text-red-500 dark:text-red-400">*</span>
           </label>
           <div className="relative">
             <textarea
@@ -183,14 +183,14 @@ export const FinalizarProducaoDrawer: React.FC<FinalizarProducaoDrawerProps> = (
               rows={3}
               placeholder="Ex: Troca dos capacitores estufados, ressolda da ponte retificadora e aplicação de verniz de proteção."
               required
-              className="w-full bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 resize-none"
+              className="w-full bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 resize-none"
             />
           </div>
         </div>
 
         {/* Observações Complementares */}
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold uppercase text-gray-300 tracking-wider">
+          <label className="block text-xs font-semibold uppercase text-gray-700 dark:text-gray-300 tracking-wider">
             Observações para o Controle de Qualidade (Opcional)
           </label>
           <textarea
@@ -198,16 +198,16 @@ export const FinalizarProducaoDrawer: React.FC<FinalizarProducaoDrawerProps> = (
             onChange={(e) => setObservacao(e.target.value)}
             rows={2}
             placeholder="Ex: Testar com atenção o canal 2 em 220V."
-            className="w-full bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 resize-none"
+            className="w-full bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 resize-none"
           />
         </div>
 
-        <div className="p-3 rounded-lg bg-indigo-950/20 border border-indigo-500/20 text-xs text-indigo-300">
+        <div className="p-3 rounded-lg bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-500/20 text-xs text-indigo-800 dark:text-indigo-300">
           <p className="font-semibold flex items-center gap-1.5">
-            <Wrench className="w-3.5 h-3.5 text-indigo-400" /> Próxima Etapa Operacional:
+            <Wrench className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" /> Próxima Etapa Operacional:
           </p>
-          <p className="mt-1 text-gray-400">
-            Ao finalizar, o status do lote mudará para <strong className="text-indigo-300">Aguardando Teste</strong> e estará visível na bancada de Controle de Qualidade (CQ).
+          <p className="mt-1 text-gray-600 dark:text-gray-400">
+            Ao finalizar, o status do lote mudará para <strong className="text-indigo-700 dark:text-indigo-300">Aguardando Teste</strong> e estará visível na bancada de Controle de Qualidade (CQ).
           </p>
         </div>
       </form>

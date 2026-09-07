@@ -186,20 +186,20 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
       width="max-w-2xl"
       footer={
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
-          <div className="flex flex-wrap items-center gap-2 text-xs text-gray-300">
-            <span className="font-bold text-emerald-400 tabular-nums flex items-center gap-1">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-gray-700 dark:text-gray-300">
+            <span className="font-bold text-emerald-600 dark:text-emerald-400 tabular-nums flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5" /> +{quantidadeAprovada} aprovadas
             </span>
             {quantidadeReprovada > 0 && (
               <>
-                <span className="text-gray-500">•</span>
-                <span className="text-amber-400 font-bold tabular-nums flex items-center gap-1">
+                <span className="text-gray-400 dark:text-gray-500">•</span>
+                <span className="text-amber-600 dark:text-amber-400 font-bold tabular-nums flex items-center gap-1">
                   <RotateCcw className="w-3.5 h-3.5" /> {quantidadeReprovada} retrabalho
                 </span>
               </>
             )}
-            <span className="text-gray-500">•</span>
-            <span className="text-amber-300 font-bold tabular-nums">
+            <span className="text-gray-400 dark:text-gray-500">•</span>
+            <span className="text-amber-600 dark:text-amber-300 font-bold tabular-nums">
               ~{ptsEstimadosAprovados.toFixed(1)} pts
             </span>
           </div>
@@ -225,8 +225,8 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
     >
       <form onSubmit={handleSubmit} className="space-y-5 text-sm">
         {errorMessage && (
-          <div className="p-3.5 rounded-lg bg-red-950/40 border border-red-800/40 flex items-start gap-2.5 text-xs text-red-300">
-            <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="p-3.5 rounded-lg bg-red-100 dark:bg-red-950/40 border border-red-300 dark:border-red-800/40 flex items-start gap-2.5 text-xs text-red-700 dark:text-red-300">
+            <AlertTriangle className="w-4 h-4 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
             <span>{errorMessage}</span>
           </div>
         )}
@@ -234,43 +234,43 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
         {/* 1. IDENTIFICAÇÃO DO TESTE (DATA, TÉCNICO, OS, EQUIPAMENTO) */}
         <div className="p-4 rounded-xl bg-surface-elevated/70 border border-surface-border space-y-3.5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-brand-300 flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-brand-400" /> Dados da Inspeção & Bancada
+            <span className="text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-300 flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-brand-500 dark:text-brand-400" /> Dados da Inspeção & Bancada
             </span>
-            <span className="text-[11px] text-gray-400">
-              Inspetor de CQ: <strong className="text-white">{user?.nome || 'Rhyan'}</strong>
+            <span className="text-[11px] text-gray-500 dark:text-gray-400">
+              Inspetor de CQ: <strong className="text-gray-900 dark:text-white">{user?.nome || 'Rhyan'}</strong>
             </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-300 flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-sky-400" /> Data do Teste
+              <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" /> Data do Teste
               </label>
               <input
                 type="date"
                 value={dataTeste}
                 onChange={(e) => setDataTeste(e.target.value)}
-                className="w-full h-10 px-3 bg-[#12161f] border border-surface-border rounded-lg text-xs text-white focus:outline-none focus:border-brand-500"
+                className="w-full h-10 px-3 bg-surface-card border border-surface-border rounded-lg text-xs text-gray-900 dark:text-white focus:outline-none focus:border-brand-500"
                 required
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-300 flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-amber-400" /> Horário
+              <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" /> Horário
               </label>
               <input
                 type="time"
                 value={horaTeste}
                 onChange={(e) => setHoraTeste(e.target.value)}
-                className="w-full h-10 px-3 bg-[#12161f] border border-surface-border rounded-lg text-xs text-white focus:outline-none focus:border-brand-500"
+                className="w-full h-10 px-3 bg-surface-card border border-surface-border rounded-lg text-xs text-gray-900 dark:text-white focus:outline-none focus:border-brand-500"
                 required
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-300 flex items-center gap-1">
+              <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
                 Número da OS <span className="text-gray-500 text-[11px] font-normal">(Opcional)</span>
               </label>
               <div className="relative">
@@ -280,7 +280,7 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
                   value={numeroOS}
                   onChange={(e) => setNumeroOS(e.target.value.replace(/[^0-9]/g, ''))}
                   placeholder="Auto se vazio"
-                  className="w-full h-10 pl-7 pr-3 bg-surface-base border border-surface-border rounded-lg text-xs text-white font-mono font-bold focus:outline-none focus:border-brand-500"
+                  className="w-full h-10 pl-7 pr-3 bg-surface-base border border-surface-border rounded-lg text-xs text-gray-900 dark:text-white font-mono font-bold focus:outline-none focus:border-brand-500"
                 />
               </div>
             </div>
@@ -288,16 +288,16 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-300 flex items-center gap-1">
-                <User className="w-3.5 h-3.5 text-sky-400" /> Técnico que Reparou o Equipamento <span className="text-brand-400">*</span>
+              <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                <User className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" /> Técnico que Reparou o Equipamento <span className="text-brand-500 dark:text-brand-400">*</span>
               </label>
               <select
                 value={tecnicoId}
                 onChange={(e) => handleTecnicoChange(e.target.value)}
-                className="w-full h-10 px-3 bg-[#12161f] border border-surface-border rounded-lg text-xs text-white focus:outline-none focus:border-brand-500 font-medium"
+                className="w-full h-10 px-3 bg-surface-card border border-surface-border rounded-lg text-xs text-gray-900 dark:text-white focus:outline-none focus:border-brand-500 font-medium"
               >
                 {tecnicos.map((t) => (
-                  <option key={t.id} value={t.id} className="bg-[#181d26] text-white py-1">
+                  <option key={t.id} value={t.id} className="bg-surface-card text-gray-900 dark:text-white py-1">
                     {t.nome} {t.funcao ? `(${t.funcao})` : ''}
                   </option>
                 ))}
@@ -305,18 +305,18 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-300 flex items-center gap-1">
-                <Wrench className="w-3.5 h-3.5 text-emerald-400" /> Modelo do Equipamento <span className="text-brand-400">*</span>
+              <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                <Wrench className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Modelo do Equipamento <span className="text-brand-500 dark:text-brand-400">*</span>
               </label>
               <select
                 value={tipoEquipamentoId}
                 onChange={(e) => setTipoEquipamentoId(e.target.value)}
-                className="w-full h-10 px-3 bg-[#12161f] border border-surface-border rounded-lg text-xs text-white focus:outline-none focus:border-brand-500 font-medium"
+                className="w-full h-10 px-3 bg-surface-card border border-surface-border rounded-lg text-xs text-gray-900 dark:text-white focus:outline-none focus:border-brand-500 font-medium"
               >
                 {tiposEquipamento.map((eq) => {
                   const pts = eq.pontos ?? 1;
                   return (
-                    <option key={eq.id} value={eq.id} className="bg-[#181d26] text-white py-1">
+                    <option key={eq.id} value={eq.id} className="bg-surface-card text-gray-900 dark:text-white py-1">
                       {eq.nome} ({pts} pt{pts > 1 ? 's' : ''})
                     </option>
                   );
@@ -329,17 +329,17 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
         {/* 2. QUANTITATIVO: TESTADAS, APROVADAS E RETRABALHO */}
         <div className="p-4 rounded-xl bg-surface-base border border-surface-border space-y-3.5">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-bold uppercase tracking-wider text-gray-300 flex items-center gap-1.5">
-              <FileCheck className="w-4 h-4 text-emerald-400" /> Contagem Diária de Testes
+            <label className="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+              <FileCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Contagem Diária de Testes
             </label>
-            <span className="text-xs text-amber-400 font-semibold tabular-nums">
+            <span className="text-xs text-amber-600 dark:text-amber-400 font-semibold tabular-nums">
               {ptsUnit} pt/un • {ptsEstimadosAprovados.toFixed(1)} pts na aprovação
             </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-300 flex items-center gap-1">
+              <label className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
                 Total Testado Hoje
               </label>
               <input
@@ -356,14 +356,14 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
                   }
                 }}
                 placeholder="Ex: 20"
-                className="w-full h-10 px-3 bg-[#141923] border border-surface-border rounded-lg text-sm text-center text-white font-mono font-bold focus:outline-none focus:border-brand-500"
+                className="w-full h-10 px-3 bg-surface-card border border-surface-border rounded-lg text-sm text-center text-gray-900 dark:text-white font-mono font-bold focus:outline-none focus:border-brand-500"
                 required
               />
-              <span className="text-[10px] text-gray-400 block text-center">Volume testado no dia</span>
+              <span className="text-[10px] text-gray-500 dark:text-gray-400 block text-center">Volume testado no dia</span>
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-emerald-400 flex items-center gap-1">
+              <label className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                 <CheckCircle2 className="w-3.5 h-3.5" /> Aprovadas (Para a Meta)
               </label>
               <input
@@ -377,14 +377,14 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
                   if (raw !== '') setQuantidadeReprovada(Math.max(0, quantidadeTestada - v));
                 }}
                 placeholder="0"
-                className="w-full h-10 px-3 bg-[#141923] border border-emerald-500/50 rounded-lg text-sm text-center text-emerald-300 font-mono font-black focus:outline-none focus:border-emerald-400 ring-1 ring-emerald-500/30"
+                className="w-full h-10 px-3 bg-surface-card border border-emerald-500/50 rounded-lg text-sm text-center text-emerald-600 dark:text-emerald-300 font-mono font-black focus:outline-none focus:border-emerald-400 ring-1 ring-emerald-500/30"
                 required
               />
-              <span className="text-[10px] text-emerald-400/80 block text-center font-medium">Pontuam na hora</span>
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400/80 block text-center font-medium">Pontuam na hora</span>
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-red-400 flex items-center gap-1">
+              <label className="text-xs font-bold text-red-600 dark:text-red-400 flex items-center gap-1">
                 <XCircle className="w-3.5 h-3.5" /> Retrabalho / Reprovadas
               </label>
               <input
@@ -398,10 +398,10 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
                   if (raw !== '') setQuantidadeAprovada(Math.max(0, quantidadeTestada - v));
                 }}
                 placeholder="0"
-                className="w-full h-10 px-3 bg-[#141923] border border-red-500/40 rounded-lg text-sm text-center text-red-300 font-mono font-bold focus:outline-none focus:border-red-500"
+                className="w-full h-10 px-3 bg-surface-card border border-red-500/40 rounded-lg text-sm text-center text-red-600 dark:text-red-300 font-mono font-bold focus:outline-none focus:border-red-500"
                 required
               />
-              <span className="text-[10px] text-red-400/80 block text-center font-medium">Voltam ao técnico</span>
+              <span className="text-[10px] text-red-600 dark:text-red-400/80 block text-center font-medium">Voltam ao técnico</span>
             </div>
           </div>
 
@@ -409,8 +409,8 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
           <div
             className={`p-2.5 rounded-lg flex items-center justify-between text-xs font-semibold ${
               isSomaValida
-                ? 'bg-emerald-950/40 text-emerald-300 border border-emerald-800/40'
-                : 'bg-red-950/40 text-red-300 border border-red-800/40 animate-pulse'
+                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/40'
+                : 'bg-red-100 text-red-800 border border-red-300 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800/40 animate-pulse'
             }`}
           >
             <span>
@@ -424,28 +424,28 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
 
         {/* 3. RETRABALHO E NÃO-CONFORMIDADE (CONDICIONAL SE REPROVADA > 0) */}
         {quantidadeReprovada > 0 && (
-          <div className="p-4 rounded-xl bg-amber-950/30 border border-amber-500/40 space-y-3.5 animate-fadeIn shadow-panel">
-            <div className="flex items-center justify-between text-xs font-bold text-amber-400 uppercase tracking-wider">
+          <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-500/40 space-y-3.5 animate-fadeIn shadow-panel">
+            <div className="flex items-center justify-between text-xs font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wider">
               <span className="flex items-center gap-1.5">
-                <ShieldAlert className="w-4 h-4 text-amber-400" /> Destino do Retrabalho & Não-Conformidade
+                <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400" /> Destino do Retrabalho & Não-Conformidade
               </span>
-              <span className="text-[11px] text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded font-bold">
+              <span className="text-[11px] text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-500/20 px-2 py-0.5 rounded font-bold">
                 {quantidadeReprovada} un para correção
               </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-gray-300 flex items-center gap-1">
-                  <RotateCcw className="w-3.5 h-3.5 text-amber-400" /> Para qual Técnico que voltou? <span className="text-amber-400">*</span>
+                <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  <RotateCcw className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" /> Para qual Técnico que voltou? <span className="text-amber-600 dark:text-amber-400">*</span>
                 </label>
                 <select
                   value={tecnicoDestinoId}
                   onChange={(e) => setTecnicoDestinoId(e.target.value)}
-                  className="w-full h-10 px-3 bg-[#141923] border border-amber-500/40 rounded-lg text-xs text-white focus:outline-none focus:border-amber-400"
+                  className="w-full h-10 px-3 bg-surface-card border border-amber-500/40 rounded-lg text-xs text-gray-900 dark:text-white focus:outline-none focus:border-amber-400"
                 >
                   {tecnicos.map((t) => (
-                    <option key={t.id} value={t.id} className="bg-[#181d26] text-white py-1">
+                    <option key={t.id} value={t.id} className="bg-surface-card text-gray-900 dark:text-white py-1">
                       {t.nome} (Devolução)
                     </option>
                   ))}
@@ -453,16 +453,16 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-gray-300">
-                  Motivo da Não-Conformidade <span className="text-amber-400">*</span>
+                <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                  Motivo da Não-Conformidade <span className="text-amber-600 dark:text-amber-400">*</span>
                 </label>
                 <select
                   value={motivoReprovacaoId}
                   onChange={(e) => setMotivoReprovacaoId(e.target.value)}
-                  className="w-full h-10 px-3 bg-[#141923] border border-amber-500/40 rounded-lg text-xs text-white focus:outline-none focus:border-amber-400"
+                  className="w-full h-10 px-3 bg-surface-card border border-amber-500/40 rounded-lg text-xs text-gray-900 dark:text-white focus:outline-none focus:border-amber-400"
                 >
                   {motivos.map((m) => (
-                    <option key={m.id} value={m.id} className="bg-[#181d26] text-white py-1">
+                    <option key={m.id} value={m.id} className="bg-surface-card text-gray-900 dark:text-white py-1">
                       {m.codigo} - {m.descricao}
                     </option>
                   ))}
@@ -471,15 +471,15 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-amber-300">
-                Descrição do Defeito Detectado / Orientação para o Técnico <span className="text-amber-400">*</span>
+              <label className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+                Descrição do Defeito Detectado / Orientação para o Técnico <span className="text-amber-600 dark:text-amber-400">*</span>
               </label>
               <textarea
                 rows={2}
                 value={detalhesDefeito}
                 onChange={(e) => setDetalhesDefeito(e.target.value)}
                 placeholder="Ex: Não ligou na carga máxima, ressoldar capacitor C12 e verificar tensão na saída."
-                className="w-full bg-[#12161f] border border-amber-500/40 rounded-lg p-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-400 resize-none"
+                className="w-full bg-surface-card border border-amber-500/40 rounded-lg p-2.5 text-xs text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:border-amber-400 resize-none"
                 required
               />
             </div>
@@ -488,7 +488,7 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
 
         {/* 4. OBSERVAÇÃO GERAL */}
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
             Observação Geral do Laudo (Opcional)
           </label>
           <textarea
@@ -496,7 +496,7 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
             value={observacao}
             onChange={(e) => setObservacao(e.target.value)}
             placeholder="Ex: Lote testado e validado em bancada de carga. FPY 90%."
-            className="w-full bg-surface-base border border-surface-border rounded-lg p-2.5 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-brand-500 resize-none"
+            className="w-full bg-surface-base border border-surface-border rounded-lg p-2.5 text-xs text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:border-brand-500 resize-none"
           />
         </div>
       </form>

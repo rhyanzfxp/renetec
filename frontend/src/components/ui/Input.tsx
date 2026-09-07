@@ -26,7 +26,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full space-y-1.5">
         {label && (
-          <label htmlFor={inputId} className="block text-xs font-semibold text-gray-300 tracking-wide uppercase">
+          <label htmlFor={inputId} className="block text-xs font-semibold text-gray-700 dark:text-gray-300 tracking-wide uppercase">
             {label}
           </label>
         )}
@@ -45,7 +45,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             autoComplete={isNumeric ? 'off' : undefined}
             className={twMerge(
               clsx(
-                'w-full bg-surface-card border rounded-lg text-sm text-gray-100 placeholder-gray-500 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 disabled:opacity-50 disabled:bg-surface-base disabled:cursor-not-allowed',
+                'w-full bg-surface-card border rounded-lg text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 disabled:opacity-50 disabled:bg-surface-base disabled:cursor-not-allowed',
                 // Remover as setas/spinners nativos do browser para campos numéricos
                 isNumeric && '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
                 'h-10 px-3',
@@ -69,11 +69,11 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           )}
         </div>
         {error ? (
-          <p className="text-xs text-red-400 font-medium flex items-center gap-1 mt-1">{error}</p>
+          <p className="text-xs text-red-500 dark:text-red-400 font-medium flex items-center gap-1 mt-1">{error}</p>
         ) : helperText ? (
-          <p className="text-xs text-gray-400 mt-1">{helperText}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{helperText}</p>
         ) : hint ? (
-          <p className="text-xs text-gray-400 mt-1">{hint}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{hint}</p>
         ) : null}
       </div>
     );

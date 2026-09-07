@@ -40,7 +40,7 @@ export function Table<T>({
     <div className={twMerge('w-full overflow-x-auto rounded-lg border border-surface-border bg-surface-card', className)}>
       <table className="w-full text-left border-collapse text-xs sm:text-sm">
         <thead>
-          <tr className="border-b border-surface-border bg-surface-elevated/80 text-gray-300 font-semibold tracking-wider uppercase text-[11px]">
+          <tr className="border-b border-surface-border bg-surface-elevated/80 text-gray-700 dark:text-gray-300 font-semibold tracking-wider uppercase text-[11px]">
             {columns.map((col) => (
               <th
                 key={col.key}
@@ -67,10 +67,10 @@ export function Table<T>({
           ) : data.length === 0 ? (
             // Empty State
             <tr>
-              <td colSpan={columns.length} className="py-8 px-4 text-center text-gray-400">
+              <td colSpan={columns.length} className="py-8 px-4 text-center text-gray-500 dark:text-gray-400">
                 <div className="flex flex-col items-center justify-center space-y-2">
-                  <Inbox className="w-8 h-8 text-gray-500 stroke-1" />
-                  <p className="text-sm font-medium text-gray-300">{emptyMessage}</p>
+                  <Inbox className="w-8 h-8 text-gray-400 dark:text-gray-500 stroke-1" />
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{emptyMessage}</p>
                 </div>
               </td>
             </tr>
@@ -90,7 +90,7 @@ export function Table<T>({
                 {columns.map((col) => (
                   <td
                     key={col.key}
-                    className={clsx('py-2.5 px-3 sm:px-4 text-gray-200', alignClasses[col.align || 'left'])}
+                    className={clsx('py-2.5 px-3 sm:px-4 text-gray-800 dark:text-gray-200', alignClasses[col.align || 'left'])}
                   >
                     {col.render ? col.render(row, index) : (row as any)[col.key]}
                   </td>

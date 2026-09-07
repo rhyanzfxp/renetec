@@ -90,9 +90,9 @@ export const RetrabalhoPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {errorMessage && (
-        <div className="p-3.5 rounded-lg bg-red-950/40 border border-red-800/50 flex items-center justify-between text-xs text-red-200">
+        <div className="p-3.5 rounded-lg bg-red-100 dark:bg-red-950/40 border border-red-300 dark:border-red-800/50 flex items-center justify-between text-xs text-red-700 dark:text-red-200">
           <div className="flex items-center gap-2.5">
-            <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+            <AlertTriangle className="w-4 h-4 text-red-500 dark:text-red-400 flex-shrink-0" />
             <span>{errorMessage}</span>
           </div>
           <Button variant="ghost" size="sm" onClick={() => setErrorMessage(null)}>
@@ -102,9 +102,9 @@ export const RetrabalhoPage: React.FC = () => {
       )}
 
       {successMessage && (
-        <div className="p-3.5 rounded-lg bg-emerald-950/40 border border-emerald-800/50 flex items-center justify-between text-xs text-emerald-200 animate-fadeIn">
+        <div className="p-3.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800/50 flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-200 animate-fadeIn">
           <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
             <span>{successMessage}</span>
           </div>
           <Button variant="ghost" size="sm" onClick={() => setSuccessMessage(null)}>
@@ -152,10 +152,10 @@ export const RetrabalhoPage: React.FC = () => {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <Wrench className="w-4 h-4 text-amber-400" /> Fila de Reparos Corretivos ({currentFila.length})
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+              <Wrench className="w-4 h-4 text-amber-500 dark:text-amber-400" /> Fila de Reparos Corretivos ({currentFila.length})
             </h3>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
               Peças reprovadas no teste de CQ aguardando intervenção técnica e encaminhamento para re-inspeção.
             </p>
           </div>
@@ -173,9 +173,9 @@ export const RetrabalhoPage: React.FC = () => {
           </div>
         ) : currentFila.length === 0 ? (
           <div className="p-8 rounded-xl bg-surface-card border border-surface-border text-center space-y-2">
-            <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
-            <h4 className="text-sm font-bold text-white">Nenhum equipamento em retrabalho!</h4>
-            <p className="text-xs text-gray-400 max-w-sm mx-auto">
+            <CheckCircle2 className="w-8 h-8 text-emerald-500 dark:text-emerald-400 mx-auto" />
+            <h4 className="text-sm font-bold text-gray-900 dark:text-white">Nenhum equipamento em retrabalho!</h4>
+            <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
               Todas as peças inspecionadas pelo CQ estão em conformidade e não há pendências de conserto.
             </p>
           </div>
@@ -196,15 +196,15 @@ export const RetrabalhoPage: React.FC = () => {
                 >
                   <div className="space-y-2.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-amber-400 tabular-nums">
+                      <span className="text-xs font-bold text-amber-600 dark:text-amber-400 tabular-nums">
                         OS #{os?.numeroOS || '—'}
                       </span>
                       <div className="flex items-center gap-1.5">
                         <span
                           className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${
                             item.status === 'EM_EXECUCAO'
-                              ? 'bg-amber-500/10 text-amber-300 border-amber-500/30 animate-pulse'
-                              : 'bg-red-500/10 text-red-300 border-red-500/30'
+                              ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30 animate-pulse'
+                              : 'bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30'
                           }`}
                         >
                           {item.status === 'EM_EXECUCAO' ? 'Em Reparo' : 'Pendente'}
@@ -214,30 +214,30 @@ export const RetrabalhoPage: React.FC = () => {
                     </div>
 
                     <div>
-                      <h4 className="text-sm font-bold text-white line-clamp-1">
+                      <h4 className="text-sm font-bold text-gray-900 dark:text-white line-clamp-1">
                         {equip?.nome || 'Equipamento'}
                       </h4>
-                      <p className="text-xs text-gray-400 line-clamp-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
                         {os?.cliente?.nomeRazaoSocial || 'MARANET Telecomunicações'}
                       </p>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs text-gray-300 py-1.5 border-y border-surface-border/50">
-                      <span>Volume a Corrigir: <strong className="text-amber-400 tabular-nums">{item.quantidadeRetrabalho} un</strong></span>
-                      <span className="flex items-center gap-1 text-gray-400">
-                        <User className="w-3 h-3 text-sky-400" />
-                        Técnico: <strong className="text-gray-200">{item.tecnicoResponsavel?.nome || 'Geral'}</strong>
+                    <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-300 py-1.5 border-y border-surface-border/50">
+                      <span>Volume a Corrigir: <strong className="text-amber-600 dark:text-amber-400 tabular-nums">{item.quantidadeRetrabalho} un</strong></span>
+                      <span className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
+                        <User className="w-3 h-3 text-sky-500 dark:text-sky-400" />
+                        Técnico: <strong className="text-gray-800 dark:text-gray-200">{item.tecnicoResponsavel?.nome || 'Geral'}</strong>
                       </span>
                     </div>
 
                     {/* Laudo do CQ */}
                     <div className="p-2.5 rounded-lg bg-surface-base/80 border border-amber-500/20 text-xs space-y-1">
-                      <div className="flex items-center gap-1 text-amber-400 font-semibold">
+                      <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-semibold">
                         <ShieldAlert className="w-3.5 h-3.5" />
                         <span>{item.motivoReprovacao?.descricao || 'Não conformidade'}</span>
                       </div>
                       {item.detalhesDefeito && (
-                        <p className="text-gray-300 text-[11px] leading-relaxed line-clamp-2">
+                        <p className="text-gray-700 dark:text-gray-300 text-[11px] leading-relaxed line-clamp-2">
                           {item.detalhesDefeito}
                         </p>
                       )}
@@ -278,7 +278,7 @@ export const RetrabalhoPage: React.FC = () => {
       {/* ─── 3. HISTÓRICO DE RETRABALHOS CONCLUÍDOS ───────────────────────── */}
       {currentHistorico.length > 0 && (
         <div className="space-y-3 pt-4 border-t border-surface-border">
-          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+          <h3 className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
             <History className="w-3.5 h-3.5" /> Reparos Corretivos Concluídos Recentemente
           </h3>
 
@@ -287,21 +287,21 @@ export const RetrabalhoPage: React.FC = () => {
               <div key={h.id || idx} className="p-3 sm:px-4 flex items-center justify-between text-xs">
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-white tabular-nums">
+                    <span className="font-bold text-gray-900 dark:text-white tabular-nums">
                       OS #{h.itemOrdemServico?.ordemServico?.numeroOS || '—'}
                     </span>
-                    <span className="text-gray-400">—</span>
-                    <span className="text-gray-300 font-medium">
+                    <span className="text-gray-400 dark:text-gray-500">—</span>
+                    <span className="text-gray-800 dark:text-gray-300 font-medium">
                       {h.itemOrdemServico?.tipoEquipamento?.nome || 'Equipamento'}
                     </span>
                   </div>
-                  <p className="text-[11px] text-gray-400">
-                    Solução Técnica: <strong className="text-gray-300">{h.solucaoAplicada || 'Reparo concluído'}</strong> • Técnico: {h.tecnicoResponsavel?.nome || 'Bancada'}
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    Solução Técnica: <strong className="text-gray-800 dark:text-gray-300">{h.solucaoAplicada || 'Reparo concluído'}</strong> • Técnico: {h.tecnicoResponsavel?.nome || 'Bancada'}
                   </p>
                 </div>
 
                 <div className="text-right flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/30 text-[10px] font-semibold">
+                  <span className="px-2 py-0.5 rounded bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/30 text-[10px] font-semibold">
                     {h.quantidadeRetrabalho} un em Re-teste
                   </span>
                 </div>

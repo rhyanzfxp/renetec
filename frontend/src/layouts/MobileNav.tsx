@@ -49,8 +49,8 @@ export const MobileNav: React.FC<MobileNavProps> = ({ activeSection, onSelectSec
             className={clsx(
               'flex flex-col items-center justify-center min-w-[64px] min-h-[48px] py-1 px-2 rounded-lg text-[10px] font-medium transition-colors select-none',
               isActive
-                ? 'text-brand-400 bg-brand-500/10 font-bold'
-                : 'text-gray-400 hover:text-gray-200'
+                ? 'text-brand-600 dark:text-brand-400 bg-brand-500/10 font-bold'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
             )}
           >
             {item.icon}

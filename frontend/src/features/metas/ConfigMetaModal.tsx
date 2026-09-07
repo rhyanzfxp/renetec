@@ -116,8 +116,8 @@ export const ConfigMetaModal: React.FC<ConfigMetaModalProps> = ({
     >
       <form onSubmit={handleSubmit} className="space-y-4 text-sm">
         {errorMessage && (
-          <div className="p-3 rounded-lg bg-red-950/40 border border-red-800/40 flex items-center gap-2 text-xs text-red-300">
-            <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+          <div className="p-3 rounded-lg bg-red-100 dark:bg-red-950/40 border border-red-300 dark:border-red-800/40 flex items-center gap-2 text-xs text-red-700 dark:text-red-300">
+            <AlertTriangle className="w-4 h-4 text-red-500 dark:text-red-400 flex-shrink-0" />
             <span>{errorMessage}</span>
           </div>
         )}
@@ -126,10 +126,10 @@ export const ConfigMetaModal: React.FC<ConfigMetaModalProps> = ({
         <div className="p-3.5 rounded-xl bg-surface-elevated border border-surface-border space-y-2">
           <div className="flex items-center justify-between">
             <div>
-              <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Período Piloto (12/08 a 31/08)
+              <span className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" /> Período Piloto (12/08 a 31/08)
               </span>
-              <p className="text-[11px] text-gray-400 mt-0.5">
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
                 Ajusta as faixas de metas para o período proporcional de agosto.
               </p>
             </div>
@@ -147,13 +147,13 @@ export const ConfigMetaModal: React.FC<ConfigMetaModalProps> = ({
 
         {isPiloto ? (
           /* Metas do Período Piloto */
-          <div className="space-y-3 p-3.5 rounded-xl bg-amber-950/20 border border-amber-500/30">
-            <h4 className="text-xs font-bold text-amber-300 uppercase tracking-wider">
+          <div className="space-y-3 p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-300 dark:border-amber-500/30">
+            <h4 className="text-xs font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider">
               Faixas do Período Piloto (Pontos)
             </h4>
             <div className="space-y-2.5">
               <div>
-                <label className="block text-xs font-semibold text-amber-200">
+                <label className="block text-xs font-semibold text-amber-800 dark:text-amber-200">
                   Meta Piloto Mínima (Pontos)
                 </label>
                 <input
@@ -162,12 +162,12 @@ export const ConfigMetaModal: React.FC<ConfigMetaModalProps> = ({
                   value={pilotoMinima}
                   onChange={(e) => setPilotoMinima(e.target.value.replace(/\D/g, ''))}
                   placeholder="160"
-                  className="w-full bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500 tabular-nums font-bold mt-1"
+                  className="w-full bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-brand-500 tabular-nums font-bold mt-1"
                   required
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-emerald-200">
+                <label className="block text-xs font-semibold text-emerald-800 dark:text-emerald-200">
                   Meta Piloto Alvo (Pontos)
                 </label>
                 <input
@@ -176,12 +176,12 @@ export const ConfigMetaModal: React.FC<ConfigMetaModalProps> = ({
                   value={pilotoAlvo}
                   onChange={(e) => setPilotoAlvo(e.target.value.replace(/\D/g, ''))}
                   placeholder="190"
-                  className="w-full bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500 tabular-nums font-bold mt-1"
+                  className="w-full bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-brand-500 tabular-nums font-bold mt-1"
                   required
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-yellow-200">
+                <label className="block text-xs font-semibold text-amber-800 dark:text-yellow-200">
                   Meta Piloto Excelência (Pontos)
                 </label>
                 <input
@@ -190,7 +190,7 @@ export const ConfigMetaModal: React.FC<ConfigMetaModalProps> = ({
                   value={pilotoExcelencia}
                   onChange={(e) => setPilotoExcelencia(e.target.value.replace(/\D/g, ''))}
                   placeholder="220"
-                  className="w-full bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500 tabular-nums font-bold mt-1"
+                  className="w-full bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-brand-500 tabular-nums font-bold mt-1"
                   required
                 />
               </div>
@@ -200,7 +200,7 @@ export const ConfigMetaModal: React.FC<ConfigMetaModalProps> = ({
           /* Metas Oficiais Regulares */
           <div className="space-y-3 pt-1">
             <div className="space-y-1">
-              <label className="block text-xs font-semibold text-amber-300">
+              <label className="block text-xs font-semibold text-amber-700 dark:text-amber-300">
                 Meta Base (Pontos) — Sem bônus coletivo
               </label>
               <input
@@ -209,13 +209,13 @@ export const ConfigMetaModal: React.FC<ConfigMetaModalProps> = ({
                 value={base}
                 onChange={(e) => setBase(e.target.value.replace(/\D/g, ''))}
                 placeholder="250"
-                className="w-full bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500 tabular-nums font-bold"
+                className="w-full bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-brand-500 tabular-nums font-bold"
                 required
               />
             </div>
 
             <div className="space-y-1">
-              <label className="block text-xs font-semibold text-emerald-300">
+              <label className="block text-xs font-semibold text-emerald-700 dark:text-emerald-300">
                 Meta Alvo (Pontos) — 100% do bônus coletivo
               </label>
               <input
@@ -224,13 +224,13 @@ export const ConfigMetaModal: React.FC<ConfigMetaModalProps> = ({
                 value={alvo}
                 onChange={(e) => setAlvo(e.target.value.replace(/\D/g, ''))}
                 placeholder="300"
-                className="w-full bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500 tabular-nums font-bold"
+                className="w-full bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-brand-500 tabular-nums font-bold"
                 required
               />
             </div>
 
             <div className="space-y-1">
-              <label className="block text-xs font-semibold text-yellow-400">
+              <label className="block text-xs font-semibold text-amber-700 dark:text-yellow-400">
                 Meta Excelência (Pontos) — 125% do bônus coletivo (Teto)
               </label>
               <input
@@ -239,7 +239,7 @@ export const ConfigMetaModal: React.FC<ConfigMetaModalProps> = ({
                 value={excelencia}
                 onChange={(e) => setExcelencia(e.target.value.replace(/\D/g, ''))}
                 placeholder="350"
-                className="w-full bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500 tabular-nums font-bold"
+                className="w-full bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-brand-500 tabular-nums font-bold"
                 required
               />
             </div>
@@ -250,7 +250,7 @@ export const ConfigMetaModal: React.FC<ConfigMetaModalProps> = ({
         <div className="space-y-3 pt-2 border-t border-surface-border/60">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="block text-xs font-semibold text-gray-300">
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">
                 Retrabalho Máximo (%)
               </label>
               <input
@@ -259,12 +259,12 @@ export const ConfigMetaModal: React.FC<ConfigMetaModalProps> = ({
                 value={retrabalhoMaximo}
                 onChange={(e) => setRetrabalhoMaximo(e.target.value.replace(/[^0-9.,]/g, ''))}
                 placeholder="5.0"
-                className="w-full bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500 tabular-nums"
+                className="w-full bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-brand-500 tabular-nums"
                 required
               />
             </div>
             <div className="space-y-1">
-              <label className="block text-xs font-semibold text-gray-300">
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">
                 Fundo de Bônus (% Faturamento)
               </label>
               <input
@@ -273,16 +273,16 @@ export const ConfigMetaModal: React.FC<ConfigMetaModalProps> = ({
                 value={fundoBonusPct}
                 onChange={(e) => setFundoBonusPct(e.target.value.replace(/[^0-9.,]/g, ''))}
                 placeholder="1.5"
-                className="w-full bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500 tabular-nums"
+                className="w-full bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-brand-500 tabular-nums"
                 required
               />
             </div>
           </div>
         </div>
 
-        <div className="p-3 rounded-lg bg-surface-elevated border border-surface-border/60 text-xs text-gray-300 space-y-1">
-          <p className="font-semibold text-gray-200">Parâmetros Oficiais da Planilha Renetec:</p>
-          <p className="text-gray-400">
+        <div className="p-3 rounded-lg bg-surface-elevated border border-surface-border/60 text-xs text-gray-700 dark:text-gray-300 space-y-1">
+          <p className="font-semibold text-gray-900 dark:text-gray-200">Parâmetros Oficiais da Planilha Renetec:</p>
+          <p className="text-gray-600 dark:text-gray-400">
             • Metas: Base 250 pts • Alvo 300 pts • Excelência 350 pts.<br />
             • Piloto: Mínima 160 pts • Alvo 190 pts • Excelência 220 pts.<br />
             • Qualidade: Máx 5% Retrabalho • Fundo Bônus: 1,5% (70% Coletivo / 30% Individual).

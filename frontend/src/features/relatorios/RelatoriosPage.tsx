@@ -118,11 +118,11 @@ const PaginacaoBar: React.FC<{
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-surface-border bg-surface-elevated/30 text-xs text-gray-400">
+    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-surface-border bg-surface-elevated/30 text-xs text-gray-500 dark:text-gray-400">
       {/* Info */}
       <span>
-        Exibindo <span className="font-semibold text-gray-200">{start + 1}–{start + pageItems}</span> de{' '}
-        <span className="font-semibold text-gray-200">{total}</span> registros
+        Exibindo <span className="font-semibold text-gray-800 dark:text-gray-200">{start + 1}–{start + pageItems}</span> de{' '}
+        <span className="font-semibold text-gray-800 dark:text-gray-200">{total}</span> registros
       </span>
 
       <div className="flex items-center gap-3">
@@ -132,7 +132,7 @@ const PaginacaoBar: React.FC<{
           <select
             value={pageSize}
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            className="bg-surface-base border border-surface-border rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            className="bg-surface-base border border-surface-border rounded px-2 py-1 text-xs text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-brand-500"
           >
             {PAGE_SIZE_OPTIONS.map((s) => (
               <option key={s} value={s}>{s}</option>
@@ -165,26 +165,26 @@ const PaginacaoBar: React.FC<{
               onClick={() => onPageChange(p)}
               className={`min-w-[28px] px-2 py-1 rounded border text-xs font-medium transition-colors ${
                 p === page
-                  ? 'bg-brand-600 border-brand-500 text-white'
-                  : 'border-surface-border bg-surface-base hover:bg-surface-elevated text-gray-300'
+                  ? 'bg-brand-600 border-brand-500 text-white shadow-sm'
+                  : 'border-surface-border bg-surface-base hover:bg-surface-elevated text-gray-700 dark:text-gray-300'
               }`}
             >
               {p}
             </button>
           ))}
-          {windowPages[windowPages.length - 1] < totalPages && <span className="px-1">…</span>}
+          {windowPages[windowPages.length - 1] < totalPages && <span className="px-1 text-gray-400">…</span>}
 
           <button
             onClick={() => onPageChange(page + 1)}
             disabled={page === totalPages}
-            className="px-2 py-1 rounded border border-surface-border bg-surface-base disabled:opacity-30 hover:bg-surface-elevated transition-colors"
+            className="px-2 py-1 rounded border border-surface-border bg-surface-base disabled:opacity-30 hover:bg-surface-elevated transition-colors text-gray-700 dark:text-gray-300"
           >
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => onPageChange(totalPages)}
             disabled={page === totalPages}
-            className="px-2 py-1 rounded border border-surface-border bg-surface-base disabled:opacity-30 hover:bg-surface-elevated transition-colors"
+            className="px-2 py-1 rounded border border-surface-border bg-surface-base disabled:opacity-30 hover:bg-surface-elevated transition-colors text-gray-700 dark:text-gray-300"
             title="Última página"
           >
             »
@@ -200,12 +200,12 @@ const Badge: React.FC<{ children: React.ReactNode; color?: 'green' | 'red' | 'am
   children, color = 'gray',
 }) => {
   const cls = {
-    green: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
-    red: 'bg-red-500/15 text-red-300 border-red-500/30',
-    amber: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-    blue: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
-    gray: 'bg-gray-500/15 text-gray-300 border-gray-500/30',
-    purple: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
+    green: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+    red: 'bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30',
+    amber: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
+    blue: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30',
+    gray: 'bg-gray-500/15 text-gray-700 dark:text-gray-300 border-gray-500/30',
+    purple: 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30',
   };
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${cls[color]}`}>
@@ -218,19 +218,19 @@ const KpiCard: React.FC<{ label: string; value: string | number; icon: React.Rea
   label, value, icon, color = 'blue', sub,
 }) => {
   const map: Record<string, string> = {
-    blue: 'text-blue-400 bg-blue-500/10 border-blue-500/25',
-    green: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/25',
-    amber: 'text-amber-400 bg-amber-500/10 border-amber-500/25',
-    red: 'text-red-400 bg-red-500/10 border-red-500/25',
-    purple: 'text-purple-400 bg-purple-500/10 border-purple-500/25',
-    gray: 'text-gray-400 bg-gray-500/10 border-gray-500/25',
+    blue: 'text-blue-700 dark:text-blue-400 bg-blue-50/70 dark:bg-blue-500/10 border-blue-500/25',
+    green: 'text-emerald-700 dark:text-emerald-400 bg-emerald-50/70 dark:bg-emerald-500/10 border-emerald-500/25',
+    amber: 'text-amber-700 dark:text-amber-400 bg-amber-50/70 dark:bg-amber-500/10 border-amber-500/25',
+    red: 'text-red-700 dark:text-red-400 bg-red-50/70 dark:bg-red-500/10 border-red-500/25',
+    purple: 'text-purple-700 dark:text-purple-400 bg-purple-50/70 dark:bg-purple-500/10 border-purple-500/25',
+    gray: 'text-gray-700 dark:text-gray-400 bg-gray-50/70 dark:bg-gray-500/10 border-gray-500/25',
   };
   return (
     <div className={`rounded-xl border p-4 flex items-center gap-3 ${map[color] ?? map.blue}`}>
       <div className="text-2xl">{icon}</div>
       <div>
-        <div className="text-xs text-gray-400">{label}</div>
-        <div className="text-xl font-bold tabular-nums text-white">{value}</div>
+        <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
+        <div className="text-xl font-bold tabular-nums text-gray-900 dark:text-white">{value}</div>
         {sub && <div className="text-[11px] text-gray-500">{sub}</div>}
       </div>
     </div>
@@ -293,7 +293,7 @@ const FiltrosLocaisBar: React.FC<{
             value={filtros.busca}
             onChange={(e) => onChange({ ...filtros, busca: e.target.value })}
             placeholder={placeholder}
-            className="w-full pl-8 pr-3 py-2 bg-surface-base border border-surface-border rounded-lg text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            className="w-full pl-8 pr-3 py-2 bg-surface-base border border-surface-border rounded-lg text-xs text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
           />
         </div>
 
@@ -302,7 +302,7 @@ const FiltrosLocaisBar: React.FC<{
           <select
             value={filtros.cliente}
             onChange={(e) => onChange({ ...filtros, cliente: e.target.value })}
-            className="bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-xs text-gray-200 focus:outline-none focus:ring-1 focus:ring-brand-500 max-w-[180px]"
+            className="bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-xs text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-brand-500 max-w-[180px]"
           >
             <option value="">Todos os Clientes</option>
             {clienteOpts.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -314,7 +314,7 @@ const FiltrosLocaisBar: React.FC<{
           <select
             value={filtros.tecnico}
             onChange={(e) => onChange({ ...filtros, tecnico: e.target.value })}
-            className="bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-xs text-gray-200 focus:outline-none focus:ring-1 focus:ring-brand-500 max-w-[160px]"
+            className="bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-xs text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-brand-500 max-w-[160px]"
           >
             <option value="">Todos os Técnicos</option>
             {tecnicoOpts.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -326,7 +326,7 @@ const FiltrosLocaisBar: React.FC<{
           <select
             value={filtros.inspetor}
             onChange={(e) => onChange({ ...filtros, inspetor: e.target.value })}
-            className="bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-xs text-gray-200 focus:outline-none focus:ring-1 focus:ring-brand-500 max-w-[160px]"
+            className="bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-xs text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-brand-500 max-w-[160px]"
           >
             <option value="">Todos os Inspetores</option>
             {inspetorOpts.map((i) => <option key={i} value={i}>{i}</option>)}
@@ -338,7 +338,7 @@ const FiltrosLocaisBar: React.FC<{
           <select
             value={filtros.status}
             onChange={(e) => onChange({ ...filtros, status: e.target.value })}
-            className="bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-xs text-gray-200 focus:outline-none focus:ring-1 focus:ring-brand-500 max-w-[160px]"
+            className="bg-surface-base border border-surface-border rounded-lg px-3 py-2 text-xs text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-brand-500 max-w-[160px]"
           >
             <option value="">Todos os Status</option>
             {statusOpts.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -349,7 +349,7 @@ const FiltrosLocaisBar: React.FC<{
         {temFiltro && (
           <button
             onClick={limpar}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs text-red-400 border border-red-500/30 bg-red-500/10 rounded-lg hover:bg-red-500/20 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs text-red-600 dark:text-red-400 border border-red-500/30 bg-red-500/10 rounded-lg hover:bg-red-500/20 transition-colors"
           >
             <X className="w-3 h-3" /> Limpar
           </button>
@@ -358,10 +358,10 @@ const FiltrosLocaisBar: React.FC<{
 
       {/* Contador de resultados filtrados */}
       {temFiltro && (
-        <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+        <div className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400">
           <Filter className="w-3 h-3" />
           <span>
-            <span className="text-gray-300 font-semibold">{totalFiltrado}</span> de {totalOriginal} registros correspondendo aos filtros
+            <span className="text-gray-800 dark:text-gray-200 font-semibold">{totalFiltrado}</span> de {totalOriginal} registros correspondendo aos filtros
           </span>
         </div>
       )}
@@ -371,11 +371,11 @@ const FiltrosLocaisBar: React.FC<{
 
 // ─── Templates de Relatório ───────────────────────────────────────────────────
 const templateCards: { id: TipoRelatorio; label: string; desc: string; icon: React.ReactNode; color: string }[] = [
-  { id: 'producao', label: 'Produção de Técnicos', desc: 'Apontamentos de bancada: reparadas, sem defeito e sucata por OS', icon: <Wrench className="w-5 h-5" />, color: 'from-blue-600/30 to-blue-600/10 border-blue-500/30 text-blue-300' },
-  { id: 'qualidade', label: 'Inspeções e Testes CQ', desc: 'Laudos de controle de qualidade, aprovações e rotas de retrabalho', icon: <CheckCircle className="w-5 h-5" />, color: 'from-emerald-600/30 to-emerald-600/10 border-emerald-500/30 text-emerald-300' },
-  { id: 'consolidado', label: 'Consolidado Diário', desc: 'Totais e FPY% agregados por técnico e inspetor', icon: <BarChart2 className="w-5 h-5" />, color: 'from-purple-600/30 to-purple-600/10 border-purple-500/30 text-purple-300' },
-  { id: 'retrabalho', label: 'Retrabalhos & Defeitos', desc: 'Histórico de não-conformidades, motivos e técnicos envolvidos', icon: <AlertTriangle className="w-5 h-5" />, color: 'from-amber-600/30 to-amber-600/10 border-amber-500/30 text-amber-300' },
-  { id: 'clientes', label: 'Resumo por Cliente', desc: 'Volume total processado por empresa no período', icon: <Building2 className="w-5 h-5" />, color: 'from-pink-600/30 to-pink-600/10 border-pink-500/30 text-pink-300' },
+  { id: 'producao', label: 'Produção de Técnicos', desc: 'Apontamentos de bancada: reparadas, sem defeito e sucata por OS', icon: <Wrench className="w-5 h-5" />, color: 'from-blue-600/30 to-blue-600/10 border-blue-500/30 text-blue-700 dark:text-blue-300' },
+  { id: 'qualidade', label: 'Inspeções e Testes CQ', desc: 'Laudos de controle de qualidade, aprovações e rotas de retrabalho', icon: <CheckCircle className="w-5 h-5" />, color: 'from-emerald-600/30 to-emerald-600/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300' },
+  { id: 'consolidado', label: 'Consolidado Diário', desc: 'Totais e FPY% agregados por técnico e inspetor', icon: <BarChart2 className="w-5 h-5" />, color: 'from-purple-600/30 to-purple-600/10 border-purple-500/30 text-purple-700 dark:text-purple-300' },
+  { id: 'retrabalho', label: 'Retrabalhos & Defeitos', desc: 'Histórico de não-conformidades, motivos e técnicos envolvidos', icon: <AlertTriangle className="w-5 h-5" />, color: 'from-amber-600/30 to-amber-600/10 border-amber-500/30 text-amber-700 dark:text-amber-300' },
+  { id: 'clientes', label: 'Resumo por Cliente', desc: 'Volume total processado por empresa no período', icon: <Building2 className="w-5 h-5" />, color: 'from-pink-600/30 to-pink-600/10 border-pink-500/30 text-pink-700 dark:text-pink-300' },
 ];
 
 // ─── Tabela de Produção ───────────────────────────────────────────────────────
@@ -417,7 +417,7 @@ const TabelaProducao: React.FC<{ dados: ItemRelatorioProducao[]; onExport: () =>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="text-gray-400 bg-surface-elevated/40 border-b border-surface-border">
+              <tr className="text-gray-600 dark:text-gray-400 bg-surface-elevated/40 border-b border-surface-border">
                 <th className="px-3 py-2 text-left font-semibold">OS</th>
                 <th className="px-3 py-2 text-left font-semibold">Empresa</th>
                 <th className="px-3 py-2 text-left font-semibold">Técnico</th>
@@ -435,16 +435,16 @@ const TabelaProducao: React.FC<{ dados: ItemRelatorioProducao[]; onExport: () =>
                 <tr><td colSpan={10}><EmptyState message="Nenhum resultado para os filtros aplicados." /></td></tr>
               ) : pageItems.map((item, i) => (
                 <tr key={item.id} className={`border-b border-surface-border/50 hover:bg-surface-elevated/30 transition-colors ${i % 2 === 0 ? '' : 'bg-surface-card/20'}`}>
-                  <td className="px-3 py-2.5">{item.numeroOS ? <span className="font-mono font-bold text-brand-300">#{item.numeroOS}</span> : <span className="text-gray-500">—</span>}</td>
-                  <td className="px-3 py-2.5 text-gray-200 max-w-[120px] truncate">{item.clienteNome}</td>
-                  <td className="px-3 py-2.5"><div className="flex items-center gap-1.5"><User className="w-3 h-3 text-gray-500" /><span className="text-gray-200">{item.tecnicoNome}</span></div></td>
-                  <td className="px-3 py-2.5 text-gray-400 max-w-[130px] truncate">{item.tipoEquipamentoNome}</td>
+                  <td className="px-3 py-2.5">{item.numeroOS ? <span className="font-mono font-bold text-brand-600 dark:text-brand-300">#{item.numeroOS}</span> : <span className="text-gray-500">—</span>}</td>
+                  <td className="px-3 py-2.5 text-gray-800 dark:text-gray-200 max-w-[120px] truncate">{item.clienteNome}</td>
+                  <td className="px-3 py-2.5"><div className="flex items-center gap-1.5"><User className="w-3 h-3 text-gray-400 dark:text-gray-500" /><span className="text-gray-800 dark:text-gray-200">{item.tecnicoNome}</span></div></td>
+                  <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400 max-w-[130px] truncate">{item.tipoEquipamentoNome}</td>
                   <td className="px-3 py-2.5 text-right"><Badge color="blue">{item.quantidadeReparada}</Badge></td>
                   <td className="px-3 py-2.5 text-right"><Badge color="gray">{item.quantidadeSemDefeito}</Badge></td>
                   <td className="px-3 py-2.5 text-right"><Badge color="red">{item.quantidadeSucata}</Badge></td>
-                  <td className="px-3 py-2.5 text-right font-bold text-white">{item.totalCaixa}</td>
-                  <td className="px-3 py-2.5 text-right text-amber-300 font-semibold">{item.pontosTotal.toFixed(1)}</td>
-                  <td className="px-3 py-2.5 text-gray-400 whitespace-nowrap">{fmtData(item.dataRegistro)}</td>
+                  <td className="px-3 py-2.5 text-right font-bold text-gray-900 dark:text-white">{item.totalCaixa}</td>
+                  <td className="px-3 py-2.5 text-right text-amber-600 dark:text-amber-300 font-bold">{item.pontosTotal.toFixed(1)}</td>
+                  <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400 whitespace-nowrap">{fmtData(item.dataRegistro)}</td>
                 </tr>
               ))}
             </tbody>
@@ -500,7 +500,7 @@ const TabelaQualidade: React.FC<{ dados: ItemRelatorioQualidade[]; onExport: () 
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="text-gray-400 bg-surface-elevated/40 border-b border-surface-border">
+              <tr className="text-gray-600 dark:text-gray-400 bg-surface-elevated/40 border-b border-surface-border">
                 <th className="px-3 py-2 text-left font-semibold">OS</th>
                 <th className="px-3 py-2 text-left font-semibold">Empresa</th>
                 <th className="px-3 py-2 text-left font-semibold">Inspetor CQ</th>
@@ -518,20 +518,20 @@ const TabelaQualidade: React.FC<{ dados: ItemRelatorioQualidade[]; onExport: () 
                 <tr><td colSpan={10}><EmptyState message="Nenhum resultado para os filtros aplicados." /></td></tr>
               ) : pageItems.map((item, i) => (
                 <tr key={item.id} className={`border-b border-surface-border/50 hover:bg-surface-elevated/30 transition-colors ${i % 2 === 0 ? '' : 'bg-surface-card/20'}`}>
-                  <td className="px-3 py-2.5">{item.numeroOS ? <span className="font-mono font-bold text-brand-300">#{item.numeroOS}</span> : <span className="text-gray-500">—</span>}</td>
-                  <td className="px-3 py-2.5 text-gray-200 max-w-[120px] truncate">{item.clienteNome}</td>
-                  <td className="px-3 py-2.5"><div className="flex items-center gap-1.5"><CheckCircle className="w-3 h-3 text-emerald-500" /><span className="text-gray-200">{item.inspetorNome}</span></div></td>
-                  <td className="px-3 py-2.5 text-gray-400">{item.tecnicoReparoNome}</td>
-                  <td className="px-3 py-2.5 text-right font-semibold text-white">{item.quantidadeTestada}</td>
+                  <td className="px-3 py-2.5">{item.numeroOS ? <span className="font-mono font-bold text-brand-600 dark:text-brand-300">#{item.numeroOS}</span> : <span className="text-gray-500">—</span>}</td>
+                  <td className="px-3 py-2.5 text-gray-800 dark:text-gray-200 max-w-[120px] truncate">{item.clienteNome}</td>
+                  <td className="px-3 py-2.5"><div className="flex items-center gap-1.5"><CheckCircle className="w-3 h-3 text-emerald-500" /><span className="text-gray-800 dark:text-gray-200">{item.inspetorNome}</span></div></td>
+                  <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400">{item.tecnicoReparoNome}</td>
+                  <td className="px-3 py-2.5 text-right font-semibold text-gray-900 dark:text-white">{item.quantidadeTestada}</td>
                   <td className="px-3 py-2.5 text-right"><Badge color="green">{item.quantidadeAprovada} ✓</Badge></td>
-                  <td className="px-3 py-2.5 text-right">{item.quantidadeReprovada > 0 ? <Badge color="amber">{item.quantidadeReprovada} ↩</Badge> : <span className="text-gray-600">—</span>}</td>
-                  <td className="px-3 py-2.5">{item.tecnicoDestinoRetrabalho ? <div className="flex items-center gap-1 text-amber-400"><ArrowRight className="w-3 h-3" /><span>{item.tecnicoDestinoRetrabalho}</span></div> : <span className="text-gray-600">—</span>}</td>
+                  <td className="px-3 py-2.5 text-right">{item.quantidadeReprovada > 0 ? <Badge color="amber">{item.quantidadeReprovada} ↩</Badge> : <span className="text-gray-400 dark:text-gray-600">—</span>}</td>
+                  <td className="px-3 py-2.5">{item.tecnicoDestinoRetrabalho ? <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400"><ArrowRight className="w-3 h-3" /><span>{item.tecnicoDestinoRetrabalho}</span></div> : <span className="text-gray-400 dark:text-gray-600">—</span>}</td>
                   <td className="px-3 py-2.5">
                     {item.statusAprovacao === 'APROVADO_TOTAL' ? <Badge color="green">Aprovado</Badge>
                       : item.statusAprovacao === 'APROVADO_PARCIAL' ? <Badge color="amber">Parcial</Badge>
                       : <Badge color="red">Reprovado</Badge>}
                   </td>
-                  <td className="px-3 py-2.5 text-gray-400 whitespace-nowrap">{fmtData(item.dataTeste)}</td>
+                  <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400 whitespace-nowrap">{fmtData(item.dataTeste)}</td>
                 </tr>
               ))}
             </tbody>
@@ -584,7 +584,7 @@ const TabelaRetrabalho: React.FC<{ dados: ItemRelatorioRetrabalho[]; onExport: (
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="text-gray-400 bg-surface-elevated/40 border-b border-surface-border">
+              <tr className="text-gray-600 dark:text-gray-400 bg-surface-elevated/40 border-b border-surface-border">
                 <th className="px-3 py-2 text-left font-semibold">OS</th>
                 <th className="px-3 py-2 text-left font-semibold">Empresa</th>
                 <th className="px-3 py-2 text-left font-semibold">Equipamento</th>
@@ -601,18 +601,18 @@ const TabelaRetrabalho: React.FC<{ dados: ItemRelatorioRetrabalho[]; onExport: (
                 <tr><td colSpan={9}><EmptyState message="Nenhum resultado para os filtros aplicados." /></td></tr>
               ) : pageItems.map((item, i) => (
                 <tr key={item.id} className={`border-b border-surface-border/50 hover:bg-surface-elevated/30 transition-colors ${i % 2 === 0 ? '' : 'bg-surface-card/20'}`}>
-                  <td className="px-3 py-2.5">{item.numeroOS ? <span className="font-mono font-bold text-brand-300">#{item.numeroOS}</span> : <span className="text-gray-500">—</span>}</td>
-                  <td className="px-3 py-2.5 text-gray-200 max-w-[110px] truncate">{item.clienteNome}</td>
-                  <td className="px-3 py-2.5 text-gray-400 max-w-[120px] truncate">{item.tipoEquipamentoNome}</td>
+                  <td className="px-3 py-2.5">{item.numeroOS ? <span className="font-mono font-bold text-brand-600 dark:text-brand-300">#{item.numeroOS}</span> : <span className="text-gray-500">—</span>}</td>
+                  <td className="px-3 py-2.5 text-gray-800 dark:text-gray-200 max-w-[110px] truncate">{item.clienteNome}</td>
+                  <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400 max-w-[120px] truncate">{item.tipoEquipamentoNome}</td>
                   <td className="px-3 py-2.5 text-right"><Badge color="amber">{item.quantidadeRetrabalho}</Badge></td>
                   <td className="px-3 py-2.5 max-w-[160px]">
-                    <span className="text-red-300 truncate block">{item.motivoDescricao}</span>
-                    {item.detalhesDefeito && <span className="text-gray-500 text-[11px] truncate block">{item.detalhesDefeito}</span>}
+                    <span className="text-red-600 dark:text-red-300 font-medium truncate block">{item.motivoDescricao}</span>
+                    {item.detalhesDefeito && <span className="text-gray-500 dark:text-gray-400 text-[11px] truncate block">{item.detalhesDefeito}</span>}
                   </td>
-                  <td className="px-3 py-2.5 text-gray-400">{item.inspetorNome}</td>
-                  <td className="px-3 py-2.5"><div className="flex items-center gap-1 text-xs"><span className="text-gray-300">{item.tecnicoOrigem}</span><ArrowRight className="w-3 h-3 text-amber-500" /><span className="text-amber-300">{item.tecnicoDestino}</span></div></td>
+                  <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400">{item.inspetorNome}</td>
+                  <td className="px-3 py-2.5"><div className="flex items-center gap-1 text-xs"><span className="text-gray-700 dark:text-gray-300">{item.tecnicoOrigem}</span><ArrowRight className="w-3 h-3 text-amber-500" /><span className="text-amber-600 dark:text-amber-300 font-medium">{item.tecnicoDestino}</span></div></td>
                   <td className="px-3 py-2.5">{item.status === 'CONCLUIDO' ? <Badge color="green">Concluído</Badge> : <Badge color="amber">Pendente</Badge>}</td>
-                  <td className="px-3 py-2.5 text-gray-400 whitespace-nowrap">{fmtDataCurta(item.dataCriacao)}</td>
+                  <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400 whitespace-nowrap">{fmtDataCurta(item.dataCriacao)}</td>
                 </tr>
               ))}
             </tbody>
@@ -652,19 +652,19 @@ const TabelaConsolidado: React.FC<{
       {/* Técnicos */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2"><Wrench className="w-4 h-4 text-blue-400" /> Técnicos de Produção</h3>
-          <button onClick={onExportTecnicos} className="flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 transition-colors"><Download className="w-3.5 h-3.5" /> CSV</button>
+          <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2"><Wrench className="w-4 h-4 text-blue-500 dark:text-blue-400" /> Técnicos de Produção</h3>
+          <button onClick={onExportTecnicos} className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors"><Download className="w-3.5 h-3.5" /> CSV</button>
         </div>
         <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
-          <input value={buscaTec} onChange={(e) => setBuscaTec(e.target.value)} placeholder="Filtrar técnico..." className="w-full pl-8 pr-3 py-2 bg-surface-base border border-surface-border rounded-lg text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-brand-500" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+          <input value={buscaTec} onChange={(e) => setBuscaTec(e.target.value)} placeholder="Filtrar técnico..." className="w-full pl-8 pr-3 py-2 bg-surface-base border border-surface-border rounded-lg text-xs text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-brand-500" />
         </div>
         {tecsFiltrados.length === 0 ? <EmptyState message="Nenhum técnico encontrado." /> : (
           <div className="rounded-xl border border-surface-border overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="text-gray-400 bg-surface-elevated/40 border-b border-surface-border">
+                  <tr className="text-gray-600 dark:text-gray-400 bg-surface-elevated/40 border-b border-surface-border">
                     <th className="px-3 py-2 text-left font-semibold">Técnico</th>
                     <th className="px-3 py-2 text-right font-semibold">Lotes</th>
                     <th className="px-3 py-2 text-right font-semibold">Reparadas</th>
@@ -677,13 +677,13 @@ const TabelaConsolidado: React.FC<{
                 <tbody>
                   {tecPag.pageItems.map((t, i) => (
                     <tr key={t.nome} className={`border-b border-surface-border/50 hover:bg-surface-elevated/30 ${i % 2 === 0 ? '' : 'bg-surface-card/20'}`}>
-                      <td className="px-3 py-2.5 font-semibold text-white"><div className="flex items-center gap-1.5"><User className="w-3 h-3 text-blue-400" />{t.nome}</div></td>
-                      <td className="px-3 py-2.5 text-right text-gray-400">{t.totalLotes}</td>
+                      <td className="px-3 py-2.5 font-semibold text-gray-900 dark:text-white"><div className="flex items-center gap-1.5"><User className="w-3 h-3 text-blue-500 dark:text-blue-400" />{t.nome}</div></td>
+                      <td className="px-3 py-2.5 text-right text-gray-600 dark:text-gray-400">{t.totalLotes}</td>
                       <td className="px-3 py-2.5 text-right"><Badge color="blue">{t.totalReparadas}</Badge></td>
                       <td className="px-3 py-2.5 text-right"><Badge color="gray">{t.totalSemDefeito}</Badge></td>
                       <td className="px-3 py-2.5 text-right"><Badge color="red">{t.totalSucata}</Badge></td>
-                      <td className="px-3 py-2.5 text-right">{t.retrabalhosRecebidos > 0 ? <Badge color="amber">{t.retrabalhosRecebidos}</Badge> : <span className="text-gray-600">—</span>}</td>
-                      <td className="px-3 py-2.5 text-right font-bold text-amber-300">{t.pontosTotal.toFixed(1)}</td>
+                      <td className="px-3 py-2.5 text-right">{t.retrabalhosRecebidos > 0 ? <Badge color="amber">{t.retrabalhosRecebidos}</Badge> : <span className="text-gray-400 dark:text-gray-600">—</span>}</td>
+                      <td className="px-3 py-2.5 text-right font-bold text-amber-600 dark:text-amber-300">{t.pontosTotal.toFixed(1)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -697,19 +697,19 @@ const TabelaConsolidado: React.FC<{
       {/* Inspetores */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2"><CheckCircle className="w-4 h-4 text-emerald-400" /> Inspetores de Controle de Qualidade</h3>
-          <button onClick={onExportInspetores} className="flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 transition-colors"><Download className="w-3.5 h-3.5" /> CSV</button>
+          <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2"><CheckCircle className="w-4 h-4 text-emerald-500 dark:text-emerald-400" /> Inspetores de Controle de Qualidade</h3>
+          <button onClick={onExportInspetores} className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors"><Download className="w-3.5 h-3.5" /> CSV</button>
         </div>
         <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
-          <input value={buscaIns} onChange={(e) => setBuscaIns(e.target.value)} placeholder="Filtrar inspetor..." className="w-full pl-8 pr-3 py-2 bg-surface-base border border-surface-border rounded-lg text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-brand-500" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+          <input value={buscaIns} onChange={(e) => setBuscaIns(e.target.value)} placeholder="Filtrar inspetor..." className="w-full pl-8 pr-3 py-2 bg-surface-base border border-surface-border rounded-lg text-xs text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-brand-500" />
         </div>
         {insFiltrados.length === 0 ? <EmptyState message="Nenhum inspetor encontrado." /> : (
           <div className="rounded-xl border border-surface-border overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="text-gray-400 bg-surface-elevated/40 border-b border-surface-border">
+                  <tr className="text-gray-600 dark:text-gray-400 bg-surface-elevated/40 border-b border-surface-border">
                     <th className="px-3 py-2 text-left font-semibold">Inspetor</th>
                     <th className="px-3 py-2 text-right font-semibold">Laudos</th>
                     <th className="px-3 py-2 text-right font-semibold">Testadas</th>
@@ -722,13 +722,13 @@ const TabelaConsolidado: React.FC<{
                 <tbody>
                   {insPag.pageItems.map((ins, i) => (
                     <tr key={ins.nome} className={`border-b border-surface-border/50 hover:bg-surface-elevated/30 ${i % 2 === 0 ? '' : 'bg-surface-card/20'}`}>
-                      <td className="px-3 py-2.5 font-semibold text-white"><div className="flex items-center gap-1.5"><CheckCircle className="w-3 h-3 text-emerald-400" />{ins.nome}</div></td>
-                      <td className="px-3 py-2.5 text-right text-gray-400">{ins.totalLaudos}</td>
-                      <td className="px-3 py-2.5 text-right font-semibold text-white">{ins.totalTestadas}</td>
+                      <td className="px-3 py-2.5 font-semibold text-gray-900 dark:text-white"><div className="flex items-center gap-1.5"><CheckCircle className="w-3 h-3 text-emerald-500 dark:text-emerald-400" />{ins.nome}</div></td>
+                      <td className="px-3 py-2.5 text-right text-gray-600 dark:text-gray-400">{ins.totalLaudos}</td>
+                      <td className="px-3 py-2.5 text-right font-semibold text-gray-900 dark:text-white">{ins.totalTestadas}</td>
                       <td className="px-3 py-2.5 text-right"><Badge color="green">{ins.totalAprovadas}</Badge></td>
-                      <td className="px-3 py-2.5 text-right">{ins.totalReprovadas > 0 ? <Badge color="red">{ins.totalReprovadas}</Badge> : <span className="text-gray-600">0</span>}</td>
-                      <td className="px-3 py-2.5 text-right"><span className={`font-bold ${ins.fpy >= 95 ? 'text-emerald-400' : ins.fpy >= 80 ? 'text-amber-400' : 'text-red-400'}`}>{ins.fpy.toFixed(1)}%</span></td>
-                      <td className="px-3 py-2.5 text-right font-bold text-amber-300">{ins.pontosTotal.toFixed(1)}</td>
+                      <td className="px-3 py-2.5 text-right">{ins.totalReprovadas > 0 ? <Badge color="red">{ins.totalReprovadas}</Badge> : <span className="text-gray-400 dark:text-gray-600">0</span>}</td>
+                      <td className="px-3 py-2.5 text-right"><span className={`font-bold ${ins.fpy >= 95 ? 'text-emerald-600 dark:text-emerald-400' : ins.fpy >= 80 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400'}`}>{ins.fpy.toFixed(1)}%</span></td>
+                      <td className="px-3 py-2.5 text-right font-bold text-amber-600 dark:text-amber-300">{ins.pontosTotal.toFixed(1)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -756,17 +756,17 @@ const TabelaClientes: React.FC<{ dados: ItemRelatorioCliente[]; onExport: () => 
   return (
     <div className="space-y-3">
       <div className="relative">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
-        <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Filtrar por cliente..." className="w-full pl-8 pr-3 py-2 bg-surface-base border border-surface-border rounded-lg text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-brand-500" />
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+        <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Filtrar por cliente..." className="w-full pl-8 pr-3 py-2 bg-surface-base border border-surface-border rounded-lg text-xs text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-brand-500" />
       </div>
       <div className="rounded-xl border border-surface-border overflow-hidden">
         <div className="flex justify-end px-3 py-2 border-b border-surface-border bg-surface-elevated/20">
-          <button onClick={onExport} className="flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 transition-colors"><Download className="w-3.5 h-3.5" /> Exportar CSV</button>
+          <button onClick={onExport} className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors"><Download className="w-3.5 h-3.5" /> Exportar CSV</button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="text-gray-400 bg-surface-elevated/40 border-b border-surface-border">
+              <tr className="text-gray-600 dark:text-gray-400 bg-surface-elevated/40 border-b border-surface-border">
                 <th className="px-3 py-2 text-left font-semibold">Cliente / Empresa</th>
                 <th className="px-3 py-2 text-right font-semibold">Apontamentos</th>
                 <th className="px-3 py-2 text-right font-semibold">Reparadas</th>
@@ -780,12 +780,12 @@ const TabelaClientes: React.FC<{ dados: ItemRelatorioCliente[]; onExport: () => 
                 <tr><td colSpan={6}><EmptyState message="Nenhum cliente encontrado." /></td></tr>
               ) : pageItems.map((c, i) => (
                 <tr key={c.clienteNome} className={`border-b border-surface-border/50 hover:bg-surface-elevated/30 ${i % 2 === 0 ? '' : 'bg-surface-card/20'}`}>
-                  <td className="px-3 py-2.5 font-semibold text-white"><div className="flex items-center gap-1.5"><Building2 className="w-3 h-3 text-pink-400" />{c.clienteNome}</div></td>
-                  <td className="px-3 py-2.5 text-right text-gray-400">{c.totalApontamentos}</td>
+                  <td className="px-3 py-2.5 font-semibold text-gray-900 dark:text-white"><div className="flex items-center gap-1.5"><Building2 className="w-3 h-3 text-pink-500 dark:text-pink-400" />{c.clienteNome}</div></td>
+                  <td className="px-3 py-2.5 text-right text-gray-600 dark:text-gray-400">{c.totalApontamentos}</td>
                   <td className="px-3 py-2.5 text-right"><Badge color="blue">{c.totalReparadas}</Badge></td>
                   <td className="px-3 py-2.5 text-right"><Badge color="gray">{c.totalSemDefeito}</Badge></td>
                   <td className="px-3 py-2.5 text-right"><Badge color="red">{c.totalSucata}</Badge></td>
-                  <td className="px-3 py-2.5 text-right font-bold text-white">{c.totalVolumeCaixas}</td>
+                  <td className="px-3 py-2.5 text-right font-bold text-gray-900 dark:text-white">{c.totalVolumeCaixas}</td>
                 </tr>
               ))}
             </tbody>
@@ -953,18 +953,18 @@ export const RelatoriosPage: React.FC = () => {
           <div className="flex flex-wrap gap-1.5">
             {(Object.keys(periodoLabel) as PeriodoRapido[]).map((p) => (
               <button key={p} onClick={() => setPeriodo(p)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${periodo === p ? 'bg-brand-600 text-white' : 'bg-surface-elevated text-gray-400 hover:text-gray-200'}`}>
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${periodo === p ? 'bg-brand-600 text-white shadow-sm' : 'bg-surface-elevated text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}>
                 {periodoLabel[p]}
               </button>
             ))}
           </div>
           <div className="flex items-center gap-2 ml-auto">
             <button onClick={() => carregarRelatorio(tipo)} disabled={loading}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-brand-600/20 text-brand-300 border border-brand-500/30 hover:bg-brand-600/30 transition-colors disabled:opacity-50">
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-brand-600/15 text-brand-700 dark:text-brand-300 border border-brand-500/30 hover:bg-brand-600/25 transition-colors disabled:opacity-50">
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Atualizar
             </button>
             <button onClick={() => window.print()}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-surface-elevated text-gray-300 border border-surface-border hover:bg-surface-elevated/80 transition-colors">
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-surface-elevated text-gray-700 dark:text-gray-300 border border-surface-border hover:bg-surface-elevated/80 transition-colors">
               <Printer className="w-3.5 h-3.5" /> Imprimir
             </button>
           </div>
@@ -972,12 +972,12 @@ export const RelatoriosPage: React.FC = () => {
         {periodo === 'personalizado' && (
           <div className="flex flex-wrap gap-3 pt-1">
             <div className="flex items-center gap-2">
-              <label className="text-xs text-gray-400">De:</label>
-              <input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} className="bg-surface-base border border-surface-border rounded-lg px-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:ring-1 focus:ring-brand-500" />
+              <label className="text-xs text-gray-600 dark:text-gray-400">De:</label>
+              <input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} className="bg-surface-base border border-surface-border rounded-lg px-3 py-1.5 text-xs text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-brand-500" />
             </div>
             <div className="flex items-center gap-2">
-              <label className="text-xs text-gray-400">Até:</label>
-              <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className="bg-surface-base border border-surface-border rounded-lg px-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:ring-1 focus:ring-brand-500" />
+              <label className="text-xs text-gray-600 dark:text-gray-400">Até:</label>
+              <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className="bg-surface-base border border-surface-border rounded-lg px-3 py-1.5 text-xs text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-brand-500" />
             </div>
             <button onClick={() => carregarRelatorio(tipo)} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-600 text-white hover:bg-brand-700 transition-colors">Filtrar</button>
           </div>
@@ -991,11 +991,11 @@ export const RelatoriosPage: React.FC = () => {
       <div className="bg-surface-card border border-surface-border rounded-xl overflow-hidden">
         <div className="px-4 py-3 border-b border-surface-border flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-            <span className="text-sm font-semibold text-gray-200">{templateCards.find((c) => c.id === tipo)?.label}</span>
-            <span className="text-xs text-gray-500">· {periodoLabel[periodo]}</span>
+            <FileSpreadsheet className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+            <span className="text-sm font-semibold text-gray-900 dark:text-gray-200">{templateCards.find((c) => c.id === tipo)?.label}</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">· {periodoLabel[periodo]}</span>
           </div>
-          {loading && <div className="flex items-center gap-1.5 text-xs text-gray-400"><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Carregando...</div>}
+          {loading && <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400"><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Carregando...</div>}
         </div>
         <div className="p-4">{renderTabela()}</div>
       </div>

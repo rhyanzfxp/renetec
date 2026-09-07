@@ -481,14 +481,14 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                   )}
                   {totalAnteriores > 0 && (
                     <>
-                      <span className="text-gray-500">•</span>
-                      <span className="text-gray-300 font-semibold tabular-nums">
-                        Total OS: <strong className="text-white">{totalGeralCaixa} un</strong>
+                      <span className="text-gray-400 dark:text-gray-500">•</span>
+                      <span className="text-gray-700 dark:text-gray-300 font-semibold tabular-nums">
+                        Total OS: <strong className="text-gray-900 dark:text-white">{totalGeralCaixa} un</strong>
                       </span>
                     </>
                   )}
-                  <span className="text-gray-500">•</span>
-                  <span className="text-amber-400 font-bold tabular-nums" title="Pontos creditados automaticamente após o testador (CQ) aprovar">
+                  <span className="text-gray-400 dark:text-gray-500">•</span>
+                  <span className="text-amber-600 dark:text-amber-400 font-bold tabular-nums" title="Pontos creditados automaticamente após o testador (CQ) aprovar">
                     ~{pontuacaoEstimada.toFixed(1)} pts
                   </span>
                 </>
@@ -573,26 +573,26 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
       >
         <form onSubmit={(e) => { e.preventDefault(); handleSubmit(modoOperacao); }} className="space-y-5 text-sm">
           {error && (
-            <div className="p-3.5 rounded-lg bg-red-950/40 border border-red-800/40 flex items-start gap-2.5 text-xs text-red-300">
-              <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+            <div className="p-3.5 rounded-lg bg-red-100 dark:bg-red-950/40 border border-red-300 dark:border-red-800/40 flex items-start gap-2.5 text-xs text-red-700 dark:text-red-300">
+              <AlertCircle className="w-4 h-4 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
 
           {initialOs && (
-            <div className="p-3.5 rounded-xl bg-amber-950/30 border border-amber-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
+                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">
                     OS #{initialOs.numeroOS} — Em Andamento
                   </span>
-                  <span className="text-gray-400">•</span>
-                  <span className="text-xs text-gray-200 font-semibold">{initialOs.clienteNome}</span>
+                  <span className="text-gray-400 dark:text-gray-500">•</span>
+                  <span className="text-xs text-gray-800 dark:text-gray-200 font-semibold">{initialOs.clienteNome}</span>
                 </div>
-                <p className="text-xs text-gray-300">
-                  Total acumulado anterior: <strong className="text-emerald-400">{initialOs.totalGeralReparado} reparadas</strong>
-                  {initialOs.totalGeralSemDefeito > 0 && <>, <strong className="text-sky-300">{initialOs.totalGeralSemDefeito} sem def</strong></>}
-                  {initialOs.totalGeralSucata > 0 && <>, <strong className="text-red-400">{initialOs.totalGeralSucata} sucata</strong></>}
+                <p className="text-xs text-gray-600 dark:text-gray-300">
+                  Total acumulado anterior: <strong className="text-emerald-600 dark:text-emerald-400">{initialOs.totalGeralReparado} reparadas</strong>
+                  {initialOs.totalGeralSemDefeito > 0 && <>, <strong className="text-sky-600 dark:text-sky-300">{initialOs.totalGeralSemDefeito} sem def</strong></>}
+                  {initialOs.totalGeralSucata > 0 && <>, <strong className="text-red-600 dark:text-red-400">{initialOs.totalGeralSucata} sucata</strong></>}
                   {' '}({initialOs.totalGeralEquipamentos} un no total da OS).
                 </p>
               </div>
@@ -600,7 +600,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
           )}
 
         <div className="space-y-2">
-          <label className="text-xs font-bold text-gray-300 uppercase tracking-wider block">
+          <label className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider block">
             Ação / Destino deste Apontamento:
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
@@ -610,22 +610,22 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
               onClick={() => setModoOperacao('INICIAR_PRODUCAO')}
               className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                 modoOperacao === 'INICIAR_PRODUCAO'
-                  ? 'bg-amber-950/40 border-amber-500 shadow-[0_0_15px_rgba(251,191,36,0.3)] ring-1 ring-amber-500/50'
+                  ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-500 shadow-sm ring-1 ring-amber-500/50'
                   : 'bg-surface-elevated/60 border-surface-border hover:border-surface-border/80 opacity-75 hover:opacity-100'
               }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                  <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center">
                     <Play className="w-3.5 h-3.5 fill-current" />
                   </div>
-                  <span className="text-xs font-bold text-white">Iniciar Produção</span>
+                  <span className="text-xs font-bold text-gray-900 dark:text-white">Iniciar Produção</span>
                 </div>
                 {modoOperacao === 'INICIAR_PRODUCAO' && (
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-ping" />
                 )}
               </div>
-              <p className="text-[10px] text-gray-300 mt-2 leading-relaxed">
+              <p className="text-[10px] text-gray-600 dark:text-gray-300 mt-2 leading-relaxed">
                 Inicia o <strong>cronômetro ao vivo</strong> agora na bancada e no Painel Renetec (TV).
               </p>
             </button>
@@ -636,22 +636,22 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
               onClick={() => setModoOperacao('DESPACHAR_CQ')}
               className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                 modoOperacao === 'DESPACHAR_CQ'
-                  ? 'bg-emerald-950/40 border-emerald-500 shadow-glow-success ring-1 ring-emerald-500/50'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 shadow-sm ring-1 ring-emerald-500/50'
                   : 'bg-surface-elevated/60 border-surface-border hover:border-surface-border/80 opacity-75 hover:opacity-100'
               }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                     <Send className="w-3.5 h-3.5" />
                   </div>
-                  <span className="text-xs font-bold text-white">Despachar p/ CQ</span>
+                  <span className="text-xs font-bold text-gray-900 dark:text-white">Despachar p/ CQ</span>
                 </div>
                 {modoOperacao === 'DESPACHAR_CQ' && (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
                 )}
               </div>
-              <p className="text-[10px] text-gray-300 mt-2 leading-relaxed">
+              <p className="text-[10px] text-gray-600 dark:text-gray-300 mt-2 leading-relaxed">
                 Lote concluído pronto para o <strong>testador (CQ)</strong> inspecionar.
               </p>
             </button>
@@ -662,23 +662,23 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
               onClick={() => setModoOperacao('SALVAR_BANCADA')}
               className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                 modoOperacao === 'SALVAR_BANCADA'
-                  ? 'bg-sky-950/40 border-sky-500 shadow-glow-primary ring-1 ring-sky-500/50'
+                  ? 'bg-sky-50 dark:bg-sky-950/40 border-sky-500 shadow-sm ring-1 ring-sky-500/50'
                   : 'bg-surface-elevated/60 border-surface-border hover:border-surface-border/80 opacity-75 hover:opacity-100'
               }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center">
+                  <div className="w-7 h-7 rounded-lg bg-sky-500/20 text-sky-600 dark:text-sky-400 flex items-center justify-center">
                     <Save className="w-3.5 h-3.5" />
                   </div>
-                  <span className="text-xs font-bold text-white">Salvar na Bancada</span>
+                  <span className="text-xs font-bold text-gray-900 dark:text-white">Salvar na Bancada</span>
                 </div>
                 {modoOperacao === 'SALVAR_BANCADA' && (
-                  <CheckCircle2 className="w-4 h-4 text-sky-400" />
+                  <CheckCircle2 className="w-4 h-4 text-sky-500 dark:text-sky-400" />
                 )}
               </div>
-              <p className="text-[10px] text-gray-300 mt-2 leading-relaxed">
-                Salva a OS na sua bancada sem cronômetro ativo para continuar depois.
+              <p className="text-[10px] text-gray-600 dark:text-gray-300 mt-2 leading-relaxed">
+                Fica salvo como pendente na <strong>sua bancada</strong> para continuar depois.
               </p>
             </button>
           </div>
@@ -686,17 +686,17 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
 
         <div className="p-4 rounded-xl bg-surface-elevated/70 border border-surface-border space-y-3.5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-brand-300 flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-brand-400" /> Identificação da OS e Caixa
+            <span className="text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-300 flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-brand-500 dark:text-brand-400" /> Identificação da OS e Caixa
             </span>
-            <span className="text-[11px] text-gray-400">
-              Técnico: <strong className="text-white">{user?.nome || 'Operador'}</strong>
+            <span className="text-[11px] text-gray-500 dark:text-gray-400">
+              Técnico: <strong className="text-gray-900 dark:text-white">{user?.nome || 'Operador'}</strong>
             </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-300 flex items-center gap-1">
+              <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
                 Número da OS <span className="text-gray-500 text-[11px] font-normal">(Opcional)</span>
               </label>
               <div className="relative">
@@ -712,27 +712,27 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-300 flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-sky-400" /> Data do Registro
+              <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" /> Data do Registro
               </label>
               <input
                 type="date"
                 value={dataRegistro}
                 onChange={(e) => setDataRegistro(e.target.value)}
-                className="w-full h-10 px-3 bg-[#12161f] border border-surface-border rounded-lg text-sm text-white focus:outline-none focus:border-brand-500"
+                className="w-full h-10 px-3 bg-surface-card border border-surface-border rounded-lg text-sm text-gray-900 dark:text-white focus:outline-none focus:border-brand-500"
                 required
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-300 flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-amber-400" /> Horário
+              <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" /> Horário
               </label>
               <input
                 type="time"
                 value={horaRegistro}
                 onChange={(e) => setHoraRegistro(e.target.value)}
-                className="w-full h-10 px-3 bg-[#12161f] border border-surface-border rounded-lg text-sm text-white focus:outline-none focus:border-brand-500"
+                className="w-full h-10 px-3 bg-surface-card border border-surface-border rounded-lg text-sm text-gray-900 dark:text-white focus:outline-none focus:border-brand-500"
                 required
               />
             </div>
@@ -741,7 +741,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-gray-300 flex items-center gap-1">
+                <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
                   Cliente / Empresa <span className="text-gray-500 text-[11px] font-normal">(Opcional)</span>
                 </label>
                 <button
@@ -750,7 +750,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                     setIsAddingCliente(!isAddingCliente);
                     setError(null);
                   }}
-                  className="text-[11px] font-bold text-brand-400 hover:text-brand-300 flex items-center gap-1 hover:underline cursor-pointer transition-colors"
+                  className="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:text-brand-500 flex items-center gap-1 hover:underline cursor-pointer transition-colors"
                 >
                   <PlusCircle className="w-3.5 h-3.5" />
                   {isAddingCliente ? 'Fechar' : '+ Nova Empresa'}
@@ -758,10 +758,10 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
               </div>
 
               {isAddingCliente ? (
-                <div className="p-3 bg-[#0d121c] border border-brand-500/50 rounded-xl space-y-2.5 shadow-glow-primary/20">
+                <div className="p-3 bg-brand-50/50 dark:bg-brand-950/20 border border-brand-300 dark:border-brand-500/50 rounded-xl space-y-2.5 shadow-glow-primary/20">
                   <div className="flex items-center justify-between border-b border-surface-border/50 pb-1.5">
-                    <span className="text-xs font-bold text-brand-300 flex items-center gap-1">
-                      <Building2 className="w-3.5 h-3.5 text-brand-400" /> Nova Empresa
+                    <span className="text-xs font-bold text-brand-700 dark:text-brand-300 flex items-center gap-1">
+                      <Building2 className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" /> Nova Empresa
                     </span>
                   </div>
 
@@ -771,7 +771,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                       value={novoClienteNome}
                       onChange={(e) => setNovoClienteNome(e.target.value)}
                       placeholder="Nome / Razão Social da Empresa *"
-                      className="w-full h-8 px-2.5 bg-[#12161f] border border-surface-border rounded-lg text-xs text-white placeholder-gray-500 focus:outline-none focus:border-brand-500"
+                      className="w-full h-8 px-2.5 bg-surface-card border border-surface-border rounded-lg text-xs text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:border-brand-500"
                     />
                     <div className="grid grid-cols-2 gap-2">
                       <input
@@ -779,14 +779,14 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                         value={novoClienteDoc}
                         onChange={(e) => setNovoClienteDoc(e.target.value)}
                         placeholder="CNPJ (opcional)"
-                        className="w-full h-8 px-2.5 bg-[#12161f] border border-surface-border rounded-lg text-xs text-white placeholder-gray-500 focus:outline-none focus:border-brand-500"
+                        className="w-full h-8 px-2.5 bg-surface-card border border-surface-border rounded-lg text-xs text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:border-brand-500"
                       />
                       <input
                         type="text"
                         value={novoClienteTel}
                         onChange={(e) => setNovoClienteTel(e.target.value)}
                         placeholder="Telefone (opcional)"
-                        className="w-full h-8 px-2.5 bg-[#12161f] border border-surface-border rounded-lg text-xs text-white placeholder-gray-500 focus:outline-none focus:border-brand-500"
+                        className="w-full h-8 px-2.5 bg-surface-card border border-surface-border rounded-lg text-xs text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:border-brand-500"
                       />
                     </div>
                   </div>
@@ -795,7 +795,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                     <button
                       type="button"
                       onClick={() => setIsAddingCliente(false)}
-                      className="px-2 py-0.5 text-[11px] text-gray-400 hover:text-white rounded transition-colors cursor-pointer"
+                      className="px-2.5 py-1 text-[11px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors cursor-pointer"
                     >
                       Cancelar
                     </button>
@@ -808,7 +808,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                       {isSavingCliente ? (
                         <div className="w-2.5 h-2.5 border border-white border-t-transparent rounded-full animate-spin" />
                       ) : (
-                        <CheckCircle2 className="w-3 h-3" />
+                        <CheckCircle2 className="w-3.5 h-3.5" />
                       )}
                       Salvar
                     </button>
@@ -824,37 +824,37 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                       setClienteId(e.target.value);
                     }
                   }}
-                  className="w-full h-10 px-3 bg-[#12161f] border border-surface-border rounded-lg text-xs text-white focus:outline-none focus:border-brand-500"
+                  className="w-full h-10 px-3 bg-surface-card border border-surface-border rounded-lg text-xs text-gray-900 dark:text-white focus:outline-none focus:border-brand-500"
                 >
                   {clientes.map((c) => (
-                    <option key={c.id} value={c.id} className="bg-[#181d26] text-white py-1">
+                    <option key={c.id} value={c.id} className="bg-surface-card text-gray-900 dark:text-white py-1">
                       {c.nomeRazaoSocial}
                     </option>
                   ))}
-                  <option value="__NOVA_EMPRESA__" className="bg-brand-950 text-brand-300 font-bold py-1">
+                  <option value="__NOVA_EMPRESA__" className="bg-brand-100 dark:bg-brand-950 text-brand-800 dark:text-brand-300 font-bold py-1">
                     + Cadastrar Nova Empresa...
                   </option>
                 </select>
               )}
 
               {clienteSuccessMsg && (
-                <p className="text-[10px] text-emerald-400 flex items-center gap-1 font-medium mt-1">
-                  <CheckCircle2 className="w-3 h-3 text-emerald-400 flex-shrink-0" /> {clienteSuccessMsg}
+                <p className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium mt-1">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400 flex-shrink-0" /> {clienteSuccessMsg}
                 </p>
               )}
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-300">Prioridade de Atendimento</label>
+              <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">Prioridade de Atendimento</label>
               <select
                 value={prioridade}
                 onChange={(e) => setPrioridade(e.target.value as any)}
-                className="w-full h-10 px-3 bg-[#12161f] border border-surface-border rounded-lg text-xs text-white focus:outline-none focus:border-brand-500"
+                className="w-full h-10 px-3 bg-surface-card border border-surface-border rounded-lg text-xs text-gray-900 dark:text-white focus:outline-none focus:border-brand-500"
               >
-                <option value="BAIXA" className="bg-[#181d26] text-white py-1">Baixa</option>
-                <option value="MEDIA" className="bg-[#181d26] text-white py-1">Média (Padrão)</option>
-                <option value="ALTA" className="bg-[#181d26] text-white py-1">Alta Prioridade</option>
-                <option value="URGENTE" className="bg-[#181d26] text-white py-1">Urgente (Linha Parada)</option>
+                <option value="BAIXA" className="bg-surface-card text-gray-900 dark:text-white py-1">Baixa</option>
+                <option value="MEDIA" className="bg-surface-card text-gray-900 dark:text-white py-1">Média (Padrão)</option>
+                <option value="ALTA" className="bg-surface-card text-gray-900 dark:text-white py-1">Alta Prioridade</option>
+                <option value="URGENTE" className="bg-surface-card text-gray-900 dark:text-white py-1">Urgente (Linha Parada)</option>
               </select>
             </div>
           </div>
@@ -923,18 +923,18 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-gray-300 uppercase tracking-wide">
-                      Modelo de Equipamento <span className="text-brand-400">*</span>
+                    <label className="text-[11px] font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                      Modelo de Equipamento <span className="text-brand-500 dark:text-brand-400">*</span>
                     </label>
                     <select
                       value={item.tipoEquipamentoId}
                       onChange={(e) => handleUpdateItem(idx, 'tipoEquipamentoId', e.target.value)}
-                      className="w-full h-10 px-3 bg-[#12161f] border border-surface-border rounded-lg text-xs text-white focus:outline-none focus:border-brand-500"
+                      className="w-full h-10 px-3 bg-surface-card border border-surface-border rounded-lg text-xs text-gray-900 dark:text-white focus:outline-none focus:border-brand-500"
                     >
                       {tiposEquipamento.map((t) => {
                         const pts = t.pontos ?? 1;
                         return (
-                          <option key={t.id} value={t.id} className="bg-[#181d26] text-white py-1.5">
+                          <option key={t.id} value={t.id} className="bg-surface-card text-gray-900 dark:text-white py-1.5">
                             {t.nome} ({pts} pt{pts > 1 ? 's' : ''})
                           </option>
                         );
@@ -943,10 +943,10 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                   </div>
 
                   {/* 3 CAMPOS PRINCIPAIS DE APONTAMENTO: REPARADAS | SEM DEFEITO | SUCATA */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-[#0e121a] p-3 rounded-xl border border-surface-border/70">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-surface-elevated/60 dark:bg-[#0e121a] p-3 rounded-xl border border-surface-border/70">
                     <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
-                        <Wrench className="w-3.5 h-3.5" /> Reparadas Hoje
+                      <label className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                        <Wrench className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Reparadas Hoje
                       </label>
                       <input
                         type="number"
@@ -957,15 +957,15 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                           handleUpdateItem(idx, 'quantidadeReparada', v === '' ? 0 : parseInt(v));
                         }}
                         placeholder="0"
-                        className="w-full h-9 px-2.5 bg-[#141923] border border-emerald-500/50 rounded-lg text-xs text-center text-emerald-300 font-mono font-black focus:outline-none focus:border-emerald-400 ring-1 ring-emerald-500/30"
+                        className="w-full h-9 px-2.5 bg-surface-card border border-emerald-500/50 rounded-lg text-xs text-center text-emerald-700 dark:text-emerald-300 font-mono font-black focus:outline-none focus:border-emerald-400 ring-1 ring-emerald-500/30"
                         title="Quantidade exata que você reparou com sucesso hoje"
                       />
-                      <span className="text-[10px] text-emerald-400/80 block text-center font-medium">Prontas p/ teste</span>
+                      <span className="text-[10px] text-emerald-700 dark:text-emerald-400/80 block text-center font-medium">Prontas p/ teste</span>
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-sky-400 flex items-center gap-1">
-                        <ShieldCheck className="w-3.5 h-3.5 text-sky-400" /> Sem Defeito (Triagem)
+                      <label className="text-[11px] font-bold text-sky-700 dark:text-sky-400 flex items-center gap-1">
+                        <ShieldCheck className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" /> Sem Defeito (Triagem)
                       </label>
                       <input
                         type="number"
@@ -976,15 +976,15 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                           handleUpdateItem(idx, 'quantidadeSemDefeito', v === '' ? 0 : parseInt(v));
                         }}
                         placeholder="0 (opcional)"
-                        className="w-full h-9 px-2.5 bg-[#141923] border border-sky-500/40 rounded-lg text-xs text-center text-sky-300 font-mono font-bold focus:outline-none focus:border-sky-400"
+                        className="w-full h-9 px-2.5 bg-surface-card border border-sky-500/40 rounded-lg text-xs text-center text-sky-700 dark:text-sky-300 font-mono font-bold focus:outline-none focus:border-sky-400"
                         title="Equipamentos testados na triagem que estavam funcionando perfeitamente sem defeito (opcional)"
                       />
-                      <span className="text-[10px] text-sky-400/80 block text-center font-medium">OK em triagem</span>
+                      <span className="text-[10px] text-sky-700 dark:text-sky-400/80 block text-center font-medium">OK em triagem</span>
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[11px] font-semibold text-gray-400 flex items-center gap-1">
-                        <XCircle className="w-3.5 h-3.5 text-red-400" /> Sem Reparo / Sucata
+                      <label className="text-[11px] font-semibold text-gray-700 dark:text-gray-400 flex items-center gap-1">
+                        <XCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" /> Sem Reparo / Sucata
                       </label>
                       <input
                         type="number"
@@ -995,10 +995,10 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                           handleUpdateItem(idx, 'quantidadeSucata', v === '' ? 0 : parseInt(v));
                         }}
                         placeholder="0 (opcional)"
-                        className="w-full h-9 px-2.5 bg-[#141923] border border-surface-border rounded-lg text-xs text-center text-red-300 font-mono font-bold focus:outline-none focus:border-red-500"
+                        className="w-full h-9 px-2.5 bg-surface-card border border-surface-border rounded-lg text-xs text-center text-red-600 dark:text-red-300 font-mono font-bold focus:outline-none focus:border-red-500"
                         title="Unidades que morreram ou não deram conserto (opcional)"
                       />
-                      <span className="text-[10px] text-gray-500 block text-center">Sem conserto</span>
+                      <span className="text-[10px] text-gray-500 dark:text-gray-400 block text-center">Sem conserto</span>
                     </div>
                   </div>
 
@@ -1006,36 +1006,36 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                   <div className="flex flex-col gap-2 p-2.5 rounded-lg bg-surface-elevated/50 border border-surface-border/50 text-xs">
                     {item.anterioresReparadas !== undefined && (item.anterioresReparadas > 0 || (item.anterioresSemDefeito || 0) > 0 || (item.anterioresSucata || 0) > 0) && (
                       <div className="flex flex-wrap items-center justify-between gap-1.5 pb-2 border-b border-surface-border/40 text-[11px]">
-                        <span className="text-gray-400 font-medium">Acumulado anterior nesta OS:</span>
-                        <span className="text-amber-300 font-semibold tabular-nums">
+                        <span className="text-gray-600 dark:text-gray-400 font-medium">Acumulado anterior nesta OS:</span>
+                        <span className="text-amber-700 dark:text-amber-300 font-semibold tabular-nums">
                           {item.anterioresReparadas || 0} rep • {item.anterioresSemDefeito || 0} sem def • {item.anterioresSucata || 0} suc ({item.anterioresNaCaixa || 0} un total)
                         </span>
                       </div>
                     )}
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
-                      <span className="text-gray-400 font-semibold flex items-center gap-1">
-                        <Package className="w-3.5 h-3.5 text-amber-400" /> Produção de Hoje:
+                      <span className="text-gray-700 dark:text-gray-400 font-semibold flex items-center gap-1">
+                        <Package className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" /> Produção de Hoje:
                       </span>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-bold text-emerald-400 tabular-nums flex items-center gap-1">
+                        <span className="font-bold text-emerald-700 dark:text-emerald-400 tabular-nums flex items-center gap-1">
                           <CheckCircle2 className="w-3.5 h-3.5" /> {repHoje} reparadas hoje
                         </span>
                         {semDefHoje > 0 && (
-                          <span className="text-sky-300 tabular-nums flex items-center gap-1 font-semibold">
-                            <ShieldCheck className="w-3.5 h-3.5 text-sky-400" /> {semDefHoje} sem defeito
+                          <span className="text-sky-700 dark:text-sky-300 tabular-nums flex items-center gap-1 font-semibold">
+                            <ShieldCheck className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" /> {semDefHoje} sem defeito
                           </span>
                         )}
                         {sucHoje > 0 && (
-                          <span className="text-red-400 tabular-nums flex items-center gap-1">
-                            <XCircle className="w-3.5 h-3.5" /> {sucHoje} sucata
+                          <span className="text-red-700 dark:text-red-400 tabular-nums flex items-center gap-1">
+                            <XCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" /> {sucHoje} sucata
                           </span>
                         )}
                         {antHoje > 0 ? (
-                          <span className="font-bold text-amber-300 tabular-nums bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 flex items-center gap-1">
-                            Total OS: <strong className="text-white">{totalItemCaixa} un</strong>
+                          <span className="font-bold text-amber-800 dark:text-amber-300 tabular-nums bg-amber-100 dark:bg-amber-500/10 px-2 py-0.5 rounded border border-amber-300 dark:border-amber-500/20 flex items-center gap-1">
+                            Total OS: <strong className="text-gray-900 dark:text-white">{totalItemCaixa} un</strong>
                           </span>
                         ) : (
-                          <span className="font-bold text-gray-200 tabular-nums bg-surface-base px-2 py-0.5 rounded border border-surface-border">
+                          <span className="font-bold text-gray-800 dark:text-gray-200 tabular-nums bg-surface-base px-2 py-0.5 rounded border border-surface-border">
                             Total: {hojeSoma} un
                           </span>
                         )}
@@ -1044,17 +1044,17 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-semibold text-gray-300 uppercase tracking-wide">
+                    <label className="text-[11px] font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
                       Classificação Principal
                     </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 bg-[#10141d] border border-surface-border p-1 rounded-lg">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 bg-surface-elevated border border-surface-border p-1 rounded-lg">
                       <button
                         type="button"
                         onClick={() => handleUpdateItem(idx, 'tipoCategoria', 'REPARADO')}
                         className={`h-9 px-3 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                           item.tipoCategoria === 'REPARADO'
                             ? 'bg-emerald-600 text-white shadow-md ring-1 ring-emerald-400/50'
-                            : 'text-gray-400 hover:text-gray-200 hover:bg-surface-elevated'
+                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-surface-card'
                         }`}
                         title="Equipamento que tinha defeito e foi reparado na bancada"
                       >
@@ -1067,7 +1067,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                         className={`h-9 px-3 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                           item.tipoCategoria === 'SEM_DEFEITO'
                             ? 'bg-sky-600 text-white shadow-md ring-1 ring-sky-400/50'
-                            : 'text-gray-400 hover:text-gray-200 hover:bg-surface-elevated'
+                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-surface-card'
                         }`}
                         title="Equipamento testado em triagem sem defeitos encontrados"
                       >
@@ -1080,7 +1080,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                         className={`h-9 px-3 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                           item.tipoCategoria === 'RETRABALHO'
                             ? 'bg-purple-600 text-white shadow-md ring-1 ring-purple-400/50'
-                            : 'text-gray-400 hover:text-gray-200 hover:bg-surface-elevated'
+                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-surface-card'
                         }`}
                         title="Equipamento retrabalhado após reprovação do CQ"
                       >
@@ -1091,7 +1091,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">
+                    <label className="text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
                       Serviço / Reparo Realizado (Opcional)
                     </label>
                     <input
@@ -1103,7 +1103,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                           ? 'Equipamento testado e aprovado em triagem (sem defeito)'
                           : 'Ex: Troca de capacitor, ressolda da fonte, regravação de firmware...'
                       }
-                      className="w-full h-9 px-3 bg-[#12161f] border border-surface-border rounded-lg text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-brand-500"
+                      className="w-full h-9 px-3 bg-surface-card border border-surface-border rounded-lg text-xs text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:border-brand-500"
                     />
                   </div>
                 </div>
@@ -1114,26 +1114,26 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
           <div className="p-3.5 rounded-xl bg-gradient-to-r from-surface-elevated via-surface-elevated to-surface-card border border-surface-border flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                <span className="text-gray-300">Hoje: <strong className="text-white tabular-nums">{totalProcessados} un</strong> ({totalReparados} rep{totalSemDefeito ? `, ${totalSemDefeito} sem def` : ''}{totalSucata ? `, ${totalSucata} suc` : ''})</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400" />
+                <span className="text-gray-700 dark:text-gray-300">Hoje: <strong className="text-gray-900 dark:text-white tabular-nums">{totalProcessados} un</strong> ({totalReparados} rep{totalSemDefeito ? `, ${totalSemDefeito} sem def` : ''}{totalSucata ? `, ${totalSucata} suc` : ''})</span>
               </div>
               {totalAnteriores > 0 && (
                 <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-amber-400" />
-                  <span className="text-gray-300">Total Acumulado na Caixa: <strong className="text-amber-300 tabular-nums">{totalGeralCaixa} un</strong></span>
+                  <span className="w-2 h-2 rounded-full bg-amber-500 dark:bg-amber-400" />
+                  <span className="text-gray-700 dark:text-gray-300">Total Acumulado na Caixa: <strong className="text-amber-700 dark:text-amber-300 tabular-nums">{totalGeralCaixa} un</strong></span>
                 </div>
               )}
             </div>
 
             <div className="text-right whitespace-nowrap">
-              <span className="text-amber-400 text-xs font-black tabular-nums">~{pontuacaoEstimada.toFixed(1)} pts</span>
-              <span className="text-gray-400 text-[10px] block">(contabilizados após o teste do CQ)</span>
+              <span className="text-amber-600 dark:text-amber-400 text-xs font-black tabular-nums">~{pontuacaoEstimada.toFixed(1)} pts</span>
+              <span className="text-gray-500 dark:text-gray-400 text-[10px] block">(contabilizados após o teste do CQ)</span>
             </div>
           </div>
         </div>
 
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
             Observações Técnicas para o Testador / CQ (Opcional)
           </label>
           <textarea
@@ -1178,15 +1178,15 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
           </>
         }
       >
-        <div className="space-y-3 text-sm text-gray-300">
+        <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
           <p>
             Você está prestes a enviar a <strong>OS #{numeroOS}</strong> para o Controle de Qualidade (CQ).
           </p>
-          <p className="text-xs text-sky-300 bg-sky-950/40 p-2.5 rounded border border-sky-800/40">
+          <p className="text-xs text-sky-800 dark:text-sky-300 bg-sky-100/80 dark:bg-sky-950/40 p-2.5 rounded border border-sky-300 dark:border-sky-800/40">
             ℹ️ A produção informada hoje ({totalReparados} rep{totalSemDefeito ? `, ${totalSemDefeito} sem def` : ''}{totalSucata ? `, ${totalSucata} suc` : ''}) será salva e a OS será encaminhada para os <strong>testes do CQ</strong>.
           </p>
           <div className="space-y-1 pt-1">
-            <label className="text-xs font-semibold text-gray-400 block">
+            <label className="text-xs font-semibold text-gray-700 dark:text-gray-400 block">
               Observações / Instruções para o testador CQ (opcional):
             </label>
             <textarea
@@ -1194,7 +1194,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
               value={despacharObservacao}
               onChange={(e) => setDespacharObservacao(e.target.value)}
               placeholder="Ex: Lote revisado, trocados conectores óticos da porta PON. Pronto para teste de potência."
-              className="w-full bg-surface-base border border-surface-border rounded-lg p-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 resize-none"
+              className="w-full bg-surface-base border border-surface-border rounded-lg p-2.5 text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-brand-500 resize-none"
             />
           </div>
         </div>
@@ -1232,15 +1232,15 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
           </>
         }
       >
-        <div className="space-y-3 text-sm text-gray-300">
-          <div className="p-3 rounded-lg bg-red-950/30 border border-red-800/50 text-xs text-red-200 space-y-2">
-            <p className="font-bold text-red-300 flex items-center gap-1.5">
-              <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" /> Atenção: Esta ação é definitiva!
+        <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+          <div className="p-3 rounded-lg bg-red-100 dark:bg-red-950/30 border border-red-300 dark:border-red-800/50 text-xs text-red-800 dark:text-red-200 space-y-2">
+            <p className="font-bold text-red-700 dark:text-red-300 flex items-center gap-1.5">
+              <AlertCircle className="w-4 h-4 text-red-500 dark:text-red-400 flex-shrink-0" /> Atenção: Esta ação é definitiva!
             </p>
             <p>
               Tem certeza de que deseja excluir a <strong>OS #{numeroOS}</strong>?
             </p>
-            <p className="text-gray-400">
+            <p className="text-gray-600 dark:text-gray-400">
               Esta ação removerá a OS e todos os seus apontamentos do banco de dados. Utilize apenas se a OS foi criada por engano.
             </p>
           </div>

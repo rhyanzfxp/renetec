@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { LogOut, User as UserIcon, Menu, Clock } from 'lucide-react';
 import { useAuth } from '../features/auth/AuthContext';
 import { StatusBadge } from '../components/ui/StatusBadge';
+import { ThemeToggle } from '../components/ui/ThemeToggle';
 
 interface AppHeaderProps {
   onToggleSidebar?: () => void;
@@ -33,7 +34,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, isTvMode 
             type="button"
             onClick={onToggleSidebar}
             title="Menu de Navegação"
-            className={`p-2 rounded-lg text-gray-400 hover:text-white hover:bg-surface-elevated transition-colors ${
+            className={`p-2 rounded-lg text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-surface-elevated transition-colors ${
               isTvMode ? 'block' : 'lg:hidden'
             }`}
           >
@@ -50,10 +51,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, isTvMode 
             />
           </div>
           <div className="flex flex-col">
-            <span className="font-black text-lg tracking-wider text-white leading-none italic font-sans">
+            <span className="font-black text-lg tracking-wider text-gray-900 dark:text-white leading-none italic font-sans">
               RENETEC
             </span>
-            <span className="text-[8.5px] sm:text-[9px] font-bold text-gray-300 tracking-[0.16em] uppercase mt-1 leading-none italic font-sans">
+            <span className="text-[8.5px] sm:text-[9px] font-bold text-gray-500 dark:text-gray-300 tracking-[0.16em] uppercase mt-1 leading-none italic font-sans">
               SERVIÇOS E TECNOLOGIA
             </span>
           </div>
@@ -62,26 +63,29 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, isTvMode 
 
       {/* Centro: Relógio em tempo real */}
       {currentTime && (
-        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-elevated border border-surface-border/60 select-none">
-          <Clock className="w-3.5 h-3.5 text-brand-400" />
-          <span className="text-sm font-bold tabular-nums text-white tracking-widest font-mono">
+        <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-elevated border border-surface-border/60 select-none">
+          <Clock className="w-3.5 h-3.5 text-brand-500 dark:text-brand-400" />
+          <span className="text-sm font-bold tabular-nums text-gray-900 dark:text-white tracking-widest font-mono">
             {currentTime}
           </span>
         </div>
       )}
 
-      {/* Lado Direito: Informações do Usuário e Logout */}
+      {/* Lado Direito: Alternador de Tema + Informações do Usuário e Logout */}
       <div className="flex items-center gap-3 sm:gap-4">
+        {/* Alternador de Tema Personalizado Renetec (Pílula Sol/Lua) */}
+        <ThemeToggle />
+
         {user && (
-          <div className="flex items-center gap-3 pl-2">
+          <div className="flex items-center gap-3 pl-1 sm:pl-2 border-l border-surface-border/60">
             <div className="text-right hidden sm:block">
-              <p className="text-xs font-semibold text-white leading-tight">{user.nome}</p>
+              <p className="text-xs font-semibold text-gray-900 dark:text-white leading-tight">{user.nome}</p>
               <div className="mt-0.5">
                 <StatusBadge perfil={user.perfil} size="sm" />
               </div>
             </div>
 
-            <div className="w-8 h-8 rounded-full bg-surface-elevated border border-surface-border flex items-center justify-center text-gray-300">
+            <div className="w-8 h-8 rounded-full bg-surface-elevated border border-surface-border flex items-center justify-center text-gray-600 dark:text-gray-300">
               <UserIcon className="w-4 h-4" />
             </div>
 
@@ -89,7 +93,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, isTvMode 
               type="button"
               onClick={logout}
               title="Sair do Sistema"
-              className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-surface-elevated transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 hover:bg-surface-elevated transition-colors cursor-pointer"
             >
               <LogOut className="w-4 h-4" />
             </button>

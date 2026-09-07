@@ -89,7 +89,7 @@ export const AppShell: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen bg-surface-base text-gray-100 flex flex-col antialiased">
+    <div className="min-h-screen bg-surface-base text-gray-800 dark:text-gray-100 flex flex-col antialiased">
       {/* Header Fixo */}
       <AppHeader
         onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
@@ -118,12 +118,12 @@ export const AppShell: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-surface-border/60 pb-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+                  <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
                     {getSectionTitle()}
                   </h1>
                   <StatusBadge perfil={user?.perfil} size="sm" />
                 </div>
-                <p className="text-xs sm:text-sm text-gray-400 mt-1">{getSectionSubtitle()}</p>
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">{getSectionSubtitle()}</p>
               </div>
             </div>
           )}

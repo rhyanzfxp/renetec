@@ -1,4 +1,5 @@
 import React from 'react';
+import { ThemeProvider } from './features/theme/ThemeContext';
 import { AuthProvider, useAuth } from './features/auth/AuthContext';
 import { RealtimeProvider } from './features/realtime/RealtimeContext';
 import { RealtimeToastContainer } from './features/realtime/RealtimeToastContainer';
@@ -13,7 +14,7 @@ const MainContent: React.FC = () => {
       <div className="min-h-screen bg-surface-base flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin"></div>
-          <span className="text-xs text-gray-400 font-medium">Carregando sistema Renetec...</span>
+          <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Carregando sistema Renetec...</span>
         </div>
       </div>
     );
@@ -31,10 +32,12 @@ const MainContent: React.FC = () => {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <RealtimeProvider>
-        <MainContent />
-      </RealtimeProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <RealtimeProvider>
+          <MainContent />
+        </RealtimeProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

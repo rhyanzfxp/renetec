@@ -177,17 +177,17 @@ export const MetasPage: React.FC = () => {
             </div>
             <div>
               <div className="flex items-center gap-2 justify-center sm:justify-start">
-                <span className="text-xs font-black uppercase tracking-wider text-yellow-400">
+                <span className="text-xs font-black uppercase tracking-wider text-amber-700 dark:text-yellow-400">
                   Nível Máximo da Fábrica!
                 </span>
-                <span className="px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-300 text-[10px] font-black border border-yellow-500/40">
+                <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-yellow-500/20 dark:text-yellow-300 text-[10px] font-black border border-amber-300 dark:border-yellow-500/40">
                   META EXCELÊNCIA
                 </span>
               </div>
-              <h2 className="text-lg sm:text-xl font-black text-white mt-0.5">
+              <h2 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white mt-0.5">
                 Parabéns, Equipe Renetec! Meta Excelência Conquistada ({data.pontosRealizados} pts)
               </h2>
-              <p className="text-xs text-gray-300">
+              <p className="text-xs text-gray-600 dark:text-gray-300">
                 A equipe superou os {data.metaExcelencia} pontos e atingiu 125% do bônus coletivo!
               </p>
             </div>
@@ -211,24 +211,24 @@ export const MetasPage: React.FC = () => {
 
     if (data.statusMeta === 'META_ALVO') {
       return (
-        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-teal-950/30 to-surface-card border border-emerald-500/40 flex flex-col sm:flex-row items-center justify-between gap-4 animate-fadeIn">
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-surface-card dark:from-emerald-950/40 dark:via-teal-950/30 border border-emerald-300 dark:border-emerald-500/40 flex flex-col sm:flex-row items-center justify-between gap-4 animate-fadeIn">
           <div className="flex items-center gap-4 text-center sm:text-left">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-900/40 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-inner flex-shrink-0">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-900/40 border border-emerald-300 dark:border-emerald-500/40 flex items-center justify-center text-emerald-700 dark:text-emerald-400 shadow-inner flex-shrink-0">
               <CheckCircle2 className="w-7 h-7" />
             </div>
             <div>
               <div className="flex items-center gap-2 justify-center sm:justify-start">
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-300">
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
                   Meta Alvo Conquistada!
                 </span>
-                <span className="px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 text-[10px] font-bold border border-emerald-500/40">
+                <span className="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold border border-emerald-300 dark:border-emerald-500/40">
                   100% BÔNUS COLETIVO GARANTIDO
                 </span>
               </div>
-              <h2 className="text-lg sm:text-xl font-bold text-white mt-0.5">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mt-0.5">
                 Produção Acumulada: {data.pontosRealizados} pontos realizados
               </h2>
-              <p className="text-xs text-gray-300">
+              <p className="text-xs text-gray-600 dark:text-gray-300">
                 Faltam apenas {data.faltamParaExcelencia} pontos nos próximos {data.diasUteisRestantes} dias úteis para alcançar a Meta Excelência ({data.metaExcelencia} pts).
               </p>
             </div>
@@ -252,24 +252,24 @@ export const MetasPage: React.FC = () => {
 
     if (data.statusMeta === 'META_BASE') {
       return (
-        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-950/30 to-surface-card border border-amber-600/40 flex flex-col sm:flex-row items-center justify-between gap-4 animate-fadeIn">
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-50 to-surface-card dark:from-amber-950/30 border border-amber-300 dark:border-amber-600/40 flex flex-col sm:flex-row items-center justify-between gap-4 animate-fadeIn">
           <div className="flex items-center gap-4 text-center sm:text-left">
-            <div className="w-14 h-14 rounded-2xl bg-amber-900/40 border border-amber-600/40 flex items-center justify-center text-amber-400 shadow-inner flex-shrink-0">
+            <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-900/40 border border-amber-300 dark:border-amber-600/40 flex items-center justify-center text-amber-700 dark:text-amber-400 shadow-inner flex-shrink-0">
               <TrendingUp className="w-7 h-7" />
             </div>
             <div>
               <div className="flex items-center gap-2 justify-center sm:justify-start">
-                <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                <span className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
                   Meta Base Atingida
                 </span>
-                <span className="px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 text-[10px] font-bold border border-amber-600/40">
+                <span className="px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 text-[10px] font-bold border border-amber-300 dark:border-amber-600/40">
                   FALTAM {data.faltamParaAlvo} PTS P/ META ALVO
                 </span>
               </div>
-              <h2 className="text-lg sm:text-xl font-bold text-white mt-0.5">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mt-0.5">
                 {data.pontosRealizados} pontos acumulados • Rumo à Meta Alvo ({data.metaAlvo} pts)
               </h2>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-600 dark:text-gray-400">
                 Mais {data.faltamParaAlvo} pontos garantem 100% do bônus coletivo da fábrica.
               </p>
             </div>
@@ -295,23 +295,23 @@ export const MetasPage: React.FC = () => {
     return (
       <div className="p-4 sm:p-5 rounded-2xl bg-surface-card border border-surface-border flex flex-col sm:flex-row items-center justify-between gap-4 animate-fadeIn">
         <div className="flex items-center gap-4 text-center sm:text-left">
-          <div className="w-14 h-14 rounded-2xl bg-rose-950/30 border border-rose-500/30 flex items-center justify-center text-rose-400 shadow-inner flex-shrink-0">
+          <div className="w-14 h-14 rounded-2xl bg-rose-100 dark:bg-rose-950/30 border border-rose-300 dark:border-rose-500/30 flex items-center justify-center text-rose-700 dark:text-rose-400 shadow-inner flex-shrink-0">
             <Target className="w-7 h-7" />
           </div>
           <div>
             <div className="flex items-center gap-2 justify-center sm:justify-start">
-              <span className="text-xs font-bold uppercase tracking-wider text-rose-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400">
                 Em Andamento — {data.nomeMes}/{data.anoReferencia}
               </span>
-              <span className="px-2 py-0.5 rounded bg-surface-elevated text-gray-300 text-[10px] font-bold border border-surface-border">
+              <span className="px-2 py-0.5 rounded bg-surface-elevated text-gray-700 dark:text-gray-300 text-[10px] font-bold border border-surface-border">
                 {data.diasUteisRestantes} DIAS ÚTEIS RESTANTES
               </span>
             </div>
-            <h2 className="text-lg sm:text-xl font-bold text-white mt-0.5">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mt-0.5">
               {data.pontosRealizados} de {data.metaAlvo} pontos para a Meta Alvo
             </h2>
-            <p className="text-xs text-gray-400">
-              Necessário ritmo de <strong className="text-emerald-300">{data.ritmoNecessarioAlvo} pts/dia</strong> para atingir a Meta Alvo e liberar o bônus.
+            <p className="text-xs text-gray-600 dark:text-gray-400">
+              Necessário ritmo de <strong className="text-emerald-700 dark:text-emerald-300">{data.ritmoNecessarioAlvo} pts/dia</strong> para atingir a Meta Alvo e liberar o bônus.
             </p>
           </div>
         </div>
@@ -335,9 +335,9 @@ export const MetasPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {errorMessage && (
-        <div className="p-3.5 rounded-lg bg-red-950/40 border border-red-800/50 flex items-center justify-between text-xs text-red-200">
+        <div className="p-3.5 rounded-lg bg-red-100 dark:bg-red-950/40 border border-red-300 dark:border-red-800/50 flex items-center justify-between text-xs text-red-700 dark:text-red-200">
           <div className="flex items-center gap-2.5">
-            <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+            <AlertTriangle className="w-4 h-4 text-red-500 dark:text-red-400 flex-shrink-0" />
             <span>{errorMessage}</span>
           </div>
           <Button variant="ghost" size="sm" onClick={() => setErrorMessage(null)}>
@@ -355,7 +355,7 @@ export const MetasPage: React.FC = () => {
             className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer select-none ${
               activeTab === 'dashboard'
                 ? 'bg-brand-600 text-white shadow-glow-primary'
-                : 'text-gray-400 hover:text-gray-200 hover:bg-surface-elevated'
+                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-surface-elevated'
             }`}
           >
             <Award className="w-4 h-4" /> Dashboard da Meta
@@ -367,7 +367,7 @@ export const MetasPage: React.FC = () => {
             className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer select-none ${
               activeTab === 'bonus'
                 ? 'bg-brand-600 text-white shadow-glow-primary'
-                : 'text-gray-400 hover:text-gray-200 hover:bg-surface-elevated'
+                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-surface-elevated'
             }`}
           >
             <Calculator className="w-4 h-4" /> Gestão & Simulador de Bônus
@@ -379,7 +379,7 @@ export const MetasPage: React.FC = () => {
             className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer select-none ${
               activeTab === 'pontuacao'
                 ? 'bg-brand-600 text-white shadow-glow-primary'
-                : 'text-gray-400 hover:text-gray-200 hover:bg-surface-elevated'
+                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-surface-elevated'
             }`}
           >
             <ListOrdered className="w-4 h-4" /> Tabela de Pontuação ({tabelaPontuacao.length})
@@ -391,7 +391,7 @@ export const MetasPage: React.FC = () => {
             className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer select-none ${
               activeTab === 'guia'
                 ? 'bg-brand-600 text-white shadow-glow-primary'
-                : 'text-gray-400 hover:text-gray-200 hover:bg-surface-elevated'
+                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-surface-elevated'
             }`}
           >
             <BookOpen className="w-4 h-4" /> Como Usar (Guia Operacional)
@@ -403,7 +403,7 @@ export const MetasPage: React.FC = () => {
             type="button"
             onClick={() => setIsResetConfirmOpen(true)}
             disabled={isResetting}
-            className="ml-auto px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 text-red-400 hover:text-red-300 hover:bg-red-950/30 border border-red-800/30 hover:border-red-700/50 transition-all disabled:opacity-50"
+            className="ml-auto px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/30 border border-red-200 dark:border-red-800/30 hover:border-red-400 dark:hover:border-red-700/50 transition-all disabled:opacity-50"
             title="Limpar produções e metas de teste do período"
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -415,14 +415,14 @@ export const MetasPage: React.FC = () => {
       {/* ─── MODAL DE CONFIRMAÇÃO DE RESET ────────────────────────────── */}
       {isResetConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="relative w-full max-w-md mx-4 bg-surface-card border border-red-800/50 rounded-2xl shadow-2xl p-6 space-y-4 animate-fadeIn">
+          <div className="relative w-full max-w-md mx-4 bg-surface-card border border-red-300 dark:border-red-800/50 rounded-2xl shadow-2xl p-6 space-y-4 animate-fadeIn">
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-red-950/60 border border-red-700/50 flex items-center justify-center flex-shrink-0">
-                <AlertTriangle className="w-6 h-6 text-red-400" />
+              <div className="w-12 h-12 rounded-xl bg-red-100 dark:bg-red-950/60 border border-red-300 dark:border-red-700/50 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">Resetar Metas e Produções</h3>
-                <p className="text-xs text-gray-400 mt-1">
+                <h3 className="text-base font-bold text-gray-900 dark:text-white">Resetar Metas e Produções</h3>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                   Esta ação é irreversível e apagará os registros de produção, testes e retrabalhos do banco de dados.
                   Use apenas para testes ou fechamento mensal.
                 </p>
@@ -448,7 +448,7 @@ export const MetasPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsResetConfirmOpen(false)}
-                className="w-full px-4 py-2 rounded-xl bg-surface-elevated hover:bg-surface-base text-gray-300 text-sm transition-colors"
+                className="w-full px-4 py-2 rounded-xl bg-surface-elevated hover:bg-surface-base text-gray-700 dark:text-gray-300 text-sm transition-colors"
               >
                 Cancelar
               </button>
@@ -551,10 +551,10 @@ export const MetasPage: React.FC = () => {
           <div className="p-5 rounded-2xl bg-surface-card border border-surface-border space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                  <Users className="w-4 h-4 text-brand-400" /> Produção por Técnico / Colaborador
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                  <Users className="w-4 h-4 text-brand-500 dark:text-brand-400" /> Produção por Técnico / Colaborador
                 </h3>
-                <p className="text-xs text-gray-400 mt-0.5">
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                   Consolidado da pontuação e participação de cada membro da equipe Renetec.
                 </p>
               </div>
@@ -565,7 +565,7 @@ export const MetasPage: React.FC = () => {
 
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left">
-                <thead className="bg-surface-elevated/60 text-gray-400 font-semibold border-b border-surface-border">
+                <thead className="bg-surface-elevated/60 text-gray-600 dark:text-gray-400 font-semibold border-b border-surface-border">
                   <tr>
                     <th className="py-2.5 px-3">Pessoa</th>
                     <th className="py-2.5 px-3">Função</th>
@@ -577,32 +577,32 @@ export const MetasPage: React.FC = () => {
                 <tbody className="divide-y divide-surface-border">
                   {data.equipe.map((c) => (
                     <tr key={c.id} className="hover:bg-surface-elevated/30 transition-colors">
-                      <td className="py-3 px-3 font-bold text-white flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-brand-400" />
+                      <td className="py-3 px-3 font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-brand-500 dark:bg-brand-400" />
                         {c.nome}
                       </td>
-                      <td className="py-3 px-3 text-gray-300">{c.funcao}</td>
-                      <td className="py-3 px-3 text-right font-black text-amber-300 tabular-nums">
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-300">{c.funcao}</td>
+                      <td className="py-3 px-3 text-right font-black text-amber-600 dark:text-amber-300 tabular-nums">
                         {c.pontosRealizados} pts
                       </td>
-                      <td className="py-3 px-3 text-right font-semibold text-gray-300 tabular-nums">
+                      <td className="py-3 px-3 text-right font-semibold text-gray-600 dark:text-gray-300 tabular-nums">
                         {c.percentualTotal}%
                       </td>
                       <td className="py-3 px-3 text-center">
-                        <span className="px-2 py-0.5 rounded bg-surface-elevated text-gray-300 font-semibold border border-surface-border">
+                        <span className="px-2 py-0.5 rounded bg-surface-elevated text-gray-700 dark:text-gray-300 font-semibold border border-surface-border">
                           {c.pesoBonusPercentual}%
                         </span>
                       </td>
                     </tr>
                   ))}
-                  <tr className="bg-surface-elevated/80 font-bold text-white border-t-2 border-surface-border">
+                  <tr className="bg-surface-elevated/80 font-bold text-gray-900 dark:text-white border-t-2 border-surface-border">
                     <td className="py-2.5 px-3">Total Geral</td>
-                    <td className="py-2.5 px-3 text-gray-400">—</td>
-                    <td className="py-2.5 px-3 text-right text-yellow-400 font-black tabular-nums">
+                    <td className="py-2.5 px-3 text-gray-500 dark:text-gray-400">—</td>
+                    <td className="py-2.5 px-3 text-right text-amber-600 dark:text-yellow-400 font-black tabular-nums">
                       {data.pontosRealizados} pts
                     </td>
-                    <td className="py-2.5 px-3 text-right text-gray-300 tabular-nums">100%</td>
-                    <td className="py-2.5 px-3 text-center text-gray-300">100%</td>
+                    <td className="py-2.5 px-3 text-right text-gray-700 dark:text-gray-300 tabular-nums">100%</td>
+                    <td className="py-2.5 px-3 text-center text-gray-700 dark:text-gray-300">100%</td>
                   </tr>
                 </tbody>
               </table>
@@ -639,16 +639,16 @@ export const MetasPage: React.FC = () => {
             <div className="p-5 rounded-2xl bg-surface-card border border-surface-border space-y-4 shadow-xl">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h3 className="text-base font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                    <Calculator className="w-5 h-5 text-emerald-400" /> Simulador e Gestão do Fundo de Bônus
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                    <Calculator className="w-5 h-5 text-emerald-600 dark:text-emerald-400" /> Simulador e Gestão do Fundo de Bônus
                   </h3>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                     Informe o faturamento recebido e selecione o cenário de atingimento para simular o rateio do fundo (1,5%).
                   </p>
                 </div>
 
                 {bonusFeedback && (
-                  <div className="px-3 py-1.5 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-xs text-emerald-300 flex items-center gap-1.5">
+                  <div className="px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/60 dark:border-emerald-500/40 dark:text-emerald-300 text-xs flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     <span>{bonusFeedback}</span>
                   </div>
@@ -657,7 +657,7 @@ export const MetasPage: React.FC = () => {
 
               {/* Seletor de Cenário de Simulação */}
               <div className="space-y-1.5 pt-1">
-                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-400 uppercase tracking-wider">
                   Cenário de Atingimento da Meta para Simulação:
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -666,8 +666,8 @@ export const MetasPage: React.FC = () => {
                     onClick={() => setCenarioSimulacao('ALVO')}
                     className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all flex flex-col items-center justify-center gap-0.5 cursor-pointer ${
                       cenarioSimulacao === 'ALVO'
-                        ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 shadow-glow-primary'
-                        : 'bg-surface-base border-surface-border text-gray-400 hover:text-white hover:bg-surface-elevated'
+                        ? 'bg-emerald-100 border-emerald-400 text-emerald-800 dark:bg-emerald-500/20 dark:border-emerald-400 dark:text-emerald-300 shadow-glow-primary'
+                        : 'bg-surface-base border-surface-border text-gray-600 hover:text-gray-900 hover:bg-surface-elevated dark:text-gray-400 dark:hover:text-white'
                     }`}
                   >
                     <span>Meta Alvo (100%)</span>
@@ -679,8 +679,8 @@ export const MetasPage: React.FC = () => {
                     onClick={() => setCenarioSimulacao('EXCELENCIA')}
                     className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all flex flex-col items-center justify-center gap-0.5 cursor-pointer ${
                       cenarioSimulacao === 'EXCELENCIA'
-                        ? 'bg-yellow-500/20 border-yellow-400 text-yellow-300 shadow-glow-primary'
-                        : 'bg-surface-base border-surface-border text-gray-400 hover:text-white hover:bg-surface-elevated'
+                        ? 'bg-amber-100 border-amber-400 text-amber-800 dark:bg-yellow-500/20 dark:border-yellow-400 dark:text-yellow-300 shadow-glow-primary'
+                        : 'bg-surface-base border-surface-border text-gray-600 hover:text-gray-900 hover:bg-surface-elevated dark:text-gray-400 dark:hover:text-white'
                     }`}
                   >
                     <span>Excelência (110%+)</span>
@@ -692,8 +692,8 @@ export const MetasPage: React.FC = () => {
                     onClick={() => setCenarioSimulacao('BASE')}
                     className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all flex flex-col items-center justify-center gap-0.5 cursor-pointer ${
                       cenarioSimulacao === 'BASE'
-                        ? 'bg-amber-500/20 border-amber-400 text-amber-300 shadow-glow-primary'
-                        : 'bg-surface-base border-surface-border text-gray-400 hover:text-white hover:bg-surface-elevated'
+                        ? 'bg-amber-100 border-amber-400 text-amber-800 dark:bg-amber-500/20 dark:border-amber-400 dark:text-amber-300 shadow-glow-primary'
+                        : 'bg-surface-base border-surface-border text-gray-600 hover:text-gray-900 hover:bg-surface-elevated dark:text-gray-400 dark:hover:text-white'
                     }`}
                   >
                     <span>Meta Base (90%)</span>
@@ -705,8 +705,8 @@ export const MetasPage: React.FC = () => {
                     onClick={() => setCenarioSimulacao('REAL')}
                     className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all flex flex-col items-center justify-center gap-0.5 cursor-pointer ${
                       cenarioSimulacao === 'REAL'
-                        ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-glow-primary'
-                        : 'bg-surface-base border-surface-border text-gray-400 hover:text-white hover:bg-surface-elevated'
+                        ? 'bg-cyan-100 border-cyan-400 text-cyan-800 dark:bg-cyan-500/20 dark:border-cyan-400 dark:text-cyan-300 shadow-glow-primary'
+                        : 'bg-surface-base border-surface-border text-gray-600 hover:text-gray-900 hover:bg-surface-elevated dark:text-gray-400 dark:hover:text-white'
                     }`}
                   >
                     <span>Real Atual ({data.percentualAlvo}%)</span>
@@ -717,7 +717,7 @@ export const MetasPage: React.FC = () => {
 
               <form onSubmit={handleSimularFaturamento} className="flex flex-col sm:flex-row items-end gap-3 pt-2">
                 <div className="w-full sm:w-80 space-y-1">
-                  <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wide">
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
                     Faturamento Recebido no Mês (R$)
                   </label>
                   <input
@@ -729,7 +729,7 @@ export const MetasPage: React.FC = () => {
                       setSimuladorFaturamento(v);
                     }}
                     placeholder="Ex: 3000000.00"
-                    className="w-full bg-surface-base border border-surface-border rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500 font-bold tabular-nums"
+                    className="w-full bg-surface-base border border-surface-border rounded-xl px-3.5 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-brand-500 font-bold tabular-nums"
                     required
                   />
                 </div>
@@ -749,45 +749,45 @@ export const MetasPage: React.FC = () => {
             {/* Cards de Métricas do Bônus Simulado */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <div className="p-4 rounded-2xl bg-surface-card border border-surface-border space-y-1">
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Fundo Potencial (1,5%)
                 </span>
-                <div className="text-2xl font-black text-white tabular-nums">
+                <div className="text-2xl font-black text-gray-900 dark:text-white tabular-nums">
                   {formatBRL(fundoPotencialSimulado)}
                 </div>
-                <p className="text-[11px] text-gray-400">1,5% de {formatBRL(numFaturamento)}</p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">1,5% de {formatBRL(numFaturamento)}</p>
               </div>
 
               <div className="p-4 rounded-2xl bg-surface-card border border-surface-border space-y-1">
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Multiplicador Simulado
                 </span>
-                <div className="text-2xl font-black text-amber-300 tabular-nums">
+                <div className="text-2xl font-black text-amber-600 dark:text-amber-300 tabular-nums">
                   {multSimulado}x
                 </div>
-                <p className="text-[11px] text-gray-400">
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">
                   Cenário: {cenarioSimulacao === 'ALVO' ? 'Meta Alvo (100%)' : cenarioSimulacao === 'EXCELENCIA' ? 'Excelência (110%+)' : cenarioSimulacao === 'BASE' ? 'Meta Base (90%)' : 'Real Atual'}
                 </p>
               </div>
 
               <div className="p-4 rounded-2xl bg-surface-card border border-surface-border space-y-1">
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Parte Coletiva (70%)
                 </span>
-                <div className="text-2xl font-black text-sky-400 tabular-nums">
+                <div className="text-2xl font-black text-sky-600 dark:text-sky-400 tabular-nums">
                   {formatBRL(parteColetivaSimulada)}
                 </div>
-                <p className="text-[11px] text-gray-400">70% do bônus final rateado</p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">70% do bônus final rateado</p>
               </div>
 
               <div className="p-4 rounded-2xl bg-surface-card border border-surface-border space-y-1">
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Parte Individual (30%)
                 </span>
-                <div className="text-2xl font-black text-emerald-400 tabular-nums">
+                <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
                   {formatBRL(parteIndividualSimulada)}
                 </div>
-                <p className="text-[11px] text-gray-400">30% condicionado à meta individual</p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">30% condicionado à meta individual</p>
               </div>
             </div>
 
@@ -795,28 +795,28 @@ export const MetasPage: React.FC = () => {
             <div className="p-5 rounded-2xl bg-surface-card border border-surface-border space-y-4 shadow-xl">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                    <DollarSign className="w-4 h-4 text-emerald-400" /> Distribuição de Bônus por Colaborador
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Distribuição de Bônus por Colaborador
                   </h3>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                     Rateio proporcional aos pesos oficiais cadastrados na planilha Renetec.
                   </p>
                 </div>
-                <div className="px-3 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-gray-300">
-                  Bônus Final Simulado: <strong className="text-emerald-400 font-mono text-sm ml-1">{formatBRL(bonusFinalSimulado)}</strong>
+                <div className="px-3 py-1 rounded-xl bg-emerald-100 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/30 text-xs text-gray-700 dark:text-gray-300">
+                  Bônus Final Simulado: <strong className="text-emerald-700 dark:text-emerald-400 font-mono text-sm ml-1">{formatBRL(bonusFinalSimulado)}</strong>
                 </div>
               </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
-                  <thead className="bg-surface-elevated/60 text-gray-400 font-semibold border-b border-surface-border">
+                  <thead className="bg-surface-elevated/60 text-gray-600 dark:text-gray-400 font-semibold border-b border-surface-border">
                     <tr>
                       <th className="py-2.5 px-3">Pessoa</th>
                       <th className="py-2.5 px-3">Função</th>
                       <th className="py-2.5 px-3 text-center">Peso</th>
                       <th className="py-2.5 px-3 text-right">Bônus Coletivo (70%)</th>
                       <th className="py-2.5 px-3 text-right">Bônus Individual (30%)</th>
-                      <th className="py-2.5 px-3 text-right font-bold text-white">Bônus Total</th>
+                      <th className="py-2.5 px-3 text-right font-bold text-gray-900 dark:text-white">Bônus Total</th>
                       <th className="py-2.5 px-3 text-center">Meta Individual Cumprida?</th>
                     </tr>
                   </thead>
@@ -829,21 +829,21 @@ export const MetasPage: React.FC = () => {
 
                       return (
                         <tr key={c.id} className="hover:bg-surface-elevated/30 transition-colors">
-                          <td className="py-3 px-3 font-bold text-white flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                          <td className="py-3 px-3 font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400" />
                             {c.nome}
                           </td>
-                          <td className="py-3 px-3 text-gray-300">{c.funcao}</td>
-                          <td className="py-3 px-3 text-center font-bold text-gray-200">
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-300">{c.funcao}</td>
+                          <td className="py-3 px-3 text-center font-bold text-gray-800 dark:text-gray-200">
                             {c.pesoBonusPercentual}%
                           </td>
-                          <td className="py-3 px-3 text-right font-medium text-sky-300 tabular-nums font-mono">
+                          <td className="py-3 px-3 text-right font-medium text-sky-700 dark:text-sky-300 tabular-nums font-mono">
                             {formatBRL(colColetivo)}
                           </td>
-                          <td className="py-3 px-3 text-right font-medium text-emerald-300 tabular-nums font-mono">
+                          <td className="py-3 px-3 text-right font-medium text-emerald-700 dark:text-emerald-300 tabular-nums font-mono">
                             {formatBRL(colIndividual)}
                           </td>
-                          <td className="py-3 px-3 text-right font-black text-amber-300 tabular-nums text-sm font-mono">
+                          <td className="py-3 px-3 text-right font-black text-amber-700 dark:text-amber-300 tabular-nums text-sm font-mono">
                             {formatBRL(colTotal)}
                           </td>
                           <td className="py-3 px-3 text-center">
@@ -853,8 +853,8 @@ export const MetasPage: React.FC = () => {
                               disabled={user?.perfil !== 'ADMIN'}
                               className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
                                 c.metaIndividualCumprida
-                                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
-                                  : 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30'
+                                  ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/40 hover:bg-emerald-200 dark:hover:bg-emerald-500/30'
+                                  : 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/40 hover:bg-rose-200 dark:hover:bg-rose-500/30'
                               }`}
                             >
                               {c.metaIndividualCumprida ? 'Sim' : 'Não'}
@@ -863,20 +863,20 @@ export const MetasPage: React.FC = () => {
                         </tr>
                       );
                     })}
-                    <tr className="bg-surface-elevated/80 font-bold text-white border-t-2 border-surface-border">
+                    <tr className="bg-surface-elevated/80 font-bold text-gray-900 dark:text-white border-t-2 border-surface-border">
                       <td className="py-2.5 px-3">Total Distribuído</td>
-                      <td className="py-2.5 px-3 text-gray-400">—</td>
+                      <td className="py-2.5 px-3 text-gray-500 dark:text-gray-400">—</td>
                       <td className="py-2.5 px-3 text-center font-bold">100%</td>
-                      <td className="py-2.5 px-3 text-right text-sky-300 tabular-nums font-black font-mono">
+                      <td className="py-2.5 px-3 text-right text-sky-700 dark:text-sky-300 tabular-nums font-black font-mono">
                         {formatBRL(parteColetivaSimulada)}
                       </td>
-                      <td className="py-2.5 px-3 text-right text-emerald-300 tabular-nums font-black font-mono">
+                      <td className="py-2.5 px-3 text-right text-emerald-700 dark:text-emerald-300 tabular-nums font-black font-mono">
                         {formatBRL(parteIndividualSimulada)}
                       </td>
-                      <td className="py-2.5 px-3 text-right text-amber-400 tabular-nums font-black text-sm font-mono">
+                      <td className="py-2.5 px-3 text-right text-amber-700 dark:text-amber-400 tabular-nums font-black text-sm font-mono">
                         {formatBRL(bonusFinalSimulado)}
                       </td>
-                      <td className="py-2.5 px-3 text-center text-gray-400">—</td>
+                      <td className="py-2.5 px-3 text-center text-gray-500 dark:text-gray-400">—</td>
                     </tr>
                   </tbody>
                 </table>
@@ -884,26 +884,26 @@ export const MetasPage: React.FC = () => {
             </div>
 
             {/* Regras do Multiplicador Explicadas */}
-            <div className="p-4 rounded-2xl bg-surface-elevated/40 border border-surface-border space-y-2 text-xs text-gray-300">
-              <h4 className="font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <HelpCircle className="w-4 h-4 text-brand-400" /> Tabela de Escalonamento do Multiplicador de Bônus Oficial:
+            <div className="p-4 rounded-2xl bg-surface-elevated/40 border border-surface-border space-y-2 text-xs text-gray-700 dark:text-gray-300">
+              <h4 className="font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                <HelpCircle className="w-4 h-4 text-brand-500 dark:text-brand-400" /> Tabela de Escalonamento do Multiplicador de Bônus Oficial:
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-1">
                 <div className="p-2.5 rounded-lg bg-surface-card border border-surface-border">
-                  <span className="font-bold text-rose-400">Abaixo de 90%</span>
-                  <p className="text-gray-400 mt-0.5">Multiplicador: <strong className="text-white">0x (0%)</strong></p>
+                  <span className="font-bold text-rose-700 dark:text-rose-400">Abaixo de 90%</span>
+                  <p className="text-gray-600 dark:text-gray-400 mt-0.5">Multiplicador: <strong className="text-gray-900 dark:text-white">0x (0%)</strong></p>
                 </div>
                 <div className="p-2.5 rounded-lg bg-surface-card border border-surface-border">
-                  <span className="font-bold text-amber-400">90% a 99,9%</span>
-                  <p className="text-gray-400 mt-0.5">Multiplicador: <strong className="text-white">0,5x (50%)</strong></p>
+                  <span className="font-bold text-amber-700 dark:text-amber-400">90% a 99,9%</span>
+                  <p className="text-gray-600 dark:text-gray-400 mt-0.5">Multiplicador: <strong className="text-gray-900 dark:text-white">0,5x (50%)</strong></p>
                 </div>
                 <div className="p-2.5 rounded-lg bg-surface-card border border-surface-border">
-                  <span className="font-bold text-emerald-400">100% a 109,9%</span>
-                  <p className="text-gray-400 mt-0.5">Multiplicador: <strong className="text-white">1,0x (100%)</strong></p>
+                  <span className="font-bold text-emerald-700 dark:text-emerald-400">100% a 109,9%</span>
+                  <p className="text-gray-600 dark:text-gray-400 mt-0.5">Multiplicador: <strong className="text-gray-900 dark:text-white">1,0x (100%)</strong></p>
                 </div>
                 <div className="p-2.5 rounded-lg bg-surface-card border border-surface-border">
-                  <span className="font-bold text-yellow-400">A partir de 110%</span>
-                  <p className="text-gray-400 mt-0.5">Multiplicador: <strong className="text-white">1,25x (125%)</strong></p>
+                  <span className="font-bold text-amber-700 dark:text-yellow-400">A partir de 110%</span>
+                  <p className="text-gray-600 dark:text-gray-400 mt-0.5">Multiplicador: <strong className="text-gray-900 dark:text-white">1,25x (125%)</strong></p>
                 </div>
               </div>
             </div>
@@ -916,17 +916,17 @@ export const MetasPage: React.FC = () => {
         <div className="space-y-6 animate-fadeIn">
           <div className="p-5 rounded-2xl bg-surface-card border border-surface-border space-y-4">
             <div>
-              <h3 className="text-base font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <ListOrdered className="w-5 h-5 text-amber-400" /> Tabela Oficial de Pontuação — Renetec 2026
+              <h3 className="text-base font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                <ListOrdered className="w-5 h-5 text-amber-600 dark:text-amber-400" /> Tabela Oficial de Pontuação — Renetec 2026
               </h3>
-              <p className="text-xs text-gray-400 mt-0.5">
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                 Valores de pontos unitários atribuídos para cada família de equipamento e complexidade de reparo.
               </p>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left">
-                <thead className="bg-surface-elevated/60 text-gray-400 font-semibold border-b border-surface-border">
+                <thead className="bg-surface-elevated/60 text-gray-600 dark:text-gray-400 font-semibold border-b border-surface-border">
                   <tr>
                     <th className="py-2.5 px-3">Serviço / Equipamento</th>
                     <th className="py-2.5 px-3 text-center">Pontos por Unidade</th>
@@ -936,21 +936,21 @@ export const MetasPage: React.FC = () => {
                 <tbody className="divide-y divide-surface-border">
                   {tabelaPontuacao.map((t) => (
                     <tr key={t.id} className="hover:bg-surface-elevated/30 transition-colors">
-                      <td className="py-3 px-3 font-bold text-white">{t.equipamentoServico}</td>
+                      <td className="py-3 px-3 font-bold text-gray-900 dark:text-white">{t.equipamentoServico}</td>
                       <td className="py-3 px-3 text-center">
-                        <span className="px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-300 font-black border border-amber-500/30 tabular-nums">
+                        <span className="px-2.5 py-1 rounded-lg bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/30 font-black border tabular-nums">
                           {t.pontos} pt{t.pontos > 1 ? 's' : ''}
                         </span>
                       </td>
-                      <td className="py-3 px-3 text-gray-300">{t.observacao}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-300">{t.observacao}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-surface-elevated border border-surface-border text-xs text-gray-300">
-              <strong className="text-amber-300">IMPORTANTE:</strong> A pontuação é inicial e deve ser revisada após o período piloto de agosto conforme os dados de chão de fábrica.
+            <div className="p-3.5 rounded-xl bg-surface-elevated border border-surface-border text-xs text-gray-700 dark:text-gray-300">
+              <strong className="text-amber-700 dark:text-amber-300">IMPORTANTE:</strong> A pontuação é inicial e deve ser revisada após o período piloto de agosto conforme os dados de chão de fábrica.
             </div>
           </div>
         </div>
@@ -961,10 +961,10 @@ export const MetasPage: React.FC = () => {
         <div className="space-y-6 animate-fadeIn">
           <div className="p-5 rounded-2xl bg-surface-card border border-surface-border space-y-4">
             <div>
-              <h3 className="text-base font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-sky-400" /> Como Administrar a Meta Renetec (Guia Oficial)
+              <h3 className="text-base font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-sky-600 dark:text-sky-400" /> Como Administrar a Meta Renetec (Guia Oficial)
               </h3>
-              <p className="text-xs text-gray-400 mt-0.5">
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                 Diretrizes operacionais para registro de produção, controle de qualidade, retrabalho e bônus.
               </p>
             </div>
@@ -976,14 +976,14 @@ export const MetasPage: React.FC = () => {
                   className="p-4 rounded-xl bg-surface-base border border-surface-border space-y-2 hover:border-brand-500/40 transition-colors"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="w-6 h-6 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/40 flex items-center justify-center text-xs font-black">
+                    <span className="w-6 h-6 rounded-full bg-brand-500/20 text-brand-600 dark:text-brand-300 border border-brand-500/40 flex items-center justify-center text-xs font-black">
                       {g.etapa}
                     </span>
-                    <span className="px-2 py-0.5 rounded bg-surface-elevated text-gray-300 text-[10px] font-bold border border-surface-border">
+                    <span className="px-2 py-0.5 rounded bg-surface-elevated text-gray-700 dark:text-gray-300 text-[10px] font-bold border border-surface-border">
                       {g.quando}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-200 leading-relaxed font-medium">
+                  <p className="text-xs text-gray-700 dark:text-gray-200 leading-relaxed font-medium">
                     {g.oQueFazer}
                   </p>
                 </div>

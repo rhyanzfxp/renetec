@@ -63,7 +63,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       primary:
         'bg-brand-600 hover:bg-brand-500 text-white shadow-sm hover:shadow-glow-primary border border-brand-500/30',
       secondary:
-        'bg-surface-elevated hover:bg-surface-border text-gray-200 border border-surface-border',
+        'bg-surface-elevated hover:bg-surface-border text-gray-800 dark:text-gray-200 border border-surface-border',
       success:
         'bg-status-aprovado hover:bg-emerald-600 text-white border border-emerald-500/40 shadow-sm',
       danger:
@@ -71,9 +71,9 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       warning:
         'bg-status-retrabalho hover:bg-amber-500 text-slate-950 font-bold border border-amber-500/40 shadow-sm',
       outline:
-        'bg-transparent hover:bg-surface-elevated text-gray-300 border border-surface-border hover:text-white',
+        'bg-transparent hover:bg-surface-elevated text-gray-700 dark:text-gray-300 border border-surface-border hover:text-gray-900 dark:hover:text-white',
       ghost:
-        'bg-transparent hover:bg-surface-elevated text-gray-400 hover:text-gray-200 border border-transparent',
+        'bg-transparent hover:bg-surface-elevated text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 border border-transparent',
     };
 
     const renderContent = () => {

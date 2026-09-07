@@ -68,7 +68,7 @@ export const OsListPage: React.FC<OsListPageProps> = ({ onlyMine = false }) => {
       key: 'numeroOS',
       header: 'Número',
       width: '90px',
-      render: (row) => <span className="font-bold text-white tabular-nums">#{row.numeroOS}</span>,
+      render: (row) => <span className="font-bold text-gray-900 dark:text-white tabular-nums">#{row.numeroOS}</span>,
     },
     {
       key: 'cliente',
@@ -77,9 +77,9 @@ export const OsListPage: React.FC<OsListPageProps> = ({ onlyMine = false }) => {
         const item = row.itens[0];
         return (
           <div>
-            <p className="font-medium text-white truncate max-w-xs">{row.cliente.nomeRazaoSocial}</p>
+            <p className="font-medium text-gray-900 dark:text-white truncate max-w-xs">{row.cliente.nomeRazaoSocial}</p>
             {item && (
-              <p className="text-[11px] text-gray-400 truncate max-w-xs">
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate max-w-xs">
                 {item.tipoEquipamento.nome} {item.tipoEquipamento.marca ? `(${item.tipoEquipamento.marca})` : ''}
               </p>
             )}
@@ -94,7 +94,7 @@ export const OsListPage: React.FC<OsListPageProps> = ({ onlyMine = false }) => {
       align: 'center',
       render: (row) => {
         const total = row.itens.reduce((acc, it) => acc + it.quantidade, 0);
-        return <span className="font-semibold text-gray-200 tabular-nums">{total} un</span>;
+        return <span className="font-semibold text-gray-800 dark:text-gray-200 tabular-nums">{total} un</span>;
       },
     },
     {
@@ -115,7 +115,7 @@ export const OsListPage: React.FC<OsListPageProps> = ({ onlyMine = false }) => {
       width: '140px',
       render: (row) => {
         const tec = row.itens[0]?.tecnicoAlocado?.nome;
-        return <span className="text-gray-300 text-xs">{tec || '—'}</span>;
+        return <span className="text-gray-700 dark:text-gray-300 text-xs font-medium">{tec || '—'}</span>;
       },
     },
     {

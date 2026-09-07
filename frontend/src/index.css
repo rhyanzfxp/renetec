@@ -8,11 +8,27 @@
 
 @layer base {
   :root {
+    color-scheme: light;
+    /* Modo Claro Industrial Renetec (Harmônico, clean, ergonômico) */
+    --surface-base: 248 250 252;       /* #f8fafc - Slate 50 */
+    --surface-card: 255 255 255;       /* #ffffff - Branco puro */
+    --surface-elevated: 241 245 249;   /* #f1f5f9 - Slate 100 */
+    --surface-border: 226 232 240;     /* #e2e8f0 - Slate 200 */
+    --surface-muted: 148 163 184;      /* #94a3b8 - Slate 400 */
+  }
+
+  .dark {
     color-scheme: dark;
+    /* Modo Escuro Industrial Renetec (Navy profundo, alta definição) */
+    --surface-base: 11 15 25;          /* #0b0f19 */
+    --surface-card: 17 24 39;          /* #111827 */
+    --surface-elevated: 31 41 55;      /* #1f2937 */
+    --surface-border: 55 65 81;        /* #374151 */
+    --surface-muted: 75 85 99;         /* #4b5563 */
   }
   
   body {
-    @apply bg-surface-base text-gray-100 font-sans antialiased selection:bg-brand-600 selection:text-white min-h-screen overflow-x-hidden;
+    @apply bg-surface-base text-gray-800 dark:text-gray-100 font-sans antialiased selection:bg-brand-600 selection:text-white min-h-screen overflow-x-hidden transition-colors duration-200;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
@@ -21,34 +37,30 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* Estilização universal de selects e options para alto contraste em modo escuro */
+  /* Estilização universal de selects e options para ambos os temas */
   select {
-    color-scheme: dark;
-    background-color: #12161f;
-    color: #f9fafb;
+    @apply bg-surface-card text-gray-900 dark:text-gray-100 border-surface-border;
   }
 
   select option {
-    background-color: #161c26;
-    color: #ffffff;
+    @apply bg-surface-card text-gray-900 dark:text-gray-100;
     padding: 6px 10px;
   }
 
-
-  /* Custom scrollbar discreta */
+  /* Custom scrollbar adaptativa */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: #0b0f19;
+    background: rgb(var(--surface-base));
   }
   ::-webkit-scrollbar-thumb {
-    background: #1f2937;
+    background: rgb(var(--surface-border));
     border-radius: 3px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #374151;
+    background: rgb(var(--surface-muted));
   }
 
   /* Performance: desabilitar transições pesadas quando o sistema estiver sobrecarregado */

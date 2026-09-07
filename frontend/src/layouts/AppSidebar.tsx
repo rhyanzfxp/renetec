@@ -115,7 +115,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       >
         {/* Navigation list */}
         <div className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-          <div className="px-3 py-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+          <div className="px-3 py-1 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
             Navegação Operacional
           </div>
 
@@ -132,12 +132,12 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                 className={clsx(
                   'w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-colors select-none group',
                   isActive
-                    ? 'bg-brand-600/15 text-brand-300 border border-brand-500/30'
-                    : 'text-gray-400 hover:text-gray-200 hover:bg-surface-elevated/60 border border-transparent'
+                    ? 'bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-500/30 font-semibold'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-surface-elevated/70 border border-transparent'
                 )}
               >
                 <div className="flex items-center gap-3">
-                  <span className={clsx(isActive ? 'text-brand-400' : 'text-gray-400 group-hover:text-gray-300')}>
+                  <span className={clsx(isActive ? 'text-brand-600 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300')}>
                     {item.icon}
                   </span>
                   <span className="truncate">{item.label}</span>
@@ -145,7 +145,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                 <ChevronRight
                   className={clsx(
                     'w-3.5 h-3.5 transition-transform',
-                    isActive ? 'text-brand-400 translate-x-0.5' : 'text-gray-600 opacity-0 group-hover:opacity-100'
+                    isActive ? 'text-brand-600 dark:text-brand-400 translate-x-0.5' : 'text-gray-400 dark:text-gray-600 opacity-0 group-hover:opacity-100'
                   )}
                 />
               </button>
@@ -156,10 +156,10 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
         {/* Mini Widget da Meta Coletiva Dinâmico no Rodapé da Sidebar */}
         <div className="p-3 border-t border-surface-border bg-surface-base/40 m-2 rounded-xl border">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold text-gray-300 flex items-center gap-1.5">
-              <Target className="w-3.5 h-3.5 text-amber-400" /> Meta Alvo
+            <span className="font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+              <Target className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" /> Meta Alvo
             </span>
-            <span className="font-bold text-emerald-400 tabular-nums">
+            <span className="font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
               {metaData ? `${metaData.percentualAlvo}%` : '0.0%'}
             </span>
           </div>
@@ -169,7 +169,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
               style={{ width: `${pctAlvo}%` }}
             />
           </div>
-          <div className="flex justify-between items-center text-[11px] text-gray-400 mt-1.5 tabular-nums">
+          <div className="flex justify-between items-center text-[11px] text-gray-500 dark:text-gray-400 mt-1.5 tabular-nums">
             <span>{metaData ? `${metaData.pontosRealizados} pts` : '0 pts'}</span>
             <span>Alvo: {metaData?.metaAlvo ?? 300} pts</span>
           </div>

@@ -132,8 +132,8 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
     >
       <form onSubmit={handleSubmit} className="space-y-5 text-sm">
         {errorMessage && (
-          <div className="p-3 rounded-lg bg-red-950/40 border border-red-800/40 flex items-start gap-2.5 text-xs text-red-300">
-            <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="p-3 rounded-lg bg-red-100 dark:bg-red-950/40 border border-red-300 dark:border-red-800/40 flex items-start gap-2.5 text-xs text-red-700 dark:text-red-300">
+            <AlertTriangle className="w-4 h-4 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
             <span>{errorMessage}</span>
           </div>
         )}
@@ -141,37 +141,37 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
         {/* Resumo do Lote Inspecionado */}
         <div className="p-3.5 rounded-lg bg-surface-elevated border border-surface-border space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-400">Equipamento a Testar</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">Equipamento a Testar</span>
             <div className="flex items-center gap-1.5">
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
                 item.tipoCategoria === 'SEM_DEFEITO'
-                  ? 'bg-sky-950/40 border-sky-500/40 text-sky-300'
+                  ? 'bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-950/40 dark:border-sky-500/40 dark:text-sky-300'
                   : item.tipoCategoria === 'RETRABALHO'
-                  ? 'bg-purple-950/40 border-purple-500/40 text-purple-300'
-                  : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+                  ? 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950/40 dark:border-purple-500/40 dark:text-purple-300'
+                  : 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:border-emerald-500/40 dark:text-emerald-300'
               }`}>
                 {item.tipoCategoria === 'SEM_DEFEITO' ? '✅ Triagem (Sem Defeito)' : item.tipoCategoria === 'RETRABALHO' ? '🔄 Retrabalho' : '🔧 Reparado'}
               </span>
               <StatusBadge prioridade={item.ordemServico.prioridade} size="sm" />
             </div>
           </div>
-          <p className="text-sm font-bold text-white">
+          <p className="text-sm font-bold text-gray-900 dark:text-white">
             {item.tipoEquipamento.nome} {item.tipoEquipamento.marca ? `(${item.tipoEquipamento.marca})` : ''}
           </p>
 
-          <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-surface-border/50 text-gray-300">
+          <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-surface-border/50 text-gray-700 dark:text-gray-300">
             <div className="flex items-center gap-1.5">
-              <User className="w-3.5 h-3.5 text-sky-400" />
-              <span>Técnico Responsável: <strong className="text-white">{item.tecnicoAlocado?.nome || 'Samuel'}</strong></span>
+              <User className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+              <span>Técnico Responsável: <strong className="text-gray-900 dark:text-white">{item.tecnicoAlocado?.nome || 'Samuel'}</strong></span>
             </div>
             <div className="text-right">
-              <span>Lote Disponível: <strong className="text-amber-400 tabular-nums">{qtdLoteTotal} un</strong></span>
+              <span>Lote Disponível: <strong className="text-amber-600 dark:text-amber-400 tabular-nums">{qtdLoteTotal} un</strong></span>
             </div>
           </div>
 
           {(item.producoes?.[0]?.servicoRealizado || item.producaoRecente?.servicoRealizado) && (
-            <div className="mt-2 p-2 rounded bg-surface-base/80 border border-surface-border/60 text-xs text-gray-300">
-              <span className="text-gray-400 font-semibold">Serviço Realizado pelo Técnico:</span>{' '}
+            <div className="mt-2 p-2 rounded bg-surface-base/80 border border-surface-border/60 text-xs text-gray-700 dark:text-gray-300">
+              <span className="text-gray-500 dark:text-gray-400 font-semibold">Serviço Realizado pelo Técnico:</span>{' '}
               {item.producoes?.[0]?.servicoRealizado || item.producaoRecente?.servicoRealizado}
             </div>
           )}
@@ -180,11 +180,11 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
         {/* Painel de Quantidades: Aprovados + Reprovados = Total */}
         <div className="p-4 rounded-xl bg-surface-base border border-surface-border space-y-3">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-bold uppercase tracking-wider text-gray-300 flex items-center gap-1.5">
-              <FileCheck className="w-4 h-4 text-emerald-400" /> Quantidades Inspecionadas
+            <label className="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+              <FileCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Quantidades Inspecionadas
             </label>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-400">Testar agora:</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">Testar agora:</span>
               <input
                 type="number"
                 min="1"
@@ -199,15 +199,15 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
                     setReprovadas(0);
                   }
                 }}
-                className="w-16 h-7 px-2 bg-[#12161f] border border-surface-border rounded text-xs text-center text-white font-mono font-bold focus:outline-none focus:border-brand-500"
+                className="w-16 h-7 px-2 bg-surface-card border border-surface-border rounded text-xs text-center text-gray-900 dark:text-white font-mono font-bold focus:outline-none focus:border-brand-500"
               />
-              <span className="text-xs text-gray-400">/ {qtdLoteTotal} un</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">/ {qtdLoteTotal} un</span>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
+              <label className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
                 <CheckCircle2 className="w-3.5 h-3.5" /> Aprovadas (Para a Meta)
               </label>
               <Input
@@ -225,7 +225,7 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-red-400 flex items-center gap-1">
+              <label className="text-xs font-semibold text-red-700 dark:text-red-400 flex items-center gap-1">
                 <XCircle className="w-3.5 h-3.5" /> Reprovadas (Retrabalho)
               </label>
               <Input
@@ -247,8 +247,8 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
           <div
             className={`p-2.5 rounded-lg flex items-center justify-between text-xs font-semibold ${
               isSomaValida
-                ? 'bg-emerald-950/40 text-emerald-300 border border-emerald-800/40'
-                : 'bg-red-950/40 text-red-300 border border-red-800/40 animate-pulse'
+                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/40'
+                : 'bg-red-100 text-red-800 border border-red-300 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800/40 animate-pulse'
             }`}
           >
             <span>
@@ -262,30 +262,30 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
 
         {/* Seção Condicional: Motivo de Reprovação (se houver reprovadas > 0) */}
         {reprovadas > 0 && (
-          <div className="p-3.5 rounded-xl bg-amber-950/20 border border-amber-500/30 space-y-3 animate-fadeIn">
-            <div className="flex items-center justify-between text-xs font-bold text-amber-400 uppercase tracking-wider">
+          <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-300 dark:border-amber-500/30 space-y-3 animate-fadeIn">
+            <div className="flex items-center justify-between text-xs font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wider">
               <span className="flex items-center gap-1.5">
-                <ShieldAlert className="w-4 h-4" /> Motivo de Não-Conformidade & Retrabalho
+                <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400" /> Motivo de Não-Conformidade & Retrabalho
               </span>
-              <span className="text-[11px] text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded font-bold">
+              <span className="text-[11px] text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-500/20 px-2 py-0.5 rounded font-bold">
                 Devolução p/ {item.tecnicoAlocado?.nome || 'Samuel'}
               </span>
             </div>
 
-            <p className="text-[11px] text-amber-200 bg-amber-950/40 p-2.5 rounded-lg border border-amber-500/30">
+            <p className="text-[11px] text-amber-900 dark:text-amber-200 bg-amber-100/70 dark:bg-amber-950/40 p-2.5 rounded-lg border border-amber-300 dark:border-amber-500/30">
               <strong>Atenção:</strong> As <strong>{reprovadas} unidade(s)</strong> reprovadas serão encaminhadas imediatamente para a fila de Retrabalho do técnico <strong>{item.tecnicoAlocado?.nome || 'Samuel'}</strong> para correção.
             </p>
 
             <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-gray-200">
-                Descrição do Defeito / O que o técnico precisa corrigir <span className="text-red-400">*</span>
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200">
+                Descrição do Defeito / O que o técnico precisa corrigir <span className="text-red-500 dark:text-red-400">*</span>
               </label>
               <textarea
                 value={detalhesDefeito}
                 onChange={(e) => setDetalhesDefeito(e.target.value)}
                 rows={3}
                 placeholder="Ex: 4 unidades apresentaram ripple excessivo na alimentação secundária e capacitor C12 estufado..."
-                className="w-full bg-[#131720] border border-surface-border rounded-lg px-3 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 resize-none"
+                className="w-full bg-surface-card border border-surface-border rounded-lg px-3 py-2.5 text-xs text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 resize-none"
                 required
               />
             </div>
@@ -294,7 +294,7 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
 
         {/* Observações Gerais do Laudo */}
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold uppercase text-gray-300 tracking-wider">
+          <label className="block text-xs font-semibold uppercase text-gray-700 dark:text-gray-300 tracking-wider">
             Observações Técnicas do Laudo (Opcional)
           </label>
           <textarea
@@ -302,7 +302,7 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
             onChange={(e) => setObservacao(e.target.value)}
             rows={2}
             placeholder="Ex: Lote submetido a ensaio de carga e teste óptico em bancada."
-            className="w-full bg-[#131720] border border-surface-border rounded-lg px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 resize-none"
+            className="w-full bg-surface-card border border-surface-border rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 resize-none"
           />
         </div>
       </form>

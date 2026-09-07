@@ -311,9 +311,9 @@ export const ProducaoPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {errorMessage && (
-        <div className="p-3.5 rounded-lg bg-red-950/40 border border-red-800/50 flex items-center justify-between text-xs text-red-200">
+        <div className="p-3.5 rounded-lg bg-red-100 dark:bg-red-950/40 border border-red-300 dark:border-red-800/50 flex items-center justify-between text-xs text-red-700 dark:text-red-200">
           <div className="flex items-center gap-2.5">
-            <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+            <AlertTriangle className="w-4 h-4 text-red-500 dark:text-red-400 flex-shrink-0" />
             <span>{errorMessage}</span>
           </div>
           <Button variant="ghost" size="sm" onClick={() => setErrorMessage(null)}>
@@ -323,9 +323,9 @@ export const ProducaoPage: React.FC = () => {
       )}
 
       {successMessage && (
-        <div className="p-3.5 rounded-lg bg-emerald-950/40 border border-emerald-800/50 flex items-center justify-between text-xs text-emerald-200 animate-fadeIn">
+        <div className="p-3.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800/50 flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-200 animate-fadeIn">
           <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
             <span>{successMessage}</span>
           </div>
           <Button variant="ghost" size="sm" onClick={() => setSuccessMessage(null)}>
@@ -335,13 +335,13 @@ export const ProducaoPage: React.FC = () => {
       )}
 
       {/* ─── BARRA DE AÇÃO RÁPIDA (AUTO-ATENDIMENTO DO TÉCNICO) ─────────────── */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 rounded-xl bg-gradient-to-r from-surface-card via-surface-card to-sky-950/20 border border-surface-border">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 rounded-xl bg-gradient-to-r from-surface-card via-surface-card to-sky-50 dark:to-sky-950/20 border border-surface-border">
         <div>
-          <h2 className="text-sm font-bold text-white flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-sky-400 animate-pulse" />
+          <h2 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-sky-500 dark:bg-sky-400 animate-pulse" />
             Bancada de Produção & Reparo Técnico
           </h2>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
             Apontamento de caixas, início de produção ao vivo e envio de lotes para o Controle de Qualidade.
           </p>
         </div>
@@ -364,11 +364,11 @@ export const ProducaoPage: React.FC = () => {
       {/* ─── BARRA SUPERIOR: MINHA PRODUÇÃO DE HOJE ─────────────────── */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4 text-brand-400" /> Minha Produção de Hoje
+          <h3 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+            <Sparkles className="w-4 h-4 text-brand-500 dark:text-brand-400" /> Minha Produção de Hoje
           </h3>
-          <span className="text-[11px] text-gray-400 font-mono flex items-center gap-1">
-            <Calendar className="w-3.5 h-3.5 text-gray-500" />
+          <span className="text-[11px] text-gray-500 dark:text-gray-400 font-mono flex items-center gap-1">
+            <Calendar className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
             {producaoHoje?.data ? new Date(producaoHoje.data + 'T12:00:00Z').toLocaleDateString('pt-BR') : 'Hoje'}
           </span>
         </div>
@@ -377,52 +377,52 @@ export const ProducaoPage: React.FC = () => {
           {/* Card Reparados Hoje */}
           <div className="p-4 rounded-xl bg-surface-card border border-emerald-500/30 shadow-sm relative overflow-hidden">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-                <Wrench className="w-3.5 h-3.5 text-emerald-400" /> Reparados
+              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Wrench className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Reparados
               </span>
-              <span className="text-[10px] text-emerald-400/80 bg-emerald-500/10 px-1.5 py-0.5 rounded font-mono font-bold">HOJE</span>
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded font-mono font-bold">HOJE</span>
             </div>
             <div className="mt-2 flex items-baseline gap-1.5">
-              <span className="text-2xl sm:text-3xl font-extrabold text-white font-mono tabular-nums">
+              <span className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white font-mono tabular-nums">
                 {producaoHoje?.totalReparados ?? 0}
               </span>
-              <span className="text-xs text-gray-400">un</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">un</span>
             </div>
-            <p className="text-[10px] text-gray-400 mt-1">Equipamentos consertados hoje</p>
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">Equipamentos consertados hoje</p>
           </div>
 
           {/* Card Sem Defeito Hoje */}
           <div className="p-4 rounded-xl bg-surface-card border border-sky-500/30 shadow-sm relative overflow-hidden">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-sky-400" /> Sem Defeito
+              <span className="text-xs font-semibold text-sky-600 dark:text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" /> Sem Defeito
               </span>
-              <span className="text-[10px] text-sky-400/80 bg-sky-500/10 px-1.5 py-0.5 rounded font-mono font-bold">TRIAGEM</span>
+              <span className="text-[10px] text-sky-600 dark:text-sky-400 bg-sky-500/10 px-1.5 py-0.5 rounded font-mono font-bold">TRIAGEM</span>
             </div>
             <div className="mt-2 flex items-baseline gap-1.5">
-              <span className="text-2xl sm:text-3xl font-extrabold text-white font-mono tabular-nums">
+              <span className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white font-mono tabular-nums">
                 {producaoHoje?.totalSemDefeito ?? 0}
               </span>
-              <span className="text-xs text-gray-400">un</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">un</span>
             </div>
-            <p className="text-[10px] text-gray-400 mt-1">Aprovados em triagem rápida</p>
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">Aprovados em triagem rápida</p>
           </div>
 
           {/* Card Sucata Hoje */}
           <div className="p-4 rounded-xl bg-surface-card border border-red-500/30 shadow-sm relative overflow-hidden">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-red-400 uppercase tracking-wider flex items-center gap-1.5">
-                <XCircle className="w-3.5 h-3.5 text-red-400" /> Sucata
+              <span className="text-xs font-semibold text-red-600 dark:text-red-400 uppercase tracking-wider flex items-center gap-1.5">
+                <XCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" /> Sucata
               </span>
-              <span className="text-[10px] text-red-400/80 bg-red-500/10 px-1.5 py-0.5 rounded font-mono font-bold">PERDA</span>
+              <span className="text-[10px] text-red-600 dark:text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded font-mono font-bold">PERDA</span>
             </div>
             <div className="mt-2 flex items-baseline gap-1.5">
-              <span className="text-2xl sm:text-3xl font-extrabold text-white font-mono tabular-nums">
+              <span className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white font-mono tabular-nums">
                 {producaoHoje?.totalSucata ?? 0}
               </span>
-              <span className="text-xs text-gray-400">un</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">un</span>
             </div>
-            <p className="text-[10px] text-gray-400 mt-1">Sem possibilidade de reparo</p>
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">Sem possibilidade de reparo</p>
           </div>
 
           {/* Card Pontos Estimados Hoje */}
@@ -464,22 +464,22 @@ export const ProducaoPage: React.FC = () => {
 
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">
                   Minhas OS em Andamento
                 </h3>
-                <span className="px-2 py-0.5 rounded-full text-xs font-bold font-mono bg-surface-base text-brand-300 border border-brand-500/30">
+                <span className="px-2 py-0.5 rounded-full text-xs font-bold font-mono bg-surface-base text-brand-600 dark:text-brand-300 border border-brand-500/30">
                   {osEmAndamento.length}
                 </span>
 
                 {!isOsAndamentoOpen && osEmAndamento.length > 0 && (
-                  <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-800/40">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                     {osEmAndamento.reduce((acc, os) => acc + (os.totalGeralReparado ?? os.totalReparados ?? 0), 0)} rep acumuladas
                   </span>
                 )}
               </div>
 
-              <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">
                 {isOsAndamentoOpen
                   ? 'Ordens de serviço abertas atribuídas a você na bancada. Continue apontando ou mande ao CQ.'
                   : `Gaveta recolhida • Clique para expandir as ${osEmAndamento.length} OSs`}
@@ -496,7 +496,7 @@ export const ProducaoPage: React.FC = () => {
                 loadData();
               }}
               leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
-              className="text-xs text-gray-400 hover:text-white"
+              className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
               title="Atualizar ordens de serviço"
             >
               Atualizar
@@ -505,7 +505,7 @@ export const ProducaoPage: React.FC = () => {
             <div
               className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all ${
                 isOsAndamentoOpen
-                  ? 'bg-surface-base border-surface-border text-gray-300'
+                  ? 'bg-surface-base border-surface-border text-gray-500 dark:text-gray-300'
                   : 'bg-brand-500/10 border-brand-500/30 text-brand-300'
               }`}
             >
@@ -527,7 +527,7 @@ export const ProducaoPage: React.FC = () => {
             {osEmAndamento.length === 0 ? (
               <div className="p-6 rounded-xl bg-surface-base/60 border border-surface-border text-center space-y-2">
                 <CheckCircle2 className="w-7 h-7 text-emerald-400 mx-auto" />
-                <h4 className="text-sm font-bold text-white">Nenhuma OS em andamento no momento</h4>
+                <h4 className="text-sm font-bold text-gray-900 dark:text-white">Nenhuma OS em andamento no momento</h4>
                 <p className="text-xs text-gray-400 max-w-sm mx-auto">
                   Clique em <strong>"Novo Apontamento / Minha OS"</strong> acima para registrar uma nova OS na bancada.
                 </p>
@@ -541,11 +541,11 @@ export const ProducaoPage: React.FC = () => {
               >
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-white tabular-nums flex items-center gap-1.5">
-                      <Package className="w-3.5 h-3.5 text-brand-400" /> OS #{os.numeroOS}
+                    <span className="text-xs font-bold text-gray-900 dark:text-white tabular-nums flex items-center gap-1.5">
+                      <Package className="w-3.5 h-3.5 text-brand-500 dark:text-brand-400" /> OS #{os.numeroOS}
                     </span>
                     <div className="flex items-center gap-1.5">
-                      <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold uppercase">
+                      <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-bold uppercase">
                         Em Andamento
                       </span>
                       {os.prioridade && <StatusBadge prioridade={os.prioridade as any} size="sm" />}
@@ -555,7 +555,7 @@ export const ProducaoPage: React.FC = () => {
                           setOsParaExcluir(os);
                           setExcluirOsModalOpen(true);
                         }}
-                        className="p-1 rounded text-gray-500 hover:text-red-400 hover:bg-red-500/15 transition-colors ml-1"
+                        className="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-500/10 transition-colors ml-1"
                         title="Excluir OS incorreta / lançada por engano"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -564,25 +564,25 @@ export const ProducaoPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <h4 className="text-sm font-bold text-white line-clamp-1">{os.clienteNome || os.cliente?.nomeRazaoSocial}</h4>
-                    <p className="text-xs text-gray-400">
+                    <h4 className="text-sm font-bold text-gray-900 dark:text-white line-clamp-1">{os.clienteNome || os.cliente?.nomeRazaoSocial}</h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       Aberta em: {new Date(os.dataCriacao || os.dataEntrada).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
 
                   {/* Resumo Acumulado na OS */}
-                  <div className="p-2.5 rounded-lg bg-[#0d121c] border border-surface-border/60 space-y-1.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">
+                  <div className="p-2.5 rounded-lg bg-surface-elevated/70 border border-surface-border/60 space-y-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 block">
                       Total Acumulado nesta OS:
                     </span>
                     <div className="flex flex-wrap items-center gap-2 text-xs">
-                      <span className="font-bold text-emerald-400 tabular-nums">
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
                         {os.totalGeralReparado ?? os.totalReparados ?? 0} rep
                       </span>
                       {(os.totalGeralSemDefeito ?? os.totalSemDefeito ?? 0) > 0 && (
                         <>
                           <span className="text-gray-600">•</span>
-                          <span className="font-bold text-sky-400 tabular-nums">
+                          <span className="font-bold text-sky-600 dark:text-sky-400 tabular-nums">
                             {os.totalGeralSemDefeito ?? os.totalSemDefeito} sem def
                           </span>
                         </>
@@ -590,13 +590,13 @@ export const ProducaoPage: React.FC = () => {
                       {(os.totalGeralSucata ?? os.totalSucata ?? 0) > 0 && (
                         <>
                           <span className="text-gray-600">•</span>
-                          <span className="font-bold text-red-400 tabular-nums">
+                          <span className="font-bold text-red-600 dark:text-red-400 tabular-nums">
                             {os.totalGeralSucata ?? os.totalSucata} suc
                           </span>
                         </>
                       )}
                       <span className="text-gray-600">•</span>
-                      <span className="text-gray-300 font-semibold tabular-nums">
+                      <span className="text-gray-600 dark:text-gray-300 font-semibold tabular-nums">
                         {os.totalGeralEquipamentos ?? os.totalProcessado ?? 0} un total
                       </span>
                     </div>
@@ -614,7 +614,7 @@ export const ProducaoPage: React.FC = () => {
                             key={eq.tipoEquipamentoId}
                             className="flex items-center justify-between text-[11px] p-1.5 rounded bg-surface-base border border-surface-border/40"
                           >
-                            <span className="text-gray-200 font-medium truncate max-w-[150px]" title={eq.tipoEquipamentoNome}>
+                            <span className="text-gray-700 dark:text-gray-200 font-medium truncate max-w-[150px]" title={eq.tipoEquipamentoNome}>
                               {eq.tipoEquipamentoNome}
                             </span>
                             <span className="text-amber-300 font-mono tabular-nums font-semibold">
@@ -629,12 +629,12 @@ export const ProducaoPage: React.FC = () => {
                   {/* Mini-histórico de dias se trabalhado em mais de 1 dia */}
                   {os.historicoDias && os.historicoDias.length > 1 && (
                     <div className="p-2 rounded-lg bg-surface-base/60 border border-surface-border/40 text-[10px] text-gray-400">
-                      <span className="font-semibold text-gray-300 block mb-1">
+                      <span className="font-semibold text-gray-700 dark:text-gray-300 block mb-1">
                         Trabalhado em {os.historicoDias.length} dias:
                       </span>
                       <div className="flex flex-wrap gap-1.5">
                         {os.historicoDias.map((d: { data: string; totalReparado: number }, idx: number) => (
-                          <span key={idx} className="bg-surface-elevated px-1.5 py-0.5 rounded border border-surface-border font-mono text-gray-300">
+                          <span key={idx} className="bg-surface-elevated px-1.5 py-0.5 rounded border border-surface-border font-mono text-gray-700 dark:text-gray-300">
                             {d.data.split('-').slice(1).reverse().join('/')}: <strong className="text-emerald-400">{d.totalReparado} rep</strong>
                           </span>
                         ))}
@@ -681,7 +681,7 @@ export const ProducaoPage: React.FC = () => {
 
       {/* ─── 1. CARD DE PRODUÇÃO EM ANDAMENTO (CRONÔMETRO AO VIVO) ─────────── */}
       {producaoAtiva ? (
-        <div className="p-5 sm:p-6 rounded-xl bg-gradient-to-r from-amber-950/40 via-surface-card to-surface-card border-2 border-amber-500/40 shadow-panel relative overflow-hidden">
+        <div className="p-5 sm:p-6 rounded-xl bg-gradient-to-r from-amber-500/10 via-surface-card to-surface-card border-2 border-amber-500/40 shadow-panel relative overflow-hidden">
           <div className="absolute top-0 right-0 transform translate-x-4 -translate-y-4 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
 
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
@@ -691,7 +691,7 @@ export const ProducaoPage: React.FC = () => {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                 </span>
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
                   <Activity className="w-4 h-4" /> Produção Ao Vivo na Bancada e Painel Renetec (TV)
                 </span>
                 {producaoAtiva?.itemOrdemServico?.ordemServico?.prioridade && (
@@ -700,19 +700,19 @@ export const ProducaoPage: React.FC = () => {
               </div>
 
               <div>
-                <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                   <span>OS #{producaoAtiva?.itemOrdemServico?.ordemServico?.numeroOS || '—'}</span>
                   <span className="text-gray-400 font-normal">|</span>
-                  <span className="text-gray-200">{producaoAtiva?.itemOrdemServico?.tipoEquipamento?.nome || 'Equipamento'}</span>
+                  <span className="text-gray-700 dark:text-gray-200">{producaoAtiva?.itemOrdemServico?.tipoEquipamento?.nome || 'Equipamento'}</span>
                 </h2>
-                <p className="text-xs text-gray-400 mt-1">
-                  Cliente: <strong className="text-white">{producaoAtiva?.itemOrdemServico?.ordemServico?.cliente?.nomeRazaoSocial || 'MARANET Telecomunicações'}</strong> • Lote: <strong className="text-amber-300 tabular-nums">{producaoAtiva?.itemOrdemServico?.quantidade || 1} un</strong>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Cliente: <strong className="text-gray-900 dark:text-white">{producaoAtiva?.itemOrdemServico?.ordemServico?.cliente?.nomeRazaoSocial || 'MARANET Telecomunicações'}</strong> • Lote: <strong className="text-amber-600 dark:text-amber-300 tabular-nums">{producaoAtiva?.itemOrdemServico?.quantidade || 1} un</strong>
                 </p>
               </div>
 
               {producaoAtiva?.itemOrdemServico?.defeitoRelatado && (
-                <div className="p-2.5 rounded-lg bg-surface-base/80 border border-surface-border text-xs text-gray-300 max-w-xl">
-                  <span className="text-gray-400 font-semibold">Defeito:</span> {producaoAtiva.itemOrdemServico.defeitoRelatado}
+                <div className="p-2.5 rounded-lg bg-surface-base/80 border border-surface-border text-xs text-gray-700 dark:text-gray-300 max-w-xl">
+                  <span className="text-gray-500 dark:text-gray-400 font-semibold">Defeito:</span> {producaoAtiva.itemOrdemServico.defeitoRelatado}
                 </div>
               )}
             </div>
@@ -720,10 +720,10 @@ export const ProducaoPage: React.FC = () => {
             {/* Cronômetro e Botões de Concluir / Pausar */}
             <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end justify-between gap-4 border-t sm:border-t-0 border-surface-border pt-4 sm:pt-0">
               <div className="text-left sm:text-right">
-                <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider block">
+                <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider block">
                   Tempo em Execução
                 </span>
-                <div className="text-3xl sm:text-4xl font-extrabold text-amber-400 font-mono tabular-nums tracking-tight mt-0.5">
+                <div className="text-3xl sm:text-4xl font-extrabold text-amber-500 dark:text-amber-400 font-mono tabular-nums tracking-tight mt-0.5">
                   {tempoDecorrido}
                 </div>
               </div>
@@ -735,8 +735,8 @@ export const ProducaoPage: React.FC = () => {
                   onClick={handlePausarProducao}
                   disabled={isPausing}
                   loading={isPausing}
-                  leftIcon={<Pause className="w-4 h-4 text-amber-400" />}
-                  className="border-amber-500/40 text-amber-300 hover:bg-amber-950/40 font-semibold"
+                  leftIcon={<Pause className="w-4 h-4 text-amber-500 dark:text-amber-400" />}
+                  className="border-amber-500/40 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-950/40 font-semibold"
                   title="Pausar produção para continuar depois ou no outro dia"
                 >
                   Pausar Produção
@@ -777,22 +777,22 @@ export const ProducaoPage: React.FC = () => {
 
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">
                   Minhas Caixas & Ordens de Serviço
                 </h3>
-                <span className="px-2 py-0.5 rounded-full text-xs font-bold font-mono bg-surface-base text-sky-300 border border-sky-500/30">
+                <span className="px-2 py-0.5 rounded-full text-xs font-bold font-mono bg-surface-base text-sky-600 dark:text-sky-300 border border-sky-500/30">
                   {currentCaixas.length}
                 </span>
 
                 {!isMinhasCaixasOpen && currentCaixas.length > 0 && (
-                  <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-sky-400 bg-sky-950/40 px-2.5 py-0.5 rounded-full border border-sky-800/40">
-                    <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
+                  <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-sky-600 dark:text-sky-400 bg-sky-500/10 px-2.5 py-0.5 rounded-full border border-sky-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
                     {currentCaixas.filter((c) => c.statusItem === 'EM_PRODUCAO').length} na bancada
                   </span>
                 )}
               </div>
 
-              <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">
                 {isMinhasCaixasOpen
                   ? 'Suas caixas em andamento na bancada. Clique em "Iniciar Produção" ou "Reabrir OS".'
                   : `Gaveta recolhida • Clique para expandir os ${currentCaixas.length} lotes de bancada`}
@@ -809,7 +809,7 @@ export const ProducaoPage: React.FC = () => {
                 loadData();
               }}
               leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
-              className="text-xs text-gray-400 hover:text-white"
+              className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
               title="Atualizar caixas"
             >
               Atualizar
@@ -818,7 +818,7 @@ export const ProducaoPage: React.FC = () => {
             <div
               className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all ${
                 isMinhasCaixasOpen
-                  ? 'bg-surface-base border-surface-border text-gray-300'
+                  ? 'bg-surface-base border-surface-border text-gray-500 dark:text-gray-300'
                   : 'bg-sky-500/10 border-sky-500/30 text-sky-300'
               }`}
             >
@@ -846,7 +846,7 @@ export const ProducaoPage: React.FC = () => {
             ) : currentCaixas.length === 0 ? (
               <div className="p-8 rounded-xl bg-surface-base/60 border border-surface-border text-center space-y-2">
                 <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
-                <h4 className="text-sm font-bold text-white">Sua bancada está livre!</h4>
+                <h4 className="text-sm font-bold text-gray-900 dark:text-white">Sua bancada está livre!</h4>
                 <p className="text-xs text-gray-400 max-w-sm mx-auto">
                   Clique em <strong>"Novo Apontamento / Minha OS"</strong> acima para registrar a caixa ou lote que você está trabalhando.
                 </p>
@@ -865,64 +865,64 @@ export const ProducaoPage: React.FC = () => {
                   key={item.id}
                   className={`p-4 rounded-xl border transition-all duration-150 flex flex-col justify-between space-y-4 shadow-sm ${
                     isItemAtivo
-                      ? 'bg-gradient-to-b from-amber-950/30 to-surface-card border-amber-500 shadow-[0_0_15px_rgba(251,191,36,0.25)]'
+                      ? 'bg-gradient-to-b from-amber-500/15 to-surface-card border-amber-500 shadow-[0_0_15px_rgba(251,191,36,0.25)]'
                       : isEmBancada
-                      ? 'bg-gradient-to-b from-sky-950/20 to-surface-card border-sky-500/40 hover:border-sky-400'
+                      ? 'bg-gradient-to-b from-sky-500/10 to-surface-card border-sky-500/40 hover:border-sky-400'
                       : isNoCQ
-                      ? 'bg-gradient-to-b from-indigo-950/20 to-surface-card border-indigo-500/40 hover:border-indigo-400'
+                      ? 'bg-gradient-to-b from-indigo-500/10 to-surface-card border-indigo-500/40 hover:border-indigo-400'
                       : 'bg-surface-card border-surface-border hover:border-surface-muted'
                   }`}
                 >
                   <div className="space-y-2.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-white tabular-nums flex items-center gap-1.5">
-                        <Package className="w-3.5 h-3.5 text-sky-400" /> OS #{os?.numeroOS || '—'}
+                      <span className="text-xs font-bold text-gray-900 dark:text-white tabular-nums flex items-center gap-1.5">
+                        <Package className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" /> OS #{os?.numeroOS || '—'}
                       </span>
                       {isItemAtivo ? (
-                        <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black uppercase flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                        <span className="px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/40 text-[10px] font-black uppercase flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-ping" />
                           Ao Vivo
                         </span>
                       ) : isEmBancada ? (
-                        <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold uppercase">
+                        <span className="px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 text-[10px] font-bold uppercase">
                           Na Bancada
                         </span>
                       ) : isNoCQ ? (
-                        <span className="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 text-[10px] font-bold uppercase">
+                        <span className="px-2 py-0.5 rounded bg-sky-50 dark:bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30 text-[10px] font-bold uppercase">
                           No Teste CQ
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded bg-gray-500/20 text-gray-300 border border-gray-500/30 text-[10px] font-bold uppercase">
+                        <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-500/20 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-500/30 text-[10px] font-bold uppercase">
                           Aguardando
                         </span>
                       )}
                     </div>
 
                     <div>
-                      <h4 className="text-sm font-bold text-white line-clamp-1">
+                      <h4 className="text-sm font-bold text-gray-900 dark:text-white line-clamp-1">
                         {equip?.nome || 'Equipamento'}
                       </h4>
-                      <p className="text-xs text-gray-400 line-clamp-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
                         {os?.cliente?.nomeRazaoSocial || 'MARANET Telecomunicações'}
                       </p>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs text-gray-300 py-1.5 border-y border-surface-border/50 bg-[#0d121c] px-2.5 rounded-lg">
-                      <span>Lote: <strong className="text-emerald-400 tabular-nums">{item.quantidade} un</strong></span>
+                    <div className="flex items-center justify-between text-xs text-gray-700 dark:text-gray-300 py-1.5 border-y border-surface-border/50 bg-surface-elevated/70 px-2.5 rounded-lg">
+                      <span>Lote: <strong className="text-emerald-600 dark:text-emerald-400 tabular-nums">{item.quantidade} un</strong></span>
                       {(() => {
                         const def = (item.defeitoRelatado || '').toLowerCase();
                         const matchRep = def.match(/(\d+)\s*rep/i);
                         const isSemDef = def.includes('sem defeito aparente') || (def.includes('sem def') && !matchRep);
                         if (isSemDef) {
-                          return <span className="text-gray-400 font-semibold tabular-nums text-[11px]">0.0 pts (Sem Defeito)</span>;
+                          return <span className="text-gray-500 dark:text-gray-400 font-semibold tabular-nums text-[11px]">0.0 pts (Sem Defeito)</span>;
                         }
                         const repQtd = matchRep ? parseInt(matchRep[1]) : (Number(item.quantidade) || 0);
-                        return <span className="text-amber-400 font-bold tabular-nums">~{(repQtd * (equip?.pontos || 1.5)).toFixed(1)} pts</span>;
+                        return <span className="text-amber-600 dark:text-amber-400 font-bold tabular-nums">~{(repQtd * (equip?.pontos || 1.5)).toFixed(1)} pts</span>;
                       })()}
                     </div>
 
                     {item.defeitoRelatado && (
-                      <p className="text-xs text-gray-300 line-clamp-2 bg-surface-base/80 p-2 rounded border border-surface-border/50">
+                      <p className="text-xs text-gray-700 dark:text-gray-300 line-clamp-2 bg-surface-base/80 p-2 rounded border border-surface-border/50">
                         {item.defeitoRelatado}
                       </p>
                     )}
@@ -945,14 +945,14 @@ export const ProducaoPage: React.FC = () => {
                         loading={isStarting === item.id}
                         leftIcon={
                           isItemAtivo ? (
-                            <Pause className="w-3.5 h-3.5 text-amber-400" />
+                            <Pause className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
                           ) : (
                             <Play className="w-3.5 h-3.5 fill-current" />
                           )
                         }
                         className={`w-full font-bold text-xs ${
                           isItemAtivo
-                            ? 'border-amber-500/50 text-amber-300 hover:bg-amber-950/40'
+                            ? 'border-amber-500/50 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-950/40'
                             : 'shadow-glow-success'
                         }`}
                       >
@@ -965,7 +965,7 @@ export const ProducaoPage: React.FC = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => handleReabrirOS(item)}
-                        leftIcon={<Edit3 className="w-3.5 h-3.5 text-sky-400" />}
+                        leftIcon={<Edit3 className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />}
                         className="text-xs"
                         title="Reabrir formulário para atualizar as quantidades reparadas desta OS"
                       >
@@ -973,8 +973,8 @@ export const ProducaoPage: React.FC = () => {
                       </Button>
 
                       {isNoCQ ? (
-                        <div className="text-center py-1 bg-sky-950/40 border border-sky-800/40 rounded-lg text-[11px] text-sky-300 font-medium flex items-center justify-center gap-1">
-                          <Clock className="w-3 h-3 text-sky-400 animate-spin" /> No Testador
+                        <div className="text-center py-1 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/40 rounded-lg text-[11px] text-sky-700 dark:text-sky-300 font-medium flex items-center justify-center gap-1">
+                          <Clock className="w-3 h-3 text-sky-600 dark:text-sky-400 animate-spin" /> No Testador
                         </div>
                       ) : (
                         <Button
@@ -1013,15 +1013,15 @@ export const ProducaoPage: React.FC = () => {
               <div key={h.id} className="p-3 sm:px-4 flex items-center justify-between text-xs">
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-white tabular-nums">
+                    <span className="font-bold text-gray-900 dark:text-white tabular-nums">
                       OS #{h.itemOrdemServico?.ordemServico?.numeroOS || '—'}
                     </span>
                     <span className="text-gray-400">—</span>
-                    <span className="text-gray-300 font-medium">
+                    <span className="text-gray-700 dark:text-gray-300 font-medium">
                       {h.itemOrdemServico?.tipoEquipamento?.nome || 'Equipamento'}
                     </span>
                   </div>
-                  <p className="text-[11px] text-gray-400 truncate max-w-md">
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate max-w-md">
                     Serviço: {h.servicoRealizado || 'Manutenção realizada'}
                   </p>
                 </div>
@@ -1081,26 +1081,26 @@ export const ProducaoPage: React.FC = () => {
             </>
           }
         >
-          <div className="space-y-3 text-sm text-gray-300">
+          <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
             <p>
               Você está enviando a <strong>OS #{osParaDespacharCQ.numeroOS}</strong> ({osParaDespacharCQ.clienteNome || osParaDespacharCQ.cliente?.nomeRazaoSocial}) para a fila de testes do Controle de Qualidade (CQ).
             </p>
             <div className="p-3 rounded-lg bg-surface-base border border-surface-border text-xs space-y-1">
-              <span className="font-semibold text-gray-300 block">Resumo do lote a ser inspecionado:</span>
-              <span className="text-emerald-400 font-bold">{osParaDespacharCQ.totalGeralReparado ?? osParaDespacharCQ.totalReparados ?? 0} reparadas</span>
+              <span className="font-semibold text-gray-700 dark:text-gray-300 block">Resumo do lote a ser inspecionado:</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">{osParaDespacharCQ.totalGeralReparado ?? osParaDespacharCQ.totalReparados ?? 0} reparadas</span>
               {(osParaDespacharCQ.totalGeralSemDefeito ?? osParaDespacharCQ.totalSemDefeito ?? 0) > 0 && (
-                <span className="text-sky-400 font-bold"> • {osParaDespacharCQ.totalGeralSemDefeito ?? osParaDespacharCQ.totalSemDefeito} sem defeito</span>
+                <span className="text-sky-600 dark:text-sky-400 font-bold"> • {osParaDespacharCQ.totalGeralSemDefeito ?? osParaDespacharCQ.totalSemDefeito} sem defeito</span>
               )}
               {(osParaDespacharCQ.totalGeralSucata ?? osParaDespacharCQ.totalSucata ?? 0) > 0 && (
-                <span className="text-red-400 font-bold"> • {osParaDespacharCQ.totalGeralSucata ?? osParaDespacharCQ.totalSucata} sucata</span>
+                <span className="text-red-600 dark:text-red-400 font-bold"> • {osParaDespacharCQ.totalGeralSucata ?? osParaDespacharCQ.totalSucata} sucata</span>
               )}
-              <span className="text-gray-400"> ({osParaDespacharCQ.totalGeralEquipamentos ?? osParaDespacharCQ.totalProcessado ?? 0} un no total)</span>
+              <span className="text-gray-500 dark:text-gray-400"> ({osParaDespacharCQ.totalGeralEquipamentos ?? osParaDespacharCQ.totalProcessado ?? 0} un no total)</span>
             </div>
-            <p className="text-xs text-sky-300 bg-sky-950/40 p-2.5 rounded border border-sky-800/40">
+            <p className="text-xs text-sky-800 dark:text-sky-300 bg-sky-100/80 dark:bg-sky-950/40 p-2.5 rounded border border-sky-300 dark:border-sky-800/40">
               ℹ️ Ao enviar para o CQ, a OS sairá da sua bancada de produção e entrará diretamente na tela do <strong>tester de qualidade</strong> para inspeção e testes de bancada.
             </p>
             <div className="space-y-1 pt-1">
-              <label className="text-xs font-semibold text-gray-400 block">
+              <label className="text-xs font-semibold text-gray-700 dark:text-gray-400 block">
                 Observações / Instruções para o testador CQ (opcional):
               </label>
               <textarea
@@ -1108,7 +1108,7 @@ export const ProducaoPage: React.FC = () => {
                 value={despacharCqObservacao}
                 onChange={(e) => setDespacharCqObservacao(e.target.value)}
                 placeholder="Ex: Lote revisado, trocados conectores óticos da porta PON. Pronto para teste de potência."
-                className="w-full bg-surface-base border border-surface-border rounded-lg p-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 resize-none"
+                className="w-full bg-surface-base border border-surface-border rounded-lg p-2.5 text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-brand-500 resize-none"
               />
             </div>
           </div>
@@ -1147,15 +1147,15 @@ export const ProducaoPage: React.FC = () => {
             </>
           }
         >
-          <div className="space-y-3 text-sm text-gray-300">
-            <div className="p-3 rounded-lg bg-red-950/30 border border-red-800/50 text-xs text-red-200 space-y-2">
-              <p className="font-bold text-red-300 flex items-center gap-1.5">
-                <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" /> Atenção: Esta ação é definitiva!
+          <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+            <div className="p-3 rounded-lg bg-red-100 dark:bg-red-950/30 border border-red-300 dark:border-red-800/50 text-xs text-red-800 dark:text-red-200 space-y-2">
+              <p className="font-bold text-red-700 dark:text-red-300 flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 text-red-500 dark:text-red-400 flex-shrink-0" /> Atenção: Esta ação é definitiva!
               </p>
               <p>
                 Tem certeza de que deseja excluir a <strong>OS #{osParaExcluir.numeroOS}</strong> ({osParaExcluir.clienteNome || osParaExcluir.cliente?.nomeRazaoSocial})?
               </p>
-              <p className="text-gray-400">
+              <p className="text-gray-600 dark:text-gray-400">
                 Esta ação removerá a OS e todos os apontamentos vinculados a ela do banco de dados. Utilize esta opção caso a OS tenha sido criada por engano ou duplicada.
               </p>
             </div>
@@ -1217,7 +1217,7 @@ export const ProducaoPage: React.FC = () => {
                 value={concluirOsObservacao}
                 onChange={(e) => setConcluirOsObservacao(e.target.value)}
                 placeholder="Ex: Todos os equipamentos testados e embalados para entrega."
-                className="w-full bg-surface-base border border-surface-border rounded-lg p-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 resize-none"
+                className="w-full bg-surface-base border border-surface-border rounded-lg p-2.5 text-xs text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 resize-none"
               />
             </div>
           </div>
