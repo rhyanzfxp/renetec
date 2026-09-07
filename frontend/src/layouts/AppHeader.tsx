@@ -43,7 +43,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, isTvMode 
         )}
 
         <div className="flex items-center gap-3 select-none">
-          <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center border border-brand-500/40 shadow-glow-primary bg-[#050b2c] p-0.5 flex-shrink-0">
+          <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center border border-brand-500/40 shadow-glow-primary bg-brand-50 dark:bg-[#050b2c] p-0.5 flex-shrink-0">
             <img
               src="/logo.png"
               alt="Logo Renetec"
