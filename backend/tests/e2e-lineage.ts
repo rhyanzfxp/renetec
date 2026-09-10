@@ -17,6 +17,8 @@ export async function runFullE2ETestSuite(): Promise<void> {
 
   const results: StepResult[] = [];
   const wsEventsReceived: string[] = [];
+  // Todo cenário automatizado usa uma OS identificada, tal como o fluxo real.
+  const numeroOsE2E = 990000 + Math.floor(Math.random() * 9000);
 
   // Helper para login
   async function login(email: string, senha = 'renetec123') {
@@ -94,6 +96,7 @@ export async function runFullE2ETestSuite(): Promise<void> {
         'Authorization': `Bearer ${admin.token}`,
       },
       body: JSON.stringify({
+        numeroOS: numeroOsE2E,
         clienteId: 'cli-01',
         prioridade: 'ALTA',
         observacoes: 'Manutenção de lote de inversores industriais',
@@ -114,7 +117,7 @@ export async function runFullE2ETestSuite(): Promise<void> {
     
     const osOk = resOS.ok && !!osId && !!itemId;
     results.push({ step: 2, name: 'Criação de OS com Lote de 10 unidades', success: osOk });
-    console.log(`   ✅ OS Criada: ${osId} | Item: ${itemId} | Status: ${resOS.status}`);
+    console.log(`   ✅ OS #${numeroOsE2E} criada: ${osId} | Item: ${itemId} | Status: ${resOS.status}`);
 
     // ─── 3. Início de Produção pelo Técnico ──────────────────────────────────
     console.log('\n⚙️ [3/10] Técnico iniciando produção na bancada...');

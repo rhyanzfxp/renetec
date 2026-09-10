@@ -61,6 +61,7 @@ export interface OrdemServicoData {
 }
 
 export interface CreateOsPayload {
+  numeroOS: number;
   clienteId: string;
   prioridade: 'BAIXA' | 'MEDIA' | 'ALTA' | 'URGENTE';
   valorOrcamento?: number;
@@ -80,5 +81,4 @@ export interface CreateClientePayload {
   email?: string;
   endereco?: string;
 }
-
 

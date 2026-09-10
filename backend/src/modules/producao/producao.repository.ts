@@ -273,7 +273,7 @@ export async function iniciarProducao(itemOrdemServicoId: string, tecnicoId: str
     });
 
     return producao;
-  });
+  }, { maxWait: 10000, timeout: 30000 });
 
   return p;
 }
@@ -350,7 +350,7 @@ export async function finalizarProducao(
     }
 
     return producaoFinalizada;
-  });
+  }, { maxWait: 10000, timeout: 30000 });
 
   return p;
 }
@@ -408,7 +408,7 @@ export async function pausarProducao(
     });
 
     return producaoPausada;
-  });
+  }, { maxWait: 10000, timeout: 30000 });
 
   return p;
 }
@@ -518,6 +518,9 @@ export async function criarApontamentoLote(
   clienteInfo: any
 ) {
   const agora = new Date();
+  if (!dados.numeroOS || Number(dados.numeroOS) <= 0) {
+    throw new Error('Informe o número oficial da OS antes de registrar a produção.');
+  }
   const dataRegistro = dados.dataEntrada ? new Date(dados.dataEntrada) : agora;
   const dataProd = dados.dataProducao ? new Date(dados.dataProducao) : (dados.dataEntrada ? new Date(dados.dataEntrada) : agora);
   
@@ -583,16 +586,11 @@ export async function criarApontamentoLote(
     if (tiposDbMap[it.tipoEquipamentoId]) continue;
     const equip = tiposEquipMap[it.tipoEquipamentoId] || { nome: 'Equipamento Renetec', marca: 'Geral', modelo: 'Padrão', tempoEstimadoMinutos: 45 };
 
-    let tipoDb = await prisma.tipoEquipamento.findFirst({
-      where: isValidUuid(it.tipoEquipamentoId)
-        ? {
-            OR: [
-              { id: it.tipoEquipamentoId },
-              { nome: { contains: equip.nome.split('/')[0].trim(), mode: 'insensitive' } },
-            ],
-          }
-        : { nome: { contains: equip.nome.split('/')[0].trim(), mode: 'insensitive' } },
-    });
+    let tipoDb = isValidUuid(it.tipoEquipamentoId)
+      ? await prisma.tipoEquipamento.findUnique({ where: { id: it.tipoEquipamentoId } })
+      : await prisma.tipoEquipamento.findFirst({
+          where: { nome: { contains: equip.nome.split('/')[0].trim(), mode: 'insensitive' } },
+        });
     if (!tipoDb) {
       tipoDb = await prisma.tipoEquipamento.create({
         data: {
@@ -606,36 +604,32 @@ export async function criarApontamentoLote(
     tiposDbMap[it.tipoEquipamentoId] = tipoDb;
   }
 
-  // 4. Criar ou reutilizar a Ordem de Serviço no banco (UMA OS = UM REGISTRO)
-  let osDb: any = null;
-  if (dados.numeroOS && Number(dados.numeroOS) > 0) {
-    const num = Number(dados.numeroOS);
-    osDb = await prisma.ordemServico.findUnique({ where: { numeroOS: num } });
+  // 4. Criar ou reutilizar a Ordem de Serviço no banco (UMA OS = UM REGISTRO).
+  // `upsert` torna a regra atômica: duas requisições simultâneas para #1234
+  // continuam apontando para o mesmo cabeçalho de OS.
+  const numeroOS = Number(dados.numeroOS);
+  const osAnterior = await prisma.ordemServico.findUnique({ where: { numeroOS } });
+  if (osAnterior && ['CONCLUIDO', 'CANCELADO'].includes(osAnterior.status)) {
+    throw new Error(`A OS #${numeroOS} já foi ${osAnterior.status === 'CONCLUIDO' ? 'concluída' : 'cancelada'} e não pode receber nova produção.`);
   }
 
-  if (!osDb) {
-    osDb = await prisma.ordemServico.create({
-      data: {
-        ...(dados.numeroOS && Number(dados.numeroOS) > 0 ? { numeroOS: Number(dados.numeroOS) } : {}),
-        clienteId: clienteDb.id,
-        prioridade: (dados.prioridade || 'MEDIA') as PrioridadeOS,
-        status: initialStatus,
-        dataEntrada: dataRegistro,
-        tecnicoResponsavelId: tecnicoDbId,
-        observacoes: dados.observacoes || `OS criada pelo técnico ${tecnicoNome}`,
-        valorOrcamento: null,
-      },
-    });
-  } else {
-    // Mantém a OS em andamento ou atualiza para initialStatus sem sobrescrever dados mestre
-    await prisma.ordemServico.update({
-      where: { id: osDb.id },
-      data: {
-        status: initialStatus,
-        tecnicoResponsavelId: osDb.tecnicoResponsavelId || tecnicoDbId,
-      },
-    });
-  }
+  const osDb = await prisma.ordemServico.upsert({
+    where: { numeroOS },
+    create: {
+      numeroOS,
+      clienteId: clienteDb.id,
+      prioridade: (dados.prioridade || 'MEDIA') as PrioridadeOS,
+      status: initialStatus,
+      dataEntrada: dataRegistro,
+      tecnicoResponsavelId: tecnicoDbId,
+      observacoes: dados.observacoes || `OS criada pelo técnico ${tecnicoNome}`,
+      valorOrcamento: null,
+    },
+    update: {
+      status: initialStatus,
+      tecnicoResponsavelId: osAnterior?.tecnicoResponsavelId || tecnicoDbId,
+    },
+  });
 
   // 5. Criar ou atualizar os itens e produções no banco (SEM DUPLICAÇÃO DE ITENS)
   const createdItens: any[] = [];
@@ -894,6 +888,31 @@ export async function getMinhasOsEmAndamento(tecnicoId: string) {
         };
       });
 
+      // Uma OS é apresentada como um resumo por tipo de equipamento. Itens do
+      // mesmo tipo podem coexistir internamente em etapas diferentes (bancada,
+      // CQ ou retrabalho), mas isso não deve repetir "ONU" ou "ONT" na tela.
+      const equipamentosConsolidados = Array.from(
+        equipamentosResumo.reduce((acc: Map<string, any>, equipamento: any) => {
+          const existente = acc.get(equipamento.tipoEquipamentoId);
+          if (!existente) {
+            acc.set(equipamento.tipoEquipamentoId, { ...equipamento, historicoDias: [...equipamento.historicoDias] });
+            return acc;
+          }
+
+          existente.quantidadePrevista += equipamento.quantidadePrevista;
+          existente.totalReparadas += equipamento.totalReparadas;
+          existente.totalSemDefeito += equipamento.totalSemDefeito;
+          existente.totalSucata += equipamento.totalSucata;
+          existente.totalAcumulado += equipamento.totalAcumulado;
+          existente.hojeReparadas += equipamento.hojeReparadas;
+          existente.hojeSemDefeito += equipamento.hojeSemDefeito;
+          existente.hojeSucata += equipamento.hojeSucata;
+          existente.hojeTotal += equipamento.hojeTotal;
+          existente.historicoDias.push(...equipamento.historicoDias);
+          return acc;
+        }, new Map<string, any>()).values()
+      );
+
       return {
         id: os.id,
         numeroOS: os.numeroOS,
@@ -924,9 +943,9 @@ export async function getMinhasOsEmAndamento(tecnicoId: string) {
         hojeSemDefeito: osSemDefeitoHoje,
         hojeSucata: osSucataHoje,
         hojeProcessado: osReparadosHoje + osSemDefeitoHoje + osSucataHoje,
-        equipamentos: equipamentosResumo,
+        equipamentos: equipamentosConsolidados,
         historicoDias: Array.from(
-          equipamentosResumo.reduce((acc: Map<string, any>, it: any) => {
+          equipamentosConsolidados.reduce((acc: Map<string, any>, it: any) => {
             for (const h of it.historicoDias || []) {
               const dia = (h.dataProducao || '').split('T')[0];
               if (!dia) continue;
@@ -993,7 +1012,10 @@ export async function getProducaoHojeTecnico(tecnicoId: string) {
     let totalSuc = 0;
     let totalPontos = 0;
 
-    const itensPorOs: any[] = [];
+    // A tela recebe uma linha por OS + tipo de equipamento, e não uma linha
+    // por clique/apontamento. O histórico bruto continua preservado no banco,
+    // mas o resumo diário fica legível mesmo com muitos lançamentos na mesma OS.
+    const resumoPorOsEEquipamento = new Map<string, any>();
 
     for (const p of producoes) {
       const rep = p.quantidadeReparada || 0;
@@ -1008,33 +1030,54 @@ export async function getProducaoHojeTecnico(tecnicoId: string) {
       // REGRA OFICIAL: Apenas reparadas contam pontos! Sem defeito não conta ponto
       totalPontos += rep * ptsUnit;
 
-      itensPorOs.push({
-        producaoId: p.id,
-        osId: p.itemOrdemServico?.ordemServico?.id,
-        numeroOS: p.itemOrdemServico?.ordemServico?.numeroOS,
-        clienteNome: p.itemOrdemServico?.ordemServico?.cliente?.nomeRazaoSocial || 'Cliente',
-        tipoEquipamentoNome: eqNome,
-        quantidadeReparada: rep,
-        quantidadeSemDefeito: semDef,
-        quantidadeSucata: suc,
-        quantidadeTotal: rep + semDef + suc,
-        pontosGanhos: rep * ptsUnit,
-        hora: p.dataProducao,
-        servicoRealizado: p.servicoRealizado,
-      });
+      const osId = p.itemOrdemServico?.ordemServico?.id || 'sem-os';
+      const tipoId = p.itemOrdemServico?.tipoEquipamento?.id || eqNome || 'sem-tipo';
+      const key = `${osId}:${tipoId}`;
+      const resumoExistente = resumoPorOsEEquipamento.get(key);
+
+      if (resumoExistente) {
+        resumoExistente.quantidadeReparada += rep;
+        resumoExistente.quantidadeSemDefeito += semDef;
+        resumoExistente.quantidadeSucata += suc;
+        resumoExistente.quantidadeTotal += rep + semDef + suc;
+        resumoExistente.pontosGanhos += rep * ptsUnit;
+        resumoExistente.pontos = resumoExistente.pontosGanhos;
+        resumoExistente.apontamentos += 1;
+      } else {
+        resumoPorOsEEquipamento.set(key, {
+          producaoId: p.id,
+          osId,
+          numeroOS: p.itemOrdemServico?.ordemServico?.numeroOS,
+          clienteNome: p.itemOrdemServico?.ordemServico?.cliente?.nomeRazaoSocial || 'Cliente',
+          tipoEquipamentoNome: eqNome,
+          equipamentoNome: eqNome,
+          quantidadeReparada: rep,
+          quantidadeSemDefeito: semDef,
+          quantidadeSucata: suc,
+          quantidadeTotal: rep + semDef + suc,
+          pontosGanhos: rep * ptsUnit,
+          pontos: rep * ptsUnit,
+          hora: p.dataProducao,
+          dataProducao: p.dataProducao,
+          servicoRealizado: p.servicoRealizado,
+          apontamentos: 1,
+        });
+      }
     }
 
     return {
+      data: hojeStart.toISOString().slice(0, 10),
       totalReparados: totalRep,
       totalSemDefeito: totalSemDef,
       totalSucata: totalSuc,
       totalProcessado: totalRep + totalSemDef + totalSuc,
       totalPontos,
-      itensPorOs,
+      itensPorOs: Array.from(resumoPorOsEEquipamento.values()),
     };
   } catch (err) {
     console.error('[getProducaoHojeTecnico] Erro ao consultar produção de hoje:', err);
     return {
+      data: new Date().toISOString().slice(0, 10),
       totalReparados: 0,
       totalSemDefeito: 0,
       totalSucata: 0,
@@ -1116,7 +1159,7 @@ export async function concluirOrdemServico(osIdOrNumero: string | number, tecnic
     });
 
     return osAtualizada;
-  });
+  }, { maxWait: 10000, timeout: 30000 });
 
   return updatedOs;
 }
@@ -1250,7 +1293,7 @@ export async function despacharOrdemServicoParaCQ(
     }
 
     return osAtualizada;
-  });
+  }, { maxWait: 10000, timeout: 30000 });
 
   return updatedOs;
 }
@@ -1310,10 +1353,7 @@ export async function excluirOrdemServico(
     await tx.ordemServico.delete({
       where: { id: osId },
     });
-  });
+  }, { maxWait: 10000, timeout: 30000 });
 
   return { id: osId, numeroOS };
 }
-
-
-

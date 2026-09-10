@@ -14,7 +14,8 @@
     "prisma:migrate": "prisma migrate dev",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
-    "prisma:seed": "tsx prisma/seed.ts"
+    "prisma:seed": "tsx prisma/seed.ts",
+    "db:consolidar-itens": "tsx src/database/consolidate-duplicate-os-items.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

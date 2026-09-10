@@ -4,7 +4,7 @@ export const RealizarTesteSchema = z
   .object({
     producaoId: z.string().optional().default('prod-direto'),
     itemOrdemServicoId: z.string().optional().default('item-direto'),
-    numeroOS: z.coerce.number().optional(),
+    numeroOS: z.coerce.number().int().positive().optional(),
     tipoEquipamentoId: z.string().optional(),
     origemTriagem: z.boolean().optional().default(false),
     tecnicoResponsavelId: z.string().optional(),
@@ -32,7 +32,19 @@ export const RealizarTesteSchema = z
       message: 'A soma de APROVADOS + REPROVADOS deve ser exatamente igual à QUANTIDADE TESTADA.',
       path: ['quantidadeTestada'],
     }
-  );
+  )
+  .superRefine((data, ctx) => {
+    // O lançamento direto do CQ também precisa apontar para uma OS existente.
+    // Inspeções vindas da fila já possuem item/OS vinculados e não precisam
+    // repetir o número no payload.
+    const isLancamentoDireto = !data.itemOrdemServicoId || data.itemOrdemServicoId === 'item-direto';
+    if (isLancamentoDireto && !data.numeroOS) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['numeroOS'],
+        message: 'Informe o número da OS para registrar um teste direto.',
+      });
+    }
+  });
 
 export type RealizarTesteInput = z.infer<typeof RealizarTesteSchema>;
-

@@ -122,6 +122,11 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
     if (e) e.preventDefault();
     if (isSubmittingRef.current || isLoading) return;
 
+    if (!numeroOS.trim()) {
+      setErrorMessage('Informe o número da OS. O CQ deve registrar o laudo na mesma OS do reparo.');
+      return;
+    }
+
     if (!isSomaValida) {
       setErrorMessage(
         `A soma de Aprovadas (${quantidadeAprovada}) + Reprovadas (${quantidadeReprovada}) = ${totalCalculado} un deve ser igual ao Total Testado (${quantidadeTestada} un).`
@@ -271,7 +276,7 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
 
             <div className="space-y-1">
               <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                Número da OS <span className="text-gray-500 text-[11px] font-normal">(Opcional)</span>
+                Número da OS <span className="text-brand-500 dark:text-brand-400">*</span>
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-2.5 text-gray-400 font-bold text-sm">#</span>
@@ -279,8 +284,9 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
                   type="text"
                   value={numeroOS}
                   onChange={(e) => setNumeroOS(e.target.value.replace(/[^0-9]/g, ''))}
-                  placeholder="Auto se vazio"
+                  placeholder="Ex.: 1234"
                   className="w-full h-10 pl-7 pr-3 bg-surface-base border border-surface-border rounded-lg text-xs text-gray-900 dark:text-white font-mono font-bold focus:outline-none focus:border-brand-500"
+                  required
                 />
               </div>
             </div>

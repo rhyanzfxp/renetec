@@ -41,7 +41,9 @@ export const ApontamentoLoteItemSchema = z.object({
 });
 
 export const ApontamentoLoteSchema = z.object({
-  numeroOS: z.coerce.number().int().positive().optional(),
+  // O apontamento diário sempre pertence a uma OS já identificada. Sem este
+  // vínculo o sistema não tem como consolidar dias e tipos de equipamento.
+  numeroOS: z.coerce.number().int().positive('Informe o número da OS.'),
   clienteId: z.string().optional().default('cli-01'),
   dataEntrada: z.string().optional(),
   dataProducao: z.string().optional(),
@@ -64,5 +66,4 @@ export type PausarProducaoInput = z.infer<typeof PausarProducaoSchema>;
 export type ApontamentoLoteItemInput = z.infer<typeof ApontamentoLoteItemSchema>;
 export type ApontamentoLoteInput = z.infer<typeof ApontamentoLoteSchema>;
 export type ConcluirOsInput = z.infer<typeof ConcluirOsSchema>;
-
 

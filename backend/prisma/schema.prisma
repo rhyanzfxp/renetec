@@ -138,7 +138,9 @@ model TipoEquipamento {
 
 model OrdemServico {
   id             String         @id @default(uuid())
-  numeroOS       Int            @unique @default(autoincrement()) @map("numero_os")
+  // Número oficial preenchido no recebimento. Não gerar automaticamente evita
+  // OSS sem rastreabilidade e impede lançamentos de teste paralelos.
+  numeroOS       Int            @unique @map("numero_os")
   clienteId      String         @map("cliente_id")
   dataEntrada    DateTime       @default(now()) @map("data_entrada")
   prioridade     PrioridadeOS   @default(MEDIA)

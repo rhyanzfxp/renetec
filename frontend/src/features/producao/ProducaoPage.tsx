@@ -412,7 +412,7 @@ export const ProducaoPage: React.FC = () => {
           <div className="p-4 rounded-xl bg-surface-card border border-red-500/30 shadow-sm relative overflow-hidden">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-red-600 dark:text-red-400 uppercase tracking-wider flex items-center gap-1.5">
-                <XCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" /> Sucata
+                <XCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" /> Mortas / Sucata
               </span>
               <span className="text-[10px] text-red-600 dark:text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded font-mono font-bold">PERDA</span>
             </div>

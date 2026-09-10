@@ -26,6 +26,7 @@ export const CreateOsDrawer: React.FC<CreateOsDrawerProps> = ({ isOpen, onClose,
   const [clienteSuccessMsg, setClienteSuccessMsg] = useState<string | null>(null);
 
   // Campos do formulário
+  const [numeroOS, setNumeroOS] = useState('');
   const [clienteId, setClienteId] = useState('');
   const [prioridade, setPrioridade] = useState<'BAIXA' | 'MEDIA' | 'ALTA' | 'URGENTE'>('MEDIA');
   const [valorOrcamento, setValorOrcamento] = useState<string>('');
@@ -93,8 +94,8 @@ export const CreateOsDrawer: React.FC<CreateOsDrawerProps> = ({ isOpen, onClose,
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!clienteId || !tipoEquipamentoId || !defeitoRelatado) {
-      setError('Por favor preencha os campos obrigatórios.');
+    if (!numeroOS.trim() || !clienteId || !tipoEquipamentoId || !defeitoRelatado) {
+      setError('Informe o número da OS e preencha os demais campos obrigatórios.');
       return;
     }
 
@@ -103,6 +104,7 @@ export const CreateOsDrawer: React.FC<CreateOsDrawerProps> = ({ isOpen, onClose,
       setError(null);
 
       const payload: CreateOsPayload = {
+        numeroOS: Number(numeroOS),
         clienteId,
         prioridade,
         valorOrcamento: valorOrcamento ? parseFloat(valorOrcamento.replace(',', '.')) : undefined,
@@ -122,6 +124,7 @@ export const CreateOsDrawer: React.FC<CreateOsDrawerProps> = ({ isOpen, onClose,
       onClose();
       // Reseta form
       setQuantidade(1);
+      setNumeroOS('');
       setDefeitoRelatado('');
       setObservacoes('');
       setValorOrcamento('');
@@ -163,6 +166,16 @@ export const CreateOsDrawer: React.FC<CreateOsDrawerProps> = ({ isOpen, onClose,
             <span>{error}</span>
           </div>
         )}
+
+        <Input
+          label="Número da OS *"
+          type="text"
+          inputMode="numeric"
+          value={numeroOS}
+          onChange={(e) => setNumeroOS(e.target.value.replace(/[^0-9]/g, ''))}
+          placeholder="Ex.: 1234"
+          required
+        />
 
         {/* Cliente */}
         <div className="space-y-1.5">

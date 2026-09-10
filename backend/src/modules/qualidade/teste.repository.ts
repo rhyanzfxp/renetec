@@ -194,40 +194,64 @@ export async function realizarTeste(
         });
       }
 
-      // 3. Ordem de Serviço
-      let osDb: any = null;
-      if (dados.numeroOS && Number(dados.numeroOS) > 0) {
-        osDb = await tx.ordemServico.findUnique({ where: { numeroOS: Number(dados.numeroOS) } });
-      }
-      if (!osDb) {
-        osDb = await tx.ordemServico.create({
-          data: {
-            ...(dados.numeroOS && Number(dados.numeroOS) > 0 ? { numeroOS: Number(dados.numeroOS) } : {}),
-            clienteId: clienteDb.id,
-            status: novoStatusItem,
-            prioridade: 'MEDIA',
-            observacoes: `Apontamento direto registrado pelo Controle de Qualidade`,
-          },
-        });
+      // 3. Ordem de Serviço. O teste direto não pode gerar uma OS paralela
+      // quando outro usuário registra o mesmo número no mesmo instante.
+      const numeroOS = Number(dados.numeroOS);
+      const osAnterior = await tx.ordemServico.findUnique({ where: { numeroOS } });
+      if (osAnterior && ['CONCLUIDO', 'CANCELADO'].includes(osAnterior.status)) {
+        throw new Error(`A OS #${numeroOS} já está encerrada e não aceita novo teste direto.`);
       }
 
-      // 4. Criar Item da OS
-      const novoItem = await tx.itemOrdemServico.create({
-        data: {
-          ordemServicoId: osDb.id,
-          tipoEquipamentoId: tipoDb.id,
-          quantidade: dados.quantidadeTestada,
-          statusItem: novoStatusItem,
-          tecnicoAlocadoId: tecnicoRespDbId || inspetorDbId,
-          defeitoRelatado: `Inspeção de bancada CQ (${dados.quantidadeAprovada} aprovadas, ${dados.quantidadeReprovada} retrabalho)`,
+      const osDb = await tx.ordemServico.upsert({
+        where: { numeroOS },
+        create: {
+          numeroOS,
+          clienteId: clienteDb.id,
+          status: novoStatusItem,
+          prioridade: 'MEDIA',
+          tecnicoResponsavelId: tecnicoRespDbId || inspetorDbId,
+          observacoes: 'Apontamento direto registrado pelo Controle de Qualidade',
         },
+        update: osAnterior?.tecnicoResponsavelId || !tecnicoRespDbId
+          ? {}
+          : { tecnicoResponsavelId: tecnicoRespDbId },
       });
-      itemOrdemServicoId = novoItem.id;
+
+      // 4. Reutilizar o item deste tipo de equipamento quando ele já pertence
+      // à OS. Assim, uma OS #1234 pode conter ONU e ONT, sem receber várias
+      // linhas paralelas de ONU a cada lançamento direto do CQ.
+      const itemExistenteMesmoTipo = await tx.itemOrdemServico.findFirst({
+        where: { ordemServicoId: osDb.id, tipoEquipamentoId: tipoDb.id },
+      });
+
+      const itemDb = itemExistenteMesmoTipo
+        ? await tx.itemOrdemServico.update({
+            where: { id: itemExistenteMesmoTipo.id },
+            data: {
+              // Não somar novamente um equipamento que já veio da produção.
+              // A quantidade da OS representa o maior lote conhecido; os
+              // lançamentos diários permanecem no histórico de Produção.
+              quantidade: Math.max(itemExistenteMesmoTipo.quantidade, dados.quantidadeTestada),
+              statusItem: novoStatusItem,
+              tecnicoAlocadoId: itemExistenteMesmoTipo.tecnicoAlocadoId || tecnicoRespDbId || inspetorDbId,
+            },
+          })
+        : await tx.itemOrdemServico.create({
+            data: {
+              ordemServicoId: osDb.id,
+              tipoEquipamentoId: tipoDb.id,
+              quantidade: dados.quantidadeTestada,
+              statusItem: novoStatusItem,
+              tecnicoAlocadoId: tecnicoRespDbId || inspetorDbId,
+              defeitoRelatado: `Inspeção de bancada CQ (${dados.quantidadeAprovada} aprovadas, ${dados.quantidadeReprovada} retrabalho)`,
+            },
+          });
+      itemOrdemServicoId = itemDb.id;
 
       // 5. Criar Produção vinculada ao técnico responsável
       const novaProd = await tx.producao.create({
         data: {
-          itemOrdemServicoId: novoItem.id,
+          itemOrdemServicoId: itemDb.id,
           tecnicoId: tecnicoRespDbId || inspetorDbId,
           dataInicio: agora,
           dataFim: agora,
@@ -384,7 +408,7 @@ export async function realizarTeste(
     }
 
     return teste;
-  });
+  }, { maxWait: 10000, timeout: 30000 });
 
   return resultado;
 }
@@ -445,4 +469,3 @@ export async function getHistoricoTestes(page = 1, limit = 20) {
     return { data: [], total: 0, page, totalPages: 0 };
   }
 }
-

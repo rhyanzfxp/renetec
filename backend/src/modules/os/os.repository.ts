@@ -197,14 +197,15 @@ export class OsRepository {
     const initialStatus = (data.status as StatusOS) || 'RECEBIDO';
 
     // 1. Resolver Cliente no banco
-    let clienteDb = await prisma.cliente.findFirst({
-      where: isValidUuid(data.clienteId)
-        ? { OR: [{ id: data.clienteId }, { nomeRazaoSocial: { contains: 'MARANET', mode: 'insensitive' } }] }
-        : { nomeRazaoSocial: { contains: 'MARANET', mode: 'insensitive' } },
-    });
+    const clienteInformado = clientesMap[data.clienteId || 'cli-01'];
+    let clienteDb = isValidUuid(data.clienteId)
+      ? await prisma.cliente.findUnique({ where: { id: data.clienteId } })
+      : await prisma.cliente.findFirst({
+          where: { nomeRazaoSocial: { contains: clienteInformado?.nomeRazaoSocial || 'MARANET', mode: 'insensitive' } },
+        });
 
     if (!clienteDb) {
-      const cliInfo = clientesMap[data.clienteId || 'cli-01'] || {
+      const cliInfo = clienteInformado || {
         nomeRazaoSocial: 'MARANET Telecomunicações',
         documento: '12.345.678/0001-90',
         contatoTelefone: '(98) 98765-4321',
@@ -225,16 +226,11 @@ export class OsRepository {
     for (const it of data.itens) {
       if (tiposDbMap[it.tipoEquipamentoId]) continue;
       const equipInfo = tiposEquipMap[it.tipoEquipamentoId] || { nome: 'Equipamento Renetec', marca: 'Geral', modelo: 'Padrão' };
-      let tipoDb = await prisma.tipoEquipamento.findFirst({
-        where: isValidUuid(it.tipoEquipamentoId)
-          ? {
-              OR: [
-                { id: it.tipoEquipamentoId },
-                { nome: { contains: equipInfo.nome.split('/')[0].trim(), mode: 'insensitive' } },
-              ],
-            }
-          : { nome: { contains: equipInfo.nome.split('/')[0].trim(), mode: 'insensitive' } },
-      });
+      let tipoDb = isValidUuid(it.tipoEquipamentoId)
+        ? await prisma.tipoEquipamento.findUnique({ where: { id: it.tipoEquipamentoId } })
+        : await prisma.tipoEquipamento.findFirst({
+            where: { nome: { contains: equipInfo.nome.split('/')[0].trim(), mode: 'insensitive' } },
+          });
       if (!tipoDb) {
         tipoDb = await prisma.tipoEquipamento.create({
           data: {
@@ -260,26 +256,64 @@ export class OsRepository {
       }
     }
 
-    // 4. Criar OS no banco
-    const osDb = await prisma.ordemServico.create({
-      data: {
-        ...(data.numeroOS ? { numeroOS: Number(data.numeroOS) } : {}),
+    // 4. A OS é o agrupador principal: um número nunca cria outro cabeçalho.
+    // O upsert também protege dois operadores que tentem cadastrar o mesmo
+    // número ao mesmo tempo. Equipamentos novos entram como itens da mesma OS.
+    const numeroOS = Number(data.numeroOS);
+    const osExistente = await prisma.ordemServico.findUnique({ where: { numeroOS } });
+    if (osExistente && ['CONCLUIDO', 'CANCELADO'].includes(osExistente.status)) {
+      throw new Error(`A OS #${numeroOS} já foi ${osExistente.status === 'CONCLUIDO' ? 'concluída' : 'cancelada'} e não aceita novos lançamentos.`);
+    }
+
+    const osBase = await prisma.ordemServico.upsert({
+      where: { numeroOS },
+      create: {
+        numeroOS,
         clienteId: clienteDb.id,
         prioridade: (data.prioridade as PrioridadeOS) || 'MEDIA',
         status: initialStatus,
         dataEntrada: dataRegistro,
         valorOrcamento: data.valorOrcamento || null,
         observacoes: data.observacoes || null,
-        itens: {
-          create: data.itens.map((it) => ({
-            tipoEquipamentoId: tiposDbMap[it.tipoEquipamentoId],
-            quantidade: it.quantidade,
-            defeitoRelatado: it.defeitoRelatado || 'Manutenção técnica realizada',
-            statusItem: initialStatus,
-            tecnicoAlocadoId: it.tecnicoAlocadoId ? tecnicosDbMap[it.tecnicoAlocadoId] : null,
-          })),
-        },
       },
+      // Não sobrescrevemos cliente, status ou data de uma OS existente. Estes
+      // são dados mestre; somente seus equipamentos devem ser complementados.
+      update: data.observacoes ? { observacoes: data.observacoes } : {},
+    });
+
+    await prisma.$transaction(async (tx) => {
+      for (const it of data.itens) {
+        const tipoEquipamentoId = tiposDbMap[it.tipoEquipamentoId];
+        const itemExistente = await tx.itemOrdemServico.findFirst({
+          where: { ordemServicoId: osBase.id, tipoEquipamentoId },
+        });
+
+        if (itemExistente) {
+          await tx.itemOrdemServico.update({
+            where: { id: itemExistente.id },
+            data: {
+              quantidade: { increment: it.quantidade },
+              defeitoRelatado: it.defeitoRelatado || itemExistente.defeitoRelatado,
+              tecnicoAlocadoId: itemExistente.tecnicoAlocadoId || (it.tecnicoAlocadoId ? tecnicosDbMap[it.tecnicoAlocadoId] : null),
+            },
+          });
+        } else {
+          await tx.itemOrdemServico.create({
+            data: {
+              ordemServicoId: osBase.id,
+              tipoEquipamentoId,
+              quantidade: it.quantidade,
+              defeitoRelatado: it.defeitoRelatado || 'Manutenção técnica realizada',
+              statusItem: osBase.status,
+              tecnicoAlocadoId: it.tecnicoAlocadoId ? tecnicosDbMap[it.tecnicoAlocadoId] : null,
+            },
+          });
+        }
+      }
+    }, { maxWait: 10000, timeout: 30000 });
+
+    const osDb = await prisma.ordemServico.findUniqueOrThrow({
+      where: { id: osBase.id },
       include: {
         cliente: true,
         itens: {

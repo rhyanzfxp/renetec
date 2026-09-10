@@ -284,7 +284,9 @@ async function runFluxoOsTestSuite() {
     // 11. Bônus: Teste de Idempotência (Prevenção de Duplo Clique)
     // ─────────────────────────────────────────────────────────────────────────
     const chaveIdempotencia = `idemp-test-${Date.now()}`;
+    const numeroOsIdempotencia = 99800 + Math.floor(Math.random() * 90);
     const apontamentoIdemp1 = await producaoService.apontarLoteTecnico(tecnico.id, tecnico.nome, {
+      numeroOS: numeroOsIdempotencia,
       clienteId: cliente.id,
       prioridade: 'MEDIA',
       idempotencyKey: chaveIdempotencia,
@@ -307,6 +309,7 @@ async function runFluxoOsTestSuite() {
 
     // Chamada idêntica simulando clique duplo com a mesma chave:
     const apontamentoIdemp2 = await producaoService.apontarLoteTecnico(tecnico.id, tecnico.nome, {
+      numeroOS: numeroOsIdempotencia,
       clienteId: cliente.id,
       prioridade: 'MEDIA',
       idempotencyKey: chaveIdempotencia,

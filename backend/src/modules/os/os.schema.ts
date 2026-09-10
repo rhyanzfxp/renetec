@@ -11,7 +11,10 @@ export const createItemOsSchema = z.object({
 });
 
 export const createOsSchema = z.object({
-  numeroOS: z.coerce.number().int().positive().optional(),
+  // Uma OS sempre precisa nascer com o número oficial informado pelo usuário.
+  // Gerar números silenciosamente aqui era a principal fonte de lançamentos
+  // paralelos e difíceis de rastrear.
+  numeroOS: z.coerce.number().int().positive('Informe o número da OS.'),
   clienteId: z.string().optional().default('cli-01'),
   dataEntrada: z.string().optional(),
   prioridade: z.enum(['BAIXA', 'MEDIA', 'ALTA', 'URGENTE']).default('MEDIA'),
@@ -70,5 +73,4 @@ export const createClienteSchema = z.object({
 });
 
 export type CreateClienteInput = z.infer<typeof createClienteSchema>;
-
 

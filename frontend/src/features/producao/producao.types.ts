@@ -91,7 +91,7 @@ export interface ApontamentoLoteItemPayload {
 }
 
 export interface ApontamentoLotePayload {
-  numeroOS?: number;
+  numeroOS: number;
   clienteId?: string;
   dataEntrada?: string;
   dataProducao?: string;
@@ -211,5 +211,4 @@ export interface ProducaoHojeResumo {
     dataProducao: string;
   }[];
 }
-
 

@@ -280,6 +280,11 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
   const handleSubmit = async (modo: 'INICIAR_PRODUCAO' | 'DESPACHAR_CQ' | 'SALVAR_BANCADA') => {
     if (isSubmittingRef.current || isLoading) return;
 
+    if (!numeroOS.trim()) {
+      setError('Informe o número da OS. O lançamento será consolidado nessa mesma OS.');
+      return;
+    }
+
     if (itens.length === 0) {
       setError('Adicione ao menos 1 equipamento no apontamento.');
       return;
@@ -697,7 +702,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1">
               <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                Número da OS <span className="text-gray-500 text-[11px] font-normal">(Opcional)</span>
+                Número da OS <span className="text-brand-500 dark:text-brand-400">*</span>
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-2.5 text-gray-400 font-bold text-sm">#</span>
@@ -705,8 +710,9 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                   type="text"
                   value={numeroOS}
                   onChange={(e) => setNumeroOS(e.target.value.replace(/[^0-9]/g, ''))}
-                  placeholder="Auto se vazio"
+                  placeholder="Ex.: 1234"
                   className="w-full h-10 pl-7 pr-3 bg-surface-base border border-surface-border rounded-lg text-sm text-white font-mono font-bold focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                  required
                 />
               </div>
             </div>
