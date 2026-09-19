@@ -9,7 +9,6 @@ import { useAuth } from '../auth/AuthContext';
 import {
   FileCheck,
   CheckCircle2,
-  XCircle,
   AlertTriangle,
   User,
   RotateCcw,
@@ -18,6 +17,7 @@ import {
   Wrench,
   ShieldAlert,
   Sparkles,
+  Ban,
 } from 'lucide-react';
 
 interface RegistrarTesteCQDrawerProps {
@@ -57,6 +57,7 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
   const [quantidadeTestada, setQuantidadeTestada] = useState<number>(0);
   const [quantidadeAprovada, setQuantidadeAprovada] = useState<number>(0);
   const [quantidadeReprovada, setQuantidadeReprovada] = useState<number>(0);
+  const [quantidadeSucata, setQuantidadeSucata] = useState<number>(0);
 
   // Retrabalho
   const [tecnicoDestinoId, setTecnicoDestinoId] = useState<string>('');
@@ -98,6 +99,7 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
           setQuantidadeTestada(10);
           setQuantidadeAprovada(10);
           setQuantidadeReprovada(0);
+          setQuantidadeSucata(0);
           setDetalhesDefeito('');
           setObservacao('');
         })
@@ -111,7 +113,7 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
     setTecnicoDestinoId(newTecId);
   };
 
-  const totalCalculado = Number(quantidadeAprovada) + Number(quantidadeReprovada);
+  const totalCalculado = Number(quantidadeAprovada) + Number(quantidadeReprovada) + Number(quantidadeSucata);
   const isSomaValida = totalCalculado === Number(quantidadeTestada) && Number(quantidadeTestada) > 0;
 
   const selectedEquip = tiposEquipamento.find((e) => e.id === tipoEquipamentoId);
@@ -129,7 +131,7 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
 
     if (!isSomaValida) {
       setErrorMessage(
-        `A soma de Aprovadas (${quantidadeAprovada}) + Reprovadas (${quantidadeReprovada}) = ${totalCalculado} un deve ser igual ao Total Testado (${quantidadeTestada} un).`
+        `A soma de Aprovadas (${quantidadeAprovada}) + Reprovadas (${quantidadeReprovada}) + Sucata (${quantidadeSucata}) = ${totalCalculado} un deve ser igual ao Total Testado (${quantidadeTestada} un).`
       );
       return;
     }
@@ -167,6 +169,7 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
         quantidadeTestada: Number(quantidadeTestada),
         quantidadeAprovada: Number(quantidadeAprovada),
         quantidadeReprovada: Number(quantidadeReprovada),
+        quantidadeSucata: Number(quantidadeSucata),
         motivoReprovacaoId: quantidadeReprovada > 0 ? (motivoReprovacaoId || 'mot-01') : undefined,
         detalhesDefeito: quantidadeReprovada > 0 ? (detalhesDefeito.trim() || observacao.trim() || 'Defeito registrado no CQ') : undefined,
         observacao: observacao.trim() || undefined,
@@ -343,10 +346,10 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                Total Testado Hoje
+                Total Testado
               </label>
               <input
                 type="number"
@@ -359,18 +362,19 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
                   if (raw !== '') {
                     setQuantidadeAprovada(v);
                     setQuantidadeReprovada(0);
+                    setQuantidadeSucata(0);
                   }
                 }}
                 placeholder="Ex: 20"
                 className="w-full h-10 px-3 bg-surface-card border border-surface-border rounded-lg text-sm text-center text-gray-900 dark:text-white font-mono font-bold focus:outline-none focus:border-brand-500"
                 required
               />
-              <span className="text-[10px] text-gray-500 dark:text-gray-400 block text-center">Volume testado no dia</span>
+              <span className="text-[10px] text-gray-500 dark:text-gray-400 block text-center">Volume no dia</span>
             </div>
 
             <div className="space-y-1">
               <label className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Aprovadas (Para a Meta)
+                <CheckCircle2 className="w-3.5 h-3.5" /> Aprovadas
               </label>
               <input
                 type="number"
@@ -378,20 +382,19 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
                 value={quantidadeAprovada === 0 ? '' : quantidadeAprovada}
                 onChange={(e) => {
                   const raw = e.target.value.replace(/\D/g, '');
-                  const v = raw === '' ? 0 : Math.min(quantidadeTestada, Math.max(0, parseInt(raw)));
-                  setQuantidadeAprovada(v === 0 && raw === '' ? 0 : v);
-                  if (raw !== '') setQuantidadeReprovada(Math.max(0, quantidadeTestada - v));
+                  const v = raw === '' ? 0 : Math.max(0, parseInt(raw));
+                  setQuantidadeAprovada(v);
                 }}
                 placeholder="0"
                 className="w-full h-10 px-3 bg-surface-card border border-emerald-500/50 rounded-lg text-sm text-center text-emerald-600 dark:text-emerald-300 font-mono font-black focus:outline-none focus:border-emerald-400 ring-1 ring-emerald-500/30"
                 required
               />
-              <span className="text-[10px] text-emerald-600 dark:text-emerald-400/80 block text-center font-medium">Pontuam na hora</span>
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400/80 block text-center font-medium">Meta imediata</span>
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-red-600 dark:text-red-400 flex items-center gap-1">
-                <XCircle className="w-3.5 h-3.5" /> Retrabalho / Reprovadas
+              <label className="text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                <RotateCcw className="w-3.5 h-3.5" /> Retrabalho
               </label>
               <input
                 type="number"
@@ -399,15 +402,33 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
                 value={quantidadeReprovada === 0 ? '' : quantidadeReprovada}
                 onChange={(e) => {
                   const raw = e.target.value.replace(/\D/g, '');
-                  const v = raw === '' ? 0 : Math.min(quantidadeTestada, Math.max(0, parseInt(raw)));
-                  setQuantidadeReprovada(v === 0 && raw === '' ? 0 : v);
-                  if (raw !== '') setQuantidadeAprovada(Math.max(0, quantidadeTestada - v));
+                  const v = raw === '' ? 0 : Math.max(0, parseInt(raw));
+                  setQuantidadeReprovada(v);
+                }}
+                placeholder="0"
+                className="w-full h-10 px-3 bg-surface-card border border-amber-500/40 rounded-lg text-sm text-center text-amber-600 dark:text-amber-300 font-mono font-bold focus:outline-none focus:border-amber-500"
+                required
+              />
+              <span className="text-[10px] text-amber-600 dark:text-amber-400/80 block text-center font-medium">Volta ao técnico</span>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-red-600 dark:text-red-400 flex items-center gap-1">
+                <Ban className="w-3.5 h-3.5" /> Sucata / Morta
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={quantidadeSucata === 0 ? '' : quantidadeSucata}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/\D/g, '');
+                  const v = raw === '' ? 0 : Math.max(0, parseInt(raw));
+                  setQuantidadeSucata(v);
                 }}
                 placeholder="0"
                 className="w-full h-10 px-3 bg-surface-card border border-red-500/40 rounded-lg text-sm text-center text-red-600 dark:text-red-300 font-mono font-bold focus:outline-none focus:border-red-500"
-                required
               />
-              <span className="text-[10px] text-red-600 dark:text-red-400/80 block text-center font-medium">Voltam ao técnico</span>
+              <span className="text-[10px] text-red-600 dark:text-red-400/80 block text-center font-medium">Sem conserto</span>
             </div>
           </div>
 
@@ -420,8 +441,9 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
             }`}
           >
             <span>
-              Validação: <strong className="tabular-nums">{quantidadeAprovada}</strong> (Aprov.) +{' '}
-              <strong className="tabular-nums">{quantidadeReprovada}</strong> (Retrabalho) ={' '}
+              Validação: <strong className="tabular-nums text-emerald-700 dark:text-emerald-400">{quantidadeAprovada}</strong> (Aprov.) +{' '}
+              <strong className="tabular-nums text-amber-700 dark:text-amber-400">{quantidadeReprovada}</strong> (Retrab.) +{' '}
+              <strong className="tabular-nums text-red-700 dark:text-red-400">{quantidadeSucata}</strong> (Sucata) ={' '}
               <strong className="tabular-nums">{totalCalculado}</strong> / {quantidadeTestada} un testadas
             </span>
             <span>{isSomaValida ? '✅ Equação OK' : '⚠️ Divergência na soma'}</span>

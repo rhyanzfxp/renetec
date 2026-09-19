@@ -22,14 +22,20 @@ export const RealizarTesteSchema = z
       .number({ required_error: 'Quantidade reprovada é obrigatória' })
       .int()
       .min(0, 'Quantidade reprovada não pode ser negativa'),
+    quantidadeSucata: z
+      .number()
+      .int()
+      .min(0, 'Quantidade de sucata não pode ser negativa')
+      .optional()
+      .default(0),
     motivoReprovacaoId: z.string().optional(),
     detalhesDefeito: z.string().max(1000).optional(),
     observacao: z.string().max(1000).optional(),
   })
   .refine(
-    (data) => data.quantidadeAprovada + data.quantidadeReprovada === data.quantidadeTestada,
+    (data) => data.quantidadeAprovada + data.quantidadeReprovada + (data.quantidadeSucata || 0) === data.quantidadeTestada,
     {
-      message: 'A soma de APROVADOS + REPROVADOS deve ser exatamente igual à QUANTIDADE TESTADA.',
+      message: 'A soma de APROVADOS + REPROVADOS (RETRABALHO) + SUCATA deve ser exatamente igual à QUANTIDADE TESTADA.',
       path: ['quantidadeTestada'],
     }
   )

@@ -8,11 +8,12 @@ import type { FilaTesteItem } from './teste.types';
 
 import {
   CheckCircle2,
-  XCircle,
   AlertTriangle,
   FileCheck,
   ShieldAlert,
-  User
+  User,
+  Ban,
+  RotateCcw,
 } from 'lucide-react';
 
 interface RealizarTesteDrawerProps {
@@ -31,6 +32,7 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
   const [qtdTestada, setQtdTestada] = useState<number>(0);
   const [aprovadas, setAprovadas] = useState<number>(0);
   const [reprovadas, setReprovadas] = useState<number>(0);
+  const [sucata, setSucata] = useState<number>(0);
   const [detalhesDefeito, setDetalhesDefeito] = useState<string>('');
   const [observacao, setObservacao] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,6 +46,7 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
       setQtdTestada(qtd);
       setAprovadas(qtd); // Padrão: sugere 100% de aprovação
       setReprovadas(0);
+      setSucata(0);
       setDetalhesDefeito('');
       setObservacao('');
       setErrorMessage(null);
@@ -53,7 +56,7 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
 
   if (!item) return null;
 
-  const totalCalculado = Number(aprovadas) + Number(reprovadas);
+  const totalCalculado = Number(aprovadas) + Number(reprovadas) + Number(sucata);
   const qtdLoteTotal = item.quantidade;
   const isSomaValida = totalCalculado === Number(qtdTestada) && Number(qtdTestada) > 0 && Number(qtdTestada) <= qtdLoteTotal;
 
@@ -63,7 +66,7 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
 
     if (!isSomaValida) {
       setErrorMessage(
-        `A soma de Aprovadas (${aprovadas}) + Reprovadas (${reprovadas}) totaliza ${totalCalculado} un, mas a quantidade a testar é ${qtdTestada} un (máx ${qtdLoteTotal} un).`
+        `A soma de Aprovadas (${aprovadas}) + Retrabalho (${reprovadas}) + Sucata (${sucata}) totaliza ${totalCalculado} un, mas a quantidade a testar é ${qtdTestada} un (máx ${qtdLoteTotal} un).`
       );
       return;
     }
@@ -90,6 +93,7 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
         quantidadeTestada: Number(qtdTestada),
         quantidadeAprovada: Number(aprovadas),
         quantidadeReprovada: Number(reprovadas),
+        quantidadeSucata: Number(sucata),
         motivoReprovacaoId: reprovadas > 0 ? 'mot-01' : undefined,
         detalhesDefeito: reprovadas > 0 ? (detalhesDefeito.trim() || observacao.trim() || 'Defeito identificado no CQ') : undefined,
         observacao: observacao.trim() || detalhesDefeito.trim() || undefined,
@@ -125,7 +129,11 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
             disabled={!isSomaValida}
             leftIcon={<FileCheck className="w-4 h-4" />}
           >
-            {reprovadas > 0 ? 'Gravar Laudo com Reprovações' : 'Aprovar Lote 100%'}
+            {reprovadas > 0
+              ? 'Gravar Laudo com Retrabalho'
+              : sucata > 0
+              ? 'Gravar Laudo com Sucata'
+              : 'Aprovar Lote 100%'}
           </Button>
         </>
       }
@@ -177,11 +185,11 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
           )}
         </div>
 
-        {/* Painel de Quantidades: Aprovados + Reprovados = Total */}
+        {/* Painel de Quantidades: Aprovados + Reprovados + Sucata = Total */}
         <div className="p-4 rounded-xl bg-surface-base border border-surface-border space-y-3">
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-              <FileCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Quantidades Inspecionadas
+              <FileCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Classificação do Teste
             </label>
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-500 dark:text-gray-400">Testar agora:</span>
@@ -197,6 +205,7 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
                   if (raw !== '') {
                     setAprovadas(v);
                     setReprovadas(0);
+                    setSucata(0);
                   }
                 }}
                 className="w-16 h-7 px-2 bg-surface-card border border-surface-border rounded text-xs text-center text-gray-900 dark:text-white font-mono font-bold focus:outline-none focus:border-brand-500"
@@ -205,41 +214,64 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            {/* 1. Aprovadas */}
             <div className="space-y-1">
               <label className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Aprovadas (Para a Meta)
+                <CheckCircle2 className="w-3.5 h-3.5" /> Aprovadas (Meta)
               </label>
               <Input
                 type="number"
+                min="0"
                 value={aprovadas === 0 ? '' : aprovadas}
                 onChange={(e) => {
                   const raw = e.target.value.replace(/\D/g, '');
-                  const v = raw === '' ? 0 : Math.min(qtdTestada, Math.max(0, parseInt(raw)));
-                  setAprovadas(v === 0 && raw === '' ? 0 : v);
-                  if (raw !== '') setReprovadas(Math.max(0, qtdTestada - v));
+                  const v = raw === '' ? 0 : Math.max(0, parseInt(raw));
+                  setAprovadas(v);
                 }}
                 placeholder="0"
                 required
               />
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 block font-medium">Contam p/ meta</span>
             </div>
 
+            {/* 2. Reprovadas (Retrabalho) */}
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-red-700 dark:text-red-400 flex items-center gap-1">
-                <XCircle className="w-3.5 h-3.5" /> Reprovadas (Retrabalho)
+              <label className="text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                <RotateCcw className="w-3.5 h-3.5" /> Retrabalho (Técnico)
               </label>
               <Input
                 type="number"
+                min="0"
                 value={reprovadas === 0 ? '' : reprovadas}
                 onChange={(e) => {
                   const raw = e.target.value.replace(/\D/g, '');
-                  const v = raw === '' ? 0 : Math.min(qtdTestada, Math.max(0, parseInt(raw)));
-                  setReprovadas(v === 0 && raw === '' ? 0 : v);
-                  if (raw !== '') setAprovadas(Math.max(0, qtdTestada - v));
+                  const v = raw === '' ? 0 : Math.max(0, parseInt(raw));
+                  setReprovadas(v);
                 }}
                 placeholder="0"
                 required
               />
+              <span className="text-[10px] text-amber-600 dark:text-amber-400 block font-medium">Volta p/ bancada</span>
+            </div>
+
+            {/* 3. Sucata / Morta */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-red-700 dark:text-red-400 flex items-center gap-1">
+                <Ban className="w-3.5 h-3.5" /> Sucata / Morta
+              </label>
+              <Input
+                type="number"
+                min="0"
+                value={sucata === 0 ? '' : sucata}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/\D/g, '');
+                  const v = raw === '' ? 0 : Math.max(0, parseInt(raw));
+                  setSucata(v);
+                }}
+                placeholder="0"
+              />
+              <span className="text-[10px] text-red-600 dark:text-red-400 block font-medium">Sem conserto / descarta</span>
             </div>
           </div>
 
@@ -252,13 +284,27 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
             }`}
           >
             <span>
-              Equação: <strong className="tabular-nums">{aprovadas}</strong> (Aprov.) +{' '}
-              <strong className="tabular-nums">{reprovadas}</strong> (Reprov.) ={' '}
+              Equação: <strong className="tabular-nums text-emerald-700 dark:text-emerald-400">{aprovadas}</strong> (Aprov.) +{' '}
+              <strong className="tabular-nums text-amber-700 dark:text-amber-400">{reprovadas}</strong> (Retrab.) +{' '}
+              <strong className="tabular-nums text-red-700 dark:text-red-400">{sucata}</strong> (Sucata) ={' '}
               <strong className="tabular-nums">{totalCalculado}</strong> / {qtdTestada} un testadas
             </span>
             <span>{isSomaValida ? 'Soma correta' : 'Divergência de soma'}</span>
           </div>
         </div>
+
+        {/* Aviso se houver sucata informada */}
+        {sucata > 0 && (
+          <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800/30 text-xs text-red-800 dark:text-red-300 flex items-start gap-2 animate-fadeIn">
+            <Ban className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold">Aviso sobre {sucata} unidade(s) de Sucata / Morta:</p>
+              <p className="text-[11px] text-red-700 dark:text-red-300 mt-0.5">
+                Esses equipamentos serão registrados como sucata/sem conserto e <strong>NÃO</strong> serão enviados para a fila de retrabalho do técnico.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Seção Condicional: Motivo de Reprovação (se houver reprovadas > 0) */}
         {reprovadas > 0 && (

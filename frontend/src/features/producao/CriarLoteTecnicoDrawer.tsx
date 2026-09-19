@@ -32,6 +32,7 @@ interface EquipamentoLinha {
   quantidadeSemDefeito: number;
   quantidadeSucata: number;
   anterioresNaCaixa?: number;
+  quantidadeTotalCaixa?: number;
   anterioresReparadas?: number;
   anterioresSemDefeito?: number;
   anterioresSucata?: number;
@@ -148,18 +149,22 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
 
             if (initialOs.equipamentos && initialOs.equipamentos.length > 0) {
               setItens(
-                initialOs.equipamentos.map((eq: any) => ({
-                  tipoEquipamentoId: eq.tipoEquipamentoId,
-                  quantidadeReparada: 0,
-                  quantidadeSemDefeito: 0,
-                  quantidadeSucata: 0,
-                  anterioresNaCaixa: eq.totalAcumulado || 0,
-                  anterioresReparadas: eq.acumuladoReparado || 0,
-                  anterioresSemDefeito: eq.acumuladoSemDefeito || 0,
-                  anterioresSucata: eq.acumuladoSucata || 0,
-                  tipoCategoria: 'REPARADO',
-                  servicoRealizado: 'Reparo de bancada efetuado',
-                }))
+                initialOs.equipamentos.map((eq: any) => {
+                  const qtdCaixa = Number(eq.quantidadePrevista) || Number(eq.totalAcumulado) || 0;
+                  return {
+                    tipoEquipamentoId: eq.tipoEquipamentoId,
+                    quantidadeReparada: 0,
+                    quantidadeSemDefeito: 0,
+                    quantidadeSucata: 0,
+                    anterioresNaCaixa: qtdCaixa,
+                    quantidadeTotalCaixa: qtdCaixa,
+                    anterioresReparadas: eq.totalReparadas || eq.acumuladoReparado || 0,
+                    anterioresSemDefeito: eq.totalSemDefeito || eq.acumuladoSemDefeito || 0,
+                    anterioresSucata: eq.totalSucata || eq.acumuladoSucata || 0,
+                    tipoCategoria: 'REPARADO',
+                    servicoRealizado: 'Reparo de bancada efetuado',
+                  };
+                })
               );
             } else if (equipamentos.length > 0) {
               setItens([
@@ -169,6 +174,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                   quantidadeSemDefeito: 0,
                   quantidadeSucata: 0,
                   anterioresNaCaixa: 0,
+                  quantidadeTotalCaixa: 0,
                   anterioresReparadas: 0,
                   anterioresSemDefeito: 0,
                   anterioresSucata: 0,
@@ -196,6 +202,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                 quantidadeSemDefeito: 0,
                 quantidadeSucata: 0,
                 anterioresNaCaixa: qtdAnterior,
+                quantidadeTotalCaixa: qtdAnterior,
                 anterioresReparadas: 0,
                 anterioresSemDefeito: 0,
                 anterioresSucata: 0,
@@ -332,7 +339,12 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
           const suc = Number(it.quantidadeSucata) || 0;
           const ant = Number(it.anterioresNaCaixa) || 0;
           const hojeSoma = rep + semDef + suc;
-          const totalNaCaixa = ant + hojeSoma;
+          // REGRA DE OURO: Se o equipamento já pertence a esta OS/caixa (ex: 8 mimosas)
+          // e o técnico está fazendo retrabalho de 3 peças, o total da caixa CONTINUA 8,
+          // NÃO deve somar 8 + 3 = 11!
+          const totalNaCaixa = it.quantidadeTotalCaixa !== undefined && it.quantidadeTotalCaixa > 0
+            ? Number(it.quantidadeTotalCaixa)
+            : (ant > 0 ? ant : (hojeSoma > 0 ? hojeSoma : 1));
           const qtdOperada = (rep + semDef) > 0 ? (rep + semDef) : (hojeSoma > 0 ? hojeSoma : (totalNaCaixa || 1));
 
           const categoria: 'REPARADO' | 'SEM_DEFEITO' | 'RETRABALHO' =
@@ -897,7 +909,9 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
               const sucHoje = Number(item.quantidadeSucata) || 0;
               const antHoje = Number(item.anterioresNaCaixa) || 0;
               const hojeSoma = repHoje + semDefHoje + sucHoje;
-              const totalItemCaixa = antHoje + hojeSoma;
+              const totalItemCaixa = item.quantidadeTotalCaixa !== undefined && item.quantidadeTotalCaixa > 0
+                ? Number(item.quantidadeTotalCaixa)
+                : (antHoje > 0 ? antHoje : hojeSoma);
               const subtotalPts = (repHoje + semDefHoje) * ptsUnit;
 
               return (
@@ -928,24 +942,54 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                     )}
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                      Modelo de Equipamento <span className="text-brand-500 dark:text-brand-400">*</span>
-                    </label>
-                    <select
-                      value={item.tipoEquipamentoId}
-                      onChange={(e) => handleUpdateItem(idx, 'tipoEquipamentoId', e.target.value)}
-                      className="w-full h-10 px-3 bg-surface-card border border-surface-border rounded-lg text-xs text-gray-900 dark:text-white focus:outline-none focus:border-brand-500"
-                    >
-                      {tiposEquipamento.map((t) => {
-                        const pts = t.pontos ?? 1;
-                        return (
-                          <option key={t.id} value={t.id} className="bg-surface-card text-gray-900 dark:text-white py-1.5">
-                            {t.nome} ({pts} pt{pts > 1 ? 's' : ''})
-                          </option>
-                        );
-                      })}
-                    </select>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                        Modelo de Equipamento <span className="text-brand-500 dark:text-brand-400">*</span>
+                      </label>
+                      <select
+                        value={item.tipoEquipamentoId}
+                        onChange={(e) => handleUpdateItem(idx, 'tipoEquipamentoId', e.target.value)}
+                        className="w-full h-10 px-3 bg-surface-card border border-surface-border rounded-lg text-xs text-gray-900 dark:text-white focus:outline-none focus:border-brand-500"
+                      >
+                        {tiposEquipamento.map((t) => {
+                          const pts = t.pontos ?? 1;
+                          return (
+                            <option key={t.id} value={t.id} className="bg-surface-card text-gray-900 dark:text-white py-1.5">
+                              {t.nome} ({pts} pt{pts > 1 ? 's' : ''})
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide flex items-center gap-1">
+                          <Package className="w-3.5 h-3.5 text-brand-500 dark:text-brand-400" /> Total Físico na Caixa / OS
+                        </label>
+                        {antHoje > 0 && (
+                          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                            Já na OS: {antHoje} un
+                          </span>
+                        )}
+                      </div>
+                      <input
+                        type="number"
+                        min="1"
+                        value={item.quantidadeTotalCaixa !== undefined ? (item.quantidadeTotalCaixa === 0 ? '' : item.quantidadeTotalCaixa) : (antHoje > 0 ? antHoje : (hojeSoma > 0 ? hojeSoma : ''))}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/\D/g, '');
+                          handleUpdateItem(idx, 'quantidadeTotalCaixa', raw === '' ? 0 : parseInt(raw));
+                        }}
+                        placeholder={String(antHoje > 0 ? antHoje : (hojeSoma > 0 ? hojeSoma : 1))}
+                        className="w-full h-10 px-3 bg-surface-card border border-surface-border rounded-lg text-xs text-gray-900 dark:text-white font-mono font-bold focus:outline-none focus:border-brand-500"
+                        title="Quantidade física total de aparelhos nesta OS. Retrabalhos não aumentam esse total."
+                      />
+                      <span className="text-[10px] text-gray-500 dark:text-gray-400 block">
+                        {antHoje > 0 ? 'Retrabalhos não aumentam o total desta OS.' : 'Total real de aparelhos desta caixa.'}
+                      </span>
+                    </div>
                   </div>
 
                   {/* 3 CAMPOS PRINCIPAIS DE APONTAMENTO: REPARADAS | SEM DEFEITO | SUCATA */}

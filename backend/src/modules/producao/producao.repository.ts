@@ -689,10 +689,13 @@ export async function criarApontamentoLote(
           ordemServico: { include: { cliente: true } },
         },
       });
-    } else {
-      // Atualiza status do item e a quantidade para refletir o total acumulado ou planejado
+      // REGRA: A quantidade do item da OS representa o total FÍSICO de equipamentos na caixa/OS,
+      // e NÃO a soma de todas as passagens de produção/retrabalho.
+      // Quando retrabalhos voltam para a bancada, eles já pertencem à caixa e não devem inflar a quantidade total.
       const prevTotal = itemDb.quantidade || 0;
-      const novoTotal = Math.max(prevTotal, totalCaixaInformado, prevTotal + totalHoje);
+      const novoTotal = totalCaixaInformado > 0
+        ? totalCaixaInformado
+        : (prevTotal > 0 ? prevTotal : qtdProntaCQ);
       itemDb = await prisma.itemOrdemServico.update({
         where: { id: itemDb.id },
         data: {
@@ -878,7 +881,7 @@ export async function getMinhasOsEmAndamento(tecnicoId: string) {
           totalReparadas: repTotal,
           totalSemDefeito: semDefTotal,
           totalSucata: sucTotal,
-          totalAcumulado: repTotal + semDefTotal + sucTotal,
+          totalAcumulado: it.quantidade > 0 ? it.quantidade : (repTotal + semDefTotal + sucTotal),
           // Produção realizada hoje para este equipamento
           hojeReparadas: repHoje,
           hojeSemDefeito: semDefHoje,
@@ -903,7 +906,9 @@ export async function getMinhasOsEmAndamento(tecnicoId: string) {
           existente.totalReparadas += equipamento.totalReparadas;
           existente.totalSemDefeito += equipamento.totalSemDefeito;
           existente.totalSucata += equipamento.totalSucata;
-          existente.totalAcumulado += equipamento.totalAcumulado;
+          existente.totalAcumulado = existente.quantidadePrevista > 0
+            ? existente.quantidadePrevista
+            : (existente.totalReparadas + existente.totalSemDefeito + existente.totalSucata);
           existente.hojeReparadas += equipamento.hojeReparadas;
           existente.hojeSemDefeito += equipamento.hojeSemDefeito;
           existente.hojeSucata += equipamento.hojeSucata;
@@ -937,7 +942,7 @@ export async function getMinhasOsEmAndamento(tecnicoId: string) {
         totalSucata: osSucataTotal,
         totalGeralSucata: osSucataTotal,
         totalProcessado: osReparadosTotal + osSemDefeitoTotal + osSucataTotal,
-        totalGeralEquipamentos: osReparadosTotal + osSemDefeitoTotal + osSucataTotal,
+        totalGeralEquipamentos: os.itens.reduce((sum, item) => sum + (item.quantidade || 0), 0) || (osReparadosTotal + osSemDefeitoTotal + osSucataTotal),
         // Totais de hoje desta OS
         hojeReparados: osReparadosHoje,
         hojeSemDefeito: osSemDefeitoHoje,

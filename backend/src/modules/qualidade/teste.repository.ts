@@ -135,7 +135,15 @@ export async function realizarTeste(
 ) {
   const agora = dados.dataTeste ? new Date(dados.dataTeste) : new Date();
   const temReprovacao = dados.quantidadeReprovada > 0;
-  const novoStatusItem: StatusOS = temReprovacao ? 'RETRABALHO' : 'APROVADO';
+  const qtdSucata = Number(dados.quantidadeSucata) || 0;
+  const temAprovacao = dados.quantidadeAprovada > 0;
+  const novoStatusItem: StatusOS = temReprovacao
+    ? 'RETRABALHO'
+    : temAprovacao
+    ? 'APROVADO'
+    : qtdSucata > 0
+    ? 'SEM_REPARO'
+    : 'APROVADO';
 
   if (!isDatabaseReady()) {
     throw new Error('Banco de dados indisponível no momento.');
@@ -229,8 +237,6 @@ export async function realizarTeste(
             where: { id: itemExistenteMesmoTipo.id },
             data: {
               // Não somar novamente um equipamento que já veio da produção.
-              // A quantidade da OS representa o maior lote conhecido; os
-              // lançamentos diários permanecem no histórico de Produção.
               quantidade: Math.max(itemExistenteMesmoTipo.quantidade, dados.quantidadeTestada),
               statusItem: novoStatusItem,
               tecnicoAlocadoId: itemExistenteMesmoTipo.tecnicoAlocadoId || tecnicoRespDbId || inspetorDbId,
@@ -243,7 +249,7 @@ export async function realizarTeste(
               quantidade: dados.quantidadeTestada,
               statusItem: novoStatusItem,
               tecnicoAlocadoId: tecnicoRespDbId || inspetorDbId,
-              defeitoRelatado: `Inspeção de bancada CQ (${dados.quantidadeAprovada} aprovadas, ${dados.quantidadeReprovada} retrabalho)`,
+              defeitoRelatado: `Inspeção de bancada CQ (${dados.quantidadeAprovada} aprovadas, ${dados.quantidadeReprovada} retrabalho${qtdSucata > 0 ? `, ${qtdSucata} sucata/morta` : ''})`,
             },
           });
       itemOrdemServicoId = itemDb.id;
@@ -256,9 +262,11 @@ export async function realizarTeste(
           dataInicio: agora,
           dataFim: agora,
           quantidadeProduzida: dados.quantidadeTestada,
+          quantidadeReparada: dados.quantidadeAprovada,
+          quantidadeSucata: qtdSucata,
           status: 'FINALIZADO',
           servicoRealizado: `Reparo inspecionado e testado pelo CQ`,
-          observacao: `Apontamento de CQ. ${dados.quantidadeAprovada} un aprovadas, ${dados.quantidadeReprovada} un retrabalho.`,
+          observacao: `Apontamento de CQ. ${dados.quantidadeAprovada} un aprovadas, ${dados.quantidadeReprovada} un retrabalho${qtdSucata > 0 ? `, ${qtdSucata} un sucata/morta` : ''}.`,
         },
       });
       producaoDbId = novaProd.id;
@@ -300,6 +308,12 @@ export async function realizarTeste(
           const prodMaisRecente = itemExistente.producoes?.[0];
           if (prodMaisRecente) {
             producaoDbId = prodMaisRecente.id;
+            if (qtdSucata > 0) {
+              await tx.producao.update({
+                where: { id: prodMaisRecente.id },
+                data: { quantidadeSucata: { increment: qtdSucata } },
+              }).catch(() => {});
+            }
           } else {
             const novaProd = await tx.producao.create({
               data: {
@@ -308,15 +322,27 @@ export async function realizarTeste(
                 dataInicio: agora,
                 dataFim: agora,
                 quantidadeProduzida: dados.quantidadeTestada,
+                quantidadeReparada: dados.quantidadeAprovada,
+                quantidadeSucata: qtdSucata,
                 status: 'FINALIZADO',
                 servicoRealizado: 'Produção apontada',
+                observacao: qtdSucata > 0 ? `Identificado ${qtdSucata} un sucata no teste CQ.` : undefined,
               },
             });
             producaoDbId = novaProd.id;
           }
+        } else if (qtdSucata > 0) {
+          await tx.producao.update({
+            where: { id: producaoExiste.id },
+            data: { quantidadeSucata: { increment: qtdSucata } },
+          }).catch(() => {});
         }
       }
     }
+
+    const sucataPrefixo = qtdSucata > 0 ? `[Sucata: ${qtdSucata} un] ` : '';
+    const baseObs = dados.observacao || (dados.quantidadeReprovada > 0 ? dados.detalhesDefeito : (qtdSucata > 0 && dados.quantidadeAprovada === 0 ? 'Equipamento sucata / sem conserto' : 'Aprovado em conformidade no CQ'));
+    const obsFinal = `${sucataPrefixo}${baseObs || ''}`.trim();
 
     // 1. Criar o registro do Teste
     const teste = await tx.teste.create({
@@ -326,7 +352,7 @@ export async function realizarTeste(
         quantidadeTestada: dados.quantidadeTestada,
         quantidadeAprovada: dados.quantidadeAprovada,
         quantidadeReprovada: dados.quantidadeReprovada,
-        observacao: dados.observacao || (dados.quantidadeReprovada > 0 ? dados.detalhesDefeito : 'Aprovado em conformidade no CQ'),
+        observacao: obsFinal || null,
         dataTeste: agora,
       },
       include: {
@@ -347,6 +373,7 @@ export async function realizarTeste(
     });
 
     // 2. Se houver unidades reprovadas, gerar automaticamente o Retrabalho atribuído ao técnico de destino
+    // NOTA: Sucata NÃO gera retrabalho, pois peças mortas/irrecuperáveis não voltam para a bancada
     if (temReprovacao) {
       let motivoId = dados.motivoReprovacaoId;
       if (motivoId) {
@@ -392,14 +419,24 @@ export async function realizarTeste(
     });
 
     if (itemDb?.ordemServico) {
-      const todosAprovados = itemDb.ordemServico.itens.every(
-        (it) => (it.id === itemOrdemServicoId ? novoStatusItem === 'APROVADO' : it.statusItem === 'APROVADO')
-      );
-      const temAlgumRetrabalho = itemDb.ordemServico.itens.some(
+      const allItens = itemDb.ordemServico.itens;
+      const temAlgumRetrabalho = allItens.some(
         (it) => (it.id === itemOrdemServicoId ? novoStatusItem === 'RETRABALHO' : it.statusItem === 'RETRABALHO')
       );
+      const todosAprovados = allItens.every(
+        (it) => (it.id === itemOrdemServicoId ? novoStatusItem === 'APROVADO' : it.statusItem === 'APROVADO')
+      );
+      const todosSemReparo = allItens.every(
+        (it) => (it.id === itemOrdemServicoId ? novoStatusItem === 'SEM_REPARO' : it.statusItem === 'SEM_REPARO')
+      );
 
-      const statusOsFinal: StatusOS = temAlgumRetrabalho ? 'RETRABALHO' : (todosAprovados ? 'APROVADO' : novoStatusItem);
+      const statusOsFinal: StatusOS = temAlgumRetrabalho
+        ? 'RETRABALHO'
+        : todosAprovados
+        ? 'APROVADO'
+        : todosSemReparo
+        ? 'SEM_REPARO'
+        : novoStatusItem;
 
       await tx.ordemServico.update({
         where: { id: itemDb.ordemServicoId },
@@ -458,8 +495,20 @@ export async function getHistoricoTestes(page = 1, limit = 20) {
       prisma.teste.count(),
     ]);
 
+    const mappedData = data.map((t: any) => {
+      let sucata = t.producao?.quantidadeSucata || 0;
+      if (!sucata && t.observacao) {
+        const match = t.observacao.match(/\[Sucata:\s*(\d+)\s*un\]/i);
+        if (match) sucata = parseInt(match[1], 10);
+      }
+      return {
+        ...t,
+        quantidadeSucata: sucata,
+      };
+    });
+
     return {
-      data,
+      data: mappedData,
       total,
       page,
       totalPages: Math.ceil(total / limit),
