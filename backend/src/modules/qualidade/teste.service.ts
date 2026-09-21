@@ -12,11 +12,12 @@ export async function getFilaTestes() {
 }
 
 export async function realizarTeste(inspetorId: string, dados: RealizarTesteInput) {
-  // Validação estrita da equação invariável de negócio
-  if (dados.quantidadeAprovada + dados.quantidadeReprovada !== dados.quantidadeTestada) {
+  // Validação estrita da equação invariável de negócio (Aprovados + Reprovados + Sucata == Testados)
+  const sucata = dados.quantidadeSucata || 0;
+  if (dados.quantidadeAprovada + dados.quantidadeReprovada + sucata !== dados.quantidadeTestada) {
     throw {
       statusCode: 400,
-      message: 'Inconsistência quantitativa: Aprovados + Reprovados deve ser igual a Testados.',
+      message: 'Inconsistência quantitativa: Aprovados + Reprovados + Sucata deve ser igual a Testados.',
     };
   }
 
