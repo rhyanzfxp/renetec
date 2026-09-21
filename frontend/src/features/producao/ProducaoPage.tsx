@@ -30,6 +30,9 @@ import {
   Send,
   Trash2,
   ChevronDown,
+  Search,
+  X,
+  Ban,
 } from 'lucide-react';
 
 export const ProducaoPage: React.FC = () => {
@@ -39,6 +42,7 @@ export const ProducaoPage: React.FC = () => {
   const [producaoHoje, setProducaoHoje] = useState<ProducaoHojeResumo | null>(null);
   const [osEmAndamento, setOsEmAndamento] = useState<OsEmAndamentoData[]>([]);
   const [selectedOsParaContinuar, setSelectedOsParaContinuar] = useState<OsEmAndamentoData | null>(null);
+  const [termoBusca, setTermoBusca] = useState<string>('');
 
   const [isLoading, setIsLoading] = useState(true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -308,6 +312,51 @@ export const ProducaoPage: React.FC = () => {
   const currentCaixas = Array.isArray(caixas) ? caixas : [];
   const currentHistorico = Array.isArray(historico) ? historico : [];
 
+  const termo = termoBusca.toLowerCase().trim();
+
+  const osEmAndamentoFiltradas = osEmAndamento.filter((os) => {
+    if (!termo) return true;
+    const numOS = String(os.numeroOS || '');
+    const clienteNome = (os.clienteNome || os.cliente?.nomeRazaoSocial || '').toLowerCase();
+    const equipNomes = (os.equipamentos || []).map((eq) => eq.tipoEquipamentoNome.toLowerCase()).join(' ');
+    const obs = (os.observacoes || '').toLowerCase();
+    return numOS.includes(termo) || clienteNome.includes(termo) || equipNomes.includes(termo) || obs.includes(termo);
+  });
+
+  const caixasFiltradas = currentCaixas.filter((item) => {
+    if (!termo) return true;
+    const numOS = String(item.ordemServico?.numeroOS || '');
+    const clienteNome = (item.ordemServico?.cliente?.nomeRazaoSocial || '').toLowerCase();
+    const equipNome = (item.tipoEquipamento?.nome || '').toLowerCase();
+    const equipModelo = (item.tipoEquipamento?.modelo || '').toLowerCase();
+    const equipMarca = (item.tipoEquipamento?.marca || '').toLowerCase();
+    const defeito = (item.defeitoRelatado || '').toLowerCase();
+    return (
+      numOS.includes(termo) ||
+      clienteNome.includes(termo) ||
+      equipNome.includes(termo) ||
+      equipModelo.includes(termo) ||
+      equipMarca.includes(termo) ||
+      defeito.includes(termo)
+    );
+  });
+
+  const historicoFiltrado = currentHistorico.filter((h) => {
+    if (!termo) return true;
+    const numOS = String(h.itemOrdemServico?.ordemServico?.numeroOS || '');
+    const clienteNome = (h.itemOrdemServico?.ordemServico?.cliente?.nomeRazaoSocial || '').toLowerCase();
+    const equipNome = (h.itemOrdemServico?.tipoEquipamento?.nome || '').toLowerCase();
+    const servico = (h.servicoRealizado || '').toLowerCase();
+    const obs = (h.observacao || '').toLowerCase();
+    return (
+      numOS.includes(termo) ||
+      clienteNome.includes(termo) ||
+      equipNome.includes(termo) ||
+      servico.includes(termo) ||
+      obs.includes(termo)
+    );
+  });
+
   return (
     <div className="space-y-6">
       {errorMessage && (
@@ -444,6 +493,30 @@ export const ProducaoPage: React.FC = () => {
         </div>
       </div>
 
+      {/* ─── BARRA DE PESQUISA POR Nº OS, CLIENTE OU MODELO ────────────────── */}
+      {(osEmAndamento.length > 0 || currentCaixas.length > 0 || currentHistorico.length > 0 || termoBusca) && (
+        <div className="relative">
+          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            type="text"
+            value={termoBusca}
+            onChange={(e) => setTermoBusca(e.target.value)}
+            placeholder="Pesquisar por nº da OS, nome da empresa/cliente ou modelo do equipamento..."
+            className="w-full h-10 pl-9 pr-9 bg-surface-card border border-surface-border rounded-xl text-xs text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors shadow-sm"
+          />
+          {termoBusca && (
+            <button
+              type="button"
+              onClick={() => setTermoBusca('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 p-0.5 rounded cursor-pointer"
+              title="Limpar pesquisa"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      )}
+
       {/* ─── GAVETA 1: MINHAS ORDENS DE SERVIÇO EM ANDAMENTO ────────────── */}
       <div className="rounded-xl bg-surface-card border border-surface-border overflow-hidden transition-all duration-200 shadow-sm">
         {/* Cabeçalho da Gaveta (Clicável para expandir/recolher) */}
@@ -468,7 +541,7 @@ export const ProducaoPage: React.FC = () => {
                   Minhas OS em Andamento
                 </h3>
                 <span className="px-2 py-0.5 rounded-full text-xs font-bold font-mono bg-surface-base text-brand-600 dark:text-brand-300 border border-brand-500/30">
-                  {osEmAndamento.length}
+                  {osEmAndamentoFiltradas.length}{osEmAndamentoFiltradas.length !== osEmAndamento.length ? ` de ${osEmAndamento.length}` : ''}
                 </span>
 
                 {!isOsAndamentoOpen && osEmAndamento.length > 0 && (
@@ -532,9 +605,20 @@ export const ProducaoPage: React.FC = () => {
                   Clique em <strong>"Novo Apontamento / Minha OS"</strong> acima para registrar uma nova OS na bancada.
                 </p>
               </div>
+            ) : osEmAndamentoFiltradas.length === 0 ? (
+              <div className="p-6 rounded-xl bg-surface-base/60 border border-surface-border text-center space-y-2">
+                <Search className="w-7 h-7 text-gray-400 mx-auto" />
+                <h4 className="text-sm font-bold text-gray-900 dark:text-white">Nenhuma OS em andamento encontrada para "{termoBusca}"</h4>
+                <p className="text-xs text-gray-400 max-w-sm mx-auto">
+                  Nenhuma ordem de serviço com esse número, cliente ou modelo encontrada na sua bancada.
+                </p>
+                <Button variant="outline" size="sm" onClick={() => setTermoBusca('')} className="mt-1">
+                  Limpar Filtro
+                </Button>
+              </div>
             ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {osEmAndamento.map((os) => (
+            {osEmAndamentoFiltradas.map((os) => (
               <div
                 key={os.id}
                 className="p-4 rounded-xl bg-surface-card border border-brand-500/30 hover:border-brand-500/60 transition-all duration-150 flex flex-col justify-between space-y-4 shadow-sm relative overflow-hidden"
@@ -781,7 +865,7 @@ export const ProducaoPage: React.FC = () => {
                   Minhas Caixas & Ordens de Serviço
                 </h3>
                 <span className="px-2 py-0.5 rounded-full text-xs font-bold font-mono bg-surface-base text-sky-600 dark:text-sky-300 border border-sky-500/30">
-                  {currentCaixas.length}
+                  {caixasFiltradas.length}{caixasFiltradas.length !== currentCaixas.length ? ` de ${currentCaixas.length}` : ''}
                 </span>
 
                 {!isMinhasCaixasOpen && currentCaixas.length > 0 && (
@@ -851,9 +935,20 @@ export const ProducaoPage: React.FC = () => {
                   Clique em <strong>"Novo Apontamento / Minha OS"</strong> acima para registrar a caixa ou lote que você está trabalhando.
                 </p>
               </div>
+            ) : caixasFiltradas.length === 0 ? (
+              <div className="p-8 rounded-xl bg-surface-base/60 border border-surface-border text-center space-y-2">
+                <Search className="w-8 h-8 text-gray-400 mx-auto" />
+                <h4 className="text-sm font-bold text-gray-900 dark:text-white">Nenhuma caixa encontrada para "{termoBusca}"</h4>
+                <p className="text-xs text-gray-400 max-w-sm mx-auto">
+                  Nenhuma caixa com esse número de OS, cliente ou modelo encontrada na bancada.
+                </p>
+                <Button variant="outline" size="sm" onClick={() => setTermoBusca('')} className="mt-1">
+                  Limpar Filtro
+                </Button>
+              </div>
             ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {currentCaixas.map((item) => {
+            {caixasFiltradas.map((item) => {
               const os = item?.ordemServico;
               const equip = item?.tipoEquipamento;
               const isNoCQ = item.statusItem === 'AGUARDANDO_TESTE';
@@ -907,8 +1002,13 @@ export const ProducaoPage: React.FC = () => {
                       </p>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs text-gray-700 dark:text-gray-300 py-1.5 border-y border-surface-border/50 bg-surface-elevated/70 px-2.5 rounded-lg">
+                    <div className="flex items-center justify-between text-xs text-gray-700 dark:text-gray-300 py-1.5 border-y border-surface-border/50 bg-surface-elevated/70 px-2.5 rounded-lg flex-wrap gap-1">
                       <span>Lote: <strong className="text-emerald-600 dark:text-emerald-400 tabular-nums">{item.quantidade} un</strong></span>
+                      {((item as any).totalSucataCaixa > 0 || (item.quantidadeSucata && item.quantidadeSucata > 0)) && (
+                        <span className="px-1.5 py-0.5 rounded bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30 text-[10px] font-bold flex items-center gap-1">
+                          <Ban className="w-2.5 h-2.5" /> {(item as any).totalSucataCaixa || item.quantidadeSucata} sucata
+                        </span>
+                      )}
                       {(() => {
                         const def = (item.defeitoRelatado || '').toLowerCase();
                         const matchRep = def.match(/(\d+)\s*rep/i);
@@ -1005,46 +1105,65 @@ export const ProducaoPage: React.FC = () => {
       {currentHistorico.length > 0 && (
         <div className="space-y-3 pt-4 border-t border-surface-border">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-            <History className="w-3.5 h-3.5" /> Lotes Concluídos Recentemente pelo Técnico
+            <History className="w-3.5 h-3.5" /> Lotes Concluídos Recentemente pelo Técnico ({historicoFiltrado.length}{historicoFiltrado.length !== currentHistorico.length ? ` de ${currentHistorico.length}` : ''})
           </h3>
 
           <div className="bg-surface-card border border-surface-border rounded-xl divide-y divide-surface-border overflow-hidden">
-            {currentHistorico.map((h) => (
-              <div key={h.id} className="p-3 sm:px-4 flex items-center justify-between text-xs">
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-gray-900 dark:text-white tabular-nums">
-                      OS #{h.itemOrdemServico?.ordemServico?.numeroOS || '—'}
-                    </span>
-                    <span className="text-gray-400">—</span>
-                    <span className="text-gray-700 dark:text-gray-300 font-medium">
-                      {h.itemOrdemServico?.tipoEquipamento?.nome || 'Equipamento'}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate max-w-md">
-                    Serviço: {h.servicoRealizado || 'Manutenção realizada'}
-                  </p>
-                </div>
-
-                <div className="text-right flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/30 text-[10px] font-semibold">
-                    {h.quantidadeProduzida} un no CQ
-                  </span>
-                  {h.itemOrdemServico && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleReabrirOS(h.itemOrdemServico as any)}
-                      leftIcon={<Edit3 className="w-3 h-3 text-sky-400" />}
-                      className="text-[11px] h-7 px-2"
-                      title="Reabrir formulário para atualizar as quantidades reparadas desta OS"
-                    >
-                      Reabrir
-                    </Button>
-                  )}
-                </div>
+            {historicoFiltrado.length === 0 ? (
+              <div className="p-6 text-center text-xs text-gray-400">
+                Nenhum lote no histórico recente correspondente a "{termoBusca}".
               </div>
-            ))}
+            ) : (
+              historicoFiltrado.map((h) => (
+                <div key={h.id} className="p-3 sm:px-4 flex items-center justify-between text-xs">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-gray-900 dark:text-white tabular-nums">
+                        OS #{h.itemOrdemServico?.ordemServico?.numeroOS || '—'}
+                      </span>
+                      <span className="text-gray-400">—</span>
+                      <span className="text-gray-700 dark:text-gray-300 font-medium">
+                        {h.itemOrdemServico?.tipoEquipamento?.nome || 'Equipamento'}
+                      </span>
+                      {h.itemOrdemServico?.ordemServico?.cliente?.nomeRazaoSocial && (
+                        <span className="text-gray-400 text-[11px] hidden md:inline">
+                          • {h.itemOrdemServico.ordemServico.cliente.nomeRazaoSocial}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate max-w-md">
+                      Serviço: {h.servicoRealizado || 'Manutenção realizada'}
+                    </p>
+                  </div>
+
+                  <div className="text-right flex items-center gap-2 flex-wrap justify-end">
+                    <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/30 text-[10px] font-semibold">
+                      {h.quantidadeProduzida} un no CQ
+                    </span>
+
+                    {/* Tag de Sucata */}
+                    {(((h as any).quantidadeSucata > 0) || (h.observacao && h.observacao.includes('[Sucata:')) || (h.servicoRealizado && h.servicoRealizado.toLowerCase().includes('sucata'))) && (
+                      <span className="px-2 py-0.5 rounded bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-500/30 text-[10px] font-semibold tabular-nums flex items-center gap-1">
+                        <Ban className="w-3 h-3 text-red-500 dark:text-red-400" /> {(h as any).quantidadeSucata || (h.observacao?.match(/\[Sucata:\s*(\d+)/i)?.[1]) || ''} Sucata
+                      </span>
+                    )}
+
+                    {h.itemOrdemServico && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleReabrirOS(h.itemOrdemServico as any)}
+                        leftIcon={<Edit3 className="w-3 h-3 text-sky-400" />}
+                        className="text-[11px] h-7 px-2"
+                        title="Reabrir formulário para atualizar as quantidades reparadas desta OS"
+                      >
+                        Reabrir
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}

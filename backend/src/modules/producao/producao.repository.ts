@@ -438,7 +438,15 @@ export async function getHistoricoProducao(tecnicoId: string, page = 1, limit = 
         include: {
           itemOrdemServico: {
             include: {
-              ordemServico: { select: { id: true, numeroOS: true, prioridade: true, status: true } },
+              ordemServico: {
+                select: {
+                  id: true,
+                  numeroOS: true,
+                  prioridade: true,
+                  status: true,
+                  cliente: { select: { id: true, nomeRazaoSocial: true } },
+                },
+              },
               tipoEquipamento: { select: { id: true, nome: true, marca: true, modelo: true } },
             },
           },

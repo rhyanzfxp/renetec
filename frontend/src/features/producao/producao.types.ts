@@ -109,17 +109,22 @@ export interface ProducaoHistoricoItem {
   dataInicio: string;
   dataFim: string | null;
   quantidadeProduzida: number;
+  quantidadeReparada?: number;
+  quantidadeSemDefeito?: number;
+  quantidadeSucata?: number;
   servicoRealizado: string | null;
+  observacao?: string | null;
   status: string;
-  itemOrdemServico: {
-    ordemServico: {
+  itemOrdemServico?: {
+    id?: string;
+    ordemServico?: {
       id: string;
       numeroOS: number;
-      cliente: {
+      cliente?: {
         nomeRazaoSocial: string;
       };
     };
-    tipoEquipamento: {
+    tipoEquipamento?: {
       nome: string;
       marca?: string | null;
     };
