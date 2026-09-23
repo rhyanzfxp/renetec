@@ -395,11 +395,12 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
         }
       }
     } else {
-      // ─── TÉCNICO DE PRODUÇÃO: métricas baseadas no que o TÉCNICO realizou na bancada ───
+      // ─── TÉCNICO DE PRODUÇÃO: pontos vêm dos testes aprovados no CQ, mas as métricas
+      //      de volume (produzidos) vêm das PRODUÇÕES FINALIZADAS por este técnico ───
 
-      // 2a. Contar quantas peças este técnico PRODUZIU/REPAROU hoje (produções finalizadas na bancada)
+      // 2a. Contar quantas peças este técnico PRODUZIU hoje (produções finalizadas na bancada)
       for (const p of producoesFinalizadasHoje) {
-        // Ignorar registros de inspeção do CQ
+        // Ignorar registros de inspeção do CQ para a contagem de volume
         const isCq = p.servicoRealizado === 'Inspeção CQ' ||
                      p.servicoRealizado === 'Reparo inspecionado e testado pelo CQ' ||
                      (p.observacao && p.observacao.includes('Apontamento de CQ'));
@@ -415,17 +416,11 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
           isTecnicoMatch(tecAlocId, tNome, b.id, b.nome) ||
           isTecnicoMatch(tecAlocId, tNome, b.tecId, b.nome)
         ) {
-          const rep = p.quantidadeReparada || 0;
-          const eqNome = p.itemOrdemServico?.tipoEquipamento?.nome || '';
-          const ptsUnit = getPontosUnitarios(eqNome);
-
           qtdProduzidaHoje += p.quantidadeProduzida || 0;
-          qtdAprovadaHoje += rep;
-          ptsHoje += rep * ptsUnit;
         }
       }
 
-      // 2b. Retrabalhos gerados hoje a partir de reprovações no CQ
+      // 2b. Pontos e aprovações: vêm dos testes aprovados no CQ (regra oficial)
       for (const t of testesHojeList) {
         const prod = (t as any).producao;
         const ret = prod?.itemOrdemServico?.retrabalhos?.[0];
@@ -442,6 +437,26 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
           isTecnicoMatch(tecAlocId, tNome, b.id, b.nome) ||
           isTecnicoMatch(tecAlocId, tNome, b.tecId, b.nome)
         ) {
+          const eqNome = prod?.itemOrdemServico?.tipoEquipamento?.nome || '';
+          const qtdAprov = t.quantidadeAprovada || 0;
+          const ptsUnit = getPontosUnitarios(eqNome);
+
+          // REGRA: Sem defeito NÃO conta ponto! Apenas peças reparadas aprovadas
+          const textoDef = (prod?.itemOrdemServico?.defeitoRelatado || '').toLowerCase();
+          const textoServ = (prod?.servicoRealizado || '').toLowerCase();
+          const textoCompleto = `${textoDef} ${textoServ}`;
+          const isSemDef = textoCompleto.includes('categoria: sem_defeito') || textoCompleto.includes('sem defeito aparente');
+          const matchRep = textoCompleto.match(/(\d+)\s*rep/i);
+          
+          const repQtd = (prod?.quantidadeReparada !== undefined && prod?.quantidadeReparada > 0)
+            ? prod.quantidadeReparada
+            : (isSemDef ? 0 : (matchRep ? parseInt(matchRep[1]) : (prod?.quantidadeProduzida || qtdAprov)));
+          const qtdPontuavel = Math.min(qtdAprov, repQtd);
+
+          if (qtdPontuavel > 0) {
+            ptsHoje += qtdPontuavel * ptsUnit;
+          }
+          qtdAprovadaHoje += qtdAprov;
           retrabalhoHoje += t.quantidadeReprovada || 0;
         }
       }
