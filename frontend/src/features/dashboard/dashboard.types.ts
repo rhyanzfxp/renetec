@@ -16,6 +16,10 @@ export interface BancadaStatusData {
     tempoDecorridoMinutos: number;
   } | null;
   pontosHoje?: number;
+  quantidadeProduzidaHoje?: number;
+  quantidadeTestadaHoje?: number;
+  quantidadeAprovadaHoje?: number;
+  retrabalhoHoje?: number;
   produzidosHoje?: number;
 }
 

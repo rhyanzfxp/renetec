@@ -358,9 +358,13 @@ export const TvFabricaPage: React.FC = () => {
                       </p>
                     </div>
                     <div className="text-center p-2 rounded-xl bg-gray-50 dark:bg-[#070c18] border border-gray-200 dark:border-gray-800">
-                      <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">TESTADOS</p>
+                      <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        {b.funcao?.includes('Qualidade') ? 'TESTADOS' : 'PRODUZIDOS'}
+                      </p>
                       <p className="text-2xl font-black text-gray-800 dark:text-slate-100 font-mono tabular-nums leading-tight mt-0.5">
-                        {(b as any).quantidadeTestadaHoje ?? 0}
+                        {b.funcao?.includes('Qualidade')
+                          ? ((b as any).quantidadeTestadaHoje ?? 0)
+                          : ((b as any).quantidadeProduzidaHoje ?? 0)}
                       </p>
                     </div>
                     <div className="text-center p-2 rounded-xl bg-emerald-50 dark:bg-[#070c18] border border-emerald-200 dark:border-gray-800">

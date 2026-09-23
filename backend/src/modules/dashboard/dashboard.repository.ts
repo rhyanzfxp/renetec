@@ -18,6 +18,8 @@ export interface BancadaStatus {
     tempoDecorridoMinutos: number;
   } | null;
   pontosHoje: number;
+  quantidadeProduzidaHoje?: number;
+  quantidadeTestadaHoje?: number;
   taxaQualidadeHoje?: number;
   quantidadeAprovadaHoje?: number;
 }
@@ -349,10 +351,12 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
     // Testes reprovados (não conformes) geram 0 pontos.
     let ptsHoje = 0;
     let qtdTestadaHoje = 0;
+    let qtdProduzidaHoje = 0;
     let qtdAprovadaHoje = 0;
     let retrabalhoHoje = 0;
 
     if (b.funcao.includes('Qualidade') || b.nome.toLowerCase().includes('rhyan')) {
+      // ─── INSPETOR DE CQ: métricas baseadas nos TESTES que ele realizou ───
       for (const t of testesHojeList) {
         const inspId = t.inspetorId || t.inspetor?.id;
         const inspNome = t.inspetor?.nome;
@@ -388,6 +392,26 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
         }
       }
     } else {
+      // ─── TÉCNICO DE PRODUÇÃO: pontos vêm dos testes aprovados, mas as métricas
+      //      de volume (produzidos) vêm das PRODUÇÕES FINALIZADAS por este técnico ───
+
+      // 2a. Contar quantas peças este técnico PRODUZIU/REPAROU hoje (produções finalizadas)
+      for (const p of producoesFinalizadasHoje) {
+        const tId = p.tecnicoId || p.tecnico?.id;
+        const tNome = p.tecnico?.nome || p.itemOrdemServico?.tecnicoAlocado?.nome;
+        const tecAlocId = p.itemOrdemServico?.tecnicoAlocadoId || p.itemOrdemServico?.tecnicoAlocado?.id;
+
+        if (
+          isTecnicoMatch(tId, tNome, b.id, b.nome) ||
+          isTecnicoMatch(tId, tNome, b.tecId, b.nome) ||
+          isTecnicoMatch(tecAlocId, tNome, b.id, b.nome) ||
+          isTecnicoMatch(tecAlocId, tNome, b.tecId, b.nome)
+        ) {
+          qtdProduzidaHoje += p.quantidadeProduzida || 0;
+        }
+      }
+
+      // 2b. Pontos e aprovações: ainda dependem dos testes aprovados no CQ
       for (const t of testesHojeList) {
         const prod = (t as any).producao;
         const ret = prod?.itemOrdemServico?.retrabalhos?.[0];
@@ -423,15 +447,17 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
           if (qtdPontuavel > 0) {
             ptsHoje += qtdPontuavel * ptsUnit;
           }
-          qtdTestadaHoje += t.quantidadeTestada || 0;
           qtdAprovadaHoje += qtdAprov;
           retrabalhoHoje += t.quantidadeReprovada || 0;
         }
       }
     }
 
-    const taxaQualidadeHoje = qtdTestadaHoje > 0 
-      ? Number(((qtdAprovadaHoje / qtdTestadaHoje) * 100).toFixed(1)) 
+    // Para o inspetor de CQ, taxa de qualidade usa testados; para técnicos, usa produzidos
+    const isQualidade = b.funcao.includes('Qualidade') || b.nome.toLowerCase().includes('rhyan');
+    const baseRef = isQualidade ? qtdTestadaHoje : qtdProduzidaHoje;
+    const taxaQualidadeHoje = baseRef > 0 
+      ? Number(((qtdAprovadaHoje / baseRef) * 100).toFixed(1)) 
       : 100.0;
 
     return {
@@ -441,7 +467,8 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
       status: ativa ? 'EM_PRODUCAO' : 'DISPONIVEL',
       producaoAtiva: producaoAtivaPayload,
       pontosHoje: Number(ptsHoje.toFixed(1)),
-      quantidadeTestadaHoje: qtdTestadaHoje,
+      quantidadeProduzidaHoje: isQualidade ? 0 : qtdProduzidaHoje,
+      quantidadeTestadaHoje: isQualidade ? qtdTestadaHoje : 0,
       quantidadeAprovadaHoje: qtdAprovadaHoje,
       retrabalhoHoje,
       taxaQualidadeHoje,

@@ -241,10 +241,8 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
 
             const valorOS = Number((t.producao?.itemOrdemServico?.ordemServico as any)?.valorOrcamento || 0);
             fat += valorOS;
-
-            // Pontos de inspeção do testador no CQ (apenas sobre itens aprovados)
-            const inspNome = t.inspetor?.nome || 'Rhyan';
-            colaboradoresMapPorNome[inspNome] = (colaboradoresMapPorNome[inspNome] || 0) + pontosLoteAprovado;
+            // NOTA: O inspetor de CQ NÃO recebe pontos de produção duplicados.
+            // Os pontos são creditados apenas ao técnico que reparou o equipamento.
           }
         }
 
