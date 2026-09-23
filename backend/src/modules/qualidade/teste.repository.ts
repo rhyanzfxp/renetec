@@ -254,18 +254,22 @@ export async function realizarTeste(
           });
       itemOrdemServicoId = itemDb.id;
 
-      // 5. Criar Produção vinculada ao técnico responsável
+      // 5. Criar registro de produção vinculado ao teste CQ para chave estrangeira.
+      // REGRA: Testes de CQ NÃO são reparos de bancada! Quantidade reparada deve ser SEMPRE 0,
+      // e o autor é o inspetor do CQ, não o técnico de bancada.
       const novaProd = await tx.producao.create({
         data: {
           itemOrdemServicoId: itemDb.id,
-          tecnicoId: tecnicoRespDbId || inspetorDbId,
+          tecnicoId: inspetorDbId,
           dataInicio: agora,
           dataFim: agora,
-          quantidadeProduzida: dados.quantidadeTestada,
-          quantidadeReparada: dados.quantidadeAprovada,
+          dataProducao: agora,
+          quantidadeProduzida: 0,
+          quantidadeReparada: 0,
+          quantidadeSemDefeito: 0,
           quantidadeSucata: qtdSucata,
           status: 'FINALIZADO',
-          servicoRealizado: `Reparo inspecionado e testado pelo CQ`,
+          servicoRealizado: 'Inspeção CQ',
           observacao: `Apontamento de CQ. ${dados.quantidadeAprovada} un aprovadas, ${dados.quantidadeReprovada} un retrabalho${qtdSucata > 0 ? `, ${qtdSucata} un sucata/morta` : ''}.`,
         },
       });
@@ -318,15 +322,17 @@ export async function realizarTeste(
             const novaProd = await tx.producao.create({
               data: {
                 itemOrdemServicoId,
-                tecnicoId: itemExistente.tecnicoAlocadoId || tecnicoRespDbId || inspetorDbId,
+                tecnicoId: inspetorDbId,
                 dataInicio: agora,
                 dataFim: agora,
-                quantidadeProduzida: dados.quantidadeTestada,
-                quantidadeReparada: dados.quantidadeAprovada,
+                dataProducao: agora,
+                quantidadeProduzida: 0,
+                quantidadeReparada: 0,
+                quantidadeSemDefeito: 0,
                 quantidadeSucata: qtdSucata,
                 status: 'FINALIZADO',
-                servicoRealizado: 'Produção apontada',
-                observacao: qtdSucata > 0 ? `Identificado ${qtdSucata} un sucata no teste CQ.` : undefined,
+                servicoRealizado: 'Inspeção CQ',
+                observacao: qtdSucata > 0 ? `Identificado ${qtdSucata} un sucata no teste CQ.` : `Inspeção de CQ (${dados.quantidadeAprovada} aprovadas, ${dados.quantidadeReprovada} retrabalho).`,
               },
             });
             producaoDbId = novaProd.id;

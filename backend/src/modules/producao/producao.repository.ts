@@ -158,27 +158,38 @@ export async function getMinhasCaixas(tecnicoId: string) {
     for (const prod of producoes) {
       if (prod.itemOrdemServico && !seenItemIds.has(prod.itemOrdemServico.id)) {
         seenItemIds.add(prod.itemOrdemServico.id);
-        const itemProds = prod.itemOrdemServico.producoes || [];
+        const allProds = prod.itemOrdemServico.producoes || [];
         
-        const totalRep = itemProds.reduce((acc, p) => acc + (p.quantidadeReparada || 0), 0);
-        const totalSemDef = itemProds.reduce((acc, p) => acc + (p.quantidadeSemDefeito || 0), 0);
-        const totalSuc = itemProds.reduce((acc, p) => acc + (p.quantidadeSucata || 0), 0);
+        // Apenas produções reais do técnico na bancada (ignorar registros de inspeção do CQ)
+        const itemProdsTecnico = allProds.filter((p) => {
+          const isCq = p.servicoRealizado === 'Inspeção CQ' ||
+                       p.servicoRealizado === 'Reparo inspecionado e testado pelo CQ' ||
+                       (p.observacao && p.observacao.includes('Apontamento de CQ'));
+          return !isCq;
+        });
+
+        // Produção mais recente do técnico (se houver)
+        const ultimaProdTecnico = itemProdsTecnico[0] || null;
+
+        const totalRep = itemProdsTecnico.reduce((acc, p) => acc + (p.quantidadeReparada || 0), 0);
+        const totalSemDef = itemProdsTecnico.reduce((acc, p) => acc + (p.quantidadeSemDefeito || 0), 0);
+        const totalSuc = itemProdsTecnico.reduce((acc, p) => acc + (p.quantidadeSucata || 0), 0);
         const totalAcumulado = (totalRep + totalSemDef + totalSuc) || prod.itemOrdemServico.quantidade;
 
         itens.push({
           ...prod.itemOrdemServico,
-          quantidade: prod.quantidadeProduzida || prod.itemOrdemServico.quantidade,
-          quantidadeReparada: prod.quantidadeReparada || 0,
-          quantidadeSemDefeito: prod.quantidadeSemDefeito || 0,
-          quantidadeSucata: prod.quantidadeSucata || 0,
-          defeitoRelatado: prod.observacao || prod.servicoRealizado || prod.itemOrdemServico.defeitoRelatado,
-          producaoId: prod.id,
-          producaoStatus: prod.status,
+          quantidade: ultimaProdTecnico?.quantidadeProduzida || prod.itemOrdemServico.quantidade,
+          quantidadeReparada: ultimaProdTecnico?.quantidadeReparada || 0,
+          quantidadeSemDefeito: ultimaProdTecnico?.quantidadeSemDefeito || 0,
+          quantidadeSucata: ultimaProdTecnico?.quantidadeSucata || 0,
+          defeitoRelatado: ultimaProdTecnico?.observacao || ultimaProdTecnico?.servicoRealizado || prod.itemOrdemServico.defeitoRelatado,
+          producaoId: ultimaProdTecnico?.id || prod.id,
+          producaoStatus: ultimaProdTecnico?.status || prod.status,
           totalAcumuladoCaixa: totalAcumulado,
           totalReparadasCaixa: totalRep,
           totalSemDefeitoCaixa: totalSemDef,
           totalSucataCaixa: totalSuc,
-          anterioresNaCaixa: Math.max(0, totalAcumulado - (prod.quantidadeProduzida || prod.itemOrdemServico.quantidade)),
+          anterioresNaCaixa: Math.max(0, totalAcumulado - (ultimaProdTecnico?.quantidadeProduzida || prod.itemOrdemServico.quantidade)),
         });
       }
     }
@@ -836,6 +847,12 @@ export async function getMinhasOsEmAndamento(tecnicoId: string) {
         const historicoDias: any[] = [];
 
         for (const p of it.producoes) {
+          // Ignorar produções de CQ para as contagens de reparo do técnico
+          const isCq = p.servicoRealizado === 'Inspeção CQ' ||
+                       p.servicoRealizado === 'Reparo inspecionado e testado pelo CQ' ||
+                       (p.observacao && p.observacao.includes('Apontamento de CQ'));
+          if (isCq) continue;
+
           const dProd = new Date(p.dataProducao || p.dataFim || p.dataInicio || p.createdAt);
           if (dProd > ultimaAtividade) {
             ultimaAtividade = dProd;
@@ -1031,6 +1048,13 @@ export async function getProducaoHojeTecnico(tecnicoId: string) {
     const resumoPorOsEEquipamento = new Map<string, any>();
 
     for (const p of producoes) {
+      // REGRA OFICIAL: Ignorar registros de inspeção/testes do CQ!
+      // A produção de hoje do técnico deve mostrar APENAS o que o técnico consertou na bancada.
+      const isCq = p.servicoRealizado === 'Inspeção CQ' ||
+                   p.servicoRealizado === 'Reparo inspecionado e testado pelo CQ' ||
+                   (p.observacao && p.observacao.includes('Apontamento de CQ'));
+      if (isCq) continue;
+
       const rep = p.quantidadeReparada || 0;
       const semDef = p.quantidadeSemDefeito || 0;
       const suc = p.quantidadeSucata || 0;

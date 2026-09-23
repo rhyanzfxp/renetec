@@ -240,7 +240,10 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
         prisma.producao.findMany({
           where: {
             status: 'FINALIZADO',
-            dataFim: { gte: limite24Horas },
+            OR: [
+              { dataFim: { gte: limite24Horas } },
+              { dataProducao: { gte: limite24Horas } },
+            ],
           },
           include: {
             itemOrdemServico: {
@@ -392,11 +395,16 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
         }
       }
     } else {
-      // ─── TÉCNICO DE PRODUÇÃO: pontos vêm dos testes aprovados, mas as métricas
-      //      de volume (produzidos) vêm das PRODUÇÕES FINALIZADAS por este técnico ───
+      // ─── TÉCNICO DE PRODUÇÃO: métricas baseadas no que o TÉCNICO realizou na bancada ───
 
-      // 2a. Contar quantas peças este técnico PRODUZIU/REPAROU hoje (produções finalizadas)
+      // 2a. Contar quantas peças este técnico PRODUZIU/REPAROU hoje (produções finalizadas na bancada)
       for (const p of producoesFinalizadasHoje) {
+        // Ignorar registros de inspeção do CQ
+        const isCq = p.servicoRealizado === 'Inspeção CQ' ||
+                     p.servicoRealizado === 'Reparo inspecionado e testado pelo CQ' ||
+                     (p.observacao && p.observacao.includes('Apontamento de CQ'));
+        if (isCq) continue;
+
         const tId = p.tecnicoId || p.tecnico?.id;
         const tNome = p.tecnico?.nome || p.itemOrdemServico?.tecnicoAlocado?.nome;
         const tecAlocId = p.itemOrdemServico?.tecnicoAlocadoId || p.itemOrdemServico?.tecnicoAlocado?.id;
@@ -407,11 +415,17 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
           isTecnicoMatch(tecAlocId, tNome, b.id, b.nome) ||
           isTecnicoMatch(tecAlocId, tNome, b.tecId, b.nome)
         ) {
+          const rep = p.quantidadeReparada || 0;
+          const eqNome = p.itemOrdemServico?.tipoEquipamento?.nome || '';
+          const ptsUnit = getPontosUnitarios(eqNome);
+
           qtdProduzidaHoje += p.quantidadeProduzida || 0;
+          qtdAprovadaHoje += rep;
+          ptsHoje += rep * ptsUnit;
         }
       }
 
-      // 2b. Pontos e aprovações: ainda dependem dos testes aprovados no CQ
+      // 2b. Retrabalhos gerados hoje a partir de reprovações no CQ
       for (const t of testesHojeList) {
         const prod = (t as any).producao;
         const ret = prod?.itemOrdemServico?.retrabalhos?.[0];
@@ -428,26 +442,6 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
           isTecnicoMatch(tecAlocId, tNome, b.id, b.nome) ||
           isTecnicoMatch(tecAlocId, tNome, b.tecId, b.nome)
         ) {
-          const eqNome = prod?.itemOrdemServico?.tipoEquipamento?.nome || '';
-          const qtdAprov = t.quantidadeAprovada || 0;
-          const ptsUnit = getPontosUnitarios(eqNome);
-
-          // REGRA: Sem defeito NÃO conta ponto! Apenas peças reparadas aprovadas
-          const textoDef = (prod?.itemOrdemServico?.defeitoRelatado || '').toLowerCase();
-          const textoServ = (prod?.servicoRealizado || '').toLowerCase();
-          const textoCompleto = `${textoDef} ${textoServ}`;
-          const isSemDef = textoCompleto.includes('categoria: sem_defeito') || textoCompleto.includes('sem defeito aparente');
-          const matchRep = textoCompleto.match(/(\d+)\s*rep/i);
-          
-          const repQtd = (prod?.quantidadeReparada !== undefined && prod?.quantidadeReparada > 0)
-            ? prod.quantidadeReparada
-            : (isSemDef ? 0 : (matchRep ? parseInt(matchRep[1]) : (prod?.quantidadeProduzida || qtdAprov)));
-          const qtdPontuavel = Math.min(qtdAprov, repQtd);
-
-          if (qtdPontuavel > 0) {
-            ptsHoje += qtdPontuavel * ptsUnit;
-          }
-          qtdAprovadaHoje += qtdAprov;
           retrabalhoHoje += t.quantidadeReprovada || 0;
         }
       }
