@@ -67,10 +67,6 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
   const [clienteSuccessMsg, setClienteSuccessMsg] = useState<string | null>(null);
 
   const [modoOperacao, setModoOperacao] = useState<'INICIAR_PRODUCAO' | 'DESPACHAR_CQ' | 'SALVAR_BANCADA'>('SALVAR_BANCADA');
-  const [isDespachandoCq, setIsDespachandoCq] = useState(false);
-  const [confirmDespacharModalOpen, setConfirmDespacharModalOpen] = useState(false);
-  const [despacharObservacao, setDespacharObservacao] = useState('');
-
   const [isExcluindoOs, setIsExcluindoOs] = useState(false);
   const [confirmExcluirModalOpen, setConfirmExcluirModalOpen] = useState(false);
 
@@ -301,6 +297,27 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
     const isDiretoCQ = modo === 'DESPACHAR_CQ';
 
     if (!isAoVivo && totalProcessados < 1) {
+      // Se for despacho para o CQ de uma OS existente na bancada (initialOs)
+      // que já tem equipamentos reparados anteriormente, pode despachar diretamente!
+      if (isDiretoCQ && initialOs && numeroOS) {
+        try {
+          isSubmittingRef.current = true;
+          setIsLoading(true);
+          setError(null);
+          const numParsed = parseInt(numeroOS.replace(/\D/g, ''));
+          await producaoApiService.despacharOsParaCQ(numParsed, observacoes.trim() || undefined);
+          onSuccess();
+          onClose();
+          return;
+        } catch (err: any) {
+          setError(err.response?.data?.message || 'Erro ao enviar OS para o CQ.');
+          return;
+        } finally {
+          isSubmittingRef.current = false;
+          setIsLoading(false);
+        }
+      }
+
       setError('Informe ao menos 1 unidade reparada, sem defeito ou sucata no apontamento de hoje.');
       return;
     }
@@ -379,66 +396,6 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
     } finally {
       isSubmittingRef.current = false;
       setIsLoading(false);
-    }
-  };
-
-  const handleDespacharCQ = async () => {
-    if (!numeroOS || isDespachandoCq) return;
-    try {
-      setIsDespachandoCq(true);
-      setError(null);
-      const numParsed = parseInt(numeroOS.replace(/\D/g, ''));
-      // Se o técnico informou quantidades hoje antes de despachar ao CQ, salva a produção primeiro
-      if (totalHoje > 0) {
-        let timestampISO: string;
-        if (dataRegistro && horaRegistro) {
-          const [ano, mes, dia] = dataRegistro.split('-').map(Number);
-          const [horas, minutos] = horaRegistro.split(':').map(Number);
-          const dataLocal = new Date(ano, mes - 1, dia, horas || 0, minutos || 0, 0);
-          timestampISO = isNaN(dataLocal.getTime()) ? new Date().toISOString() : dataLocal.toISOString();
-        } else {
-          timestampISO = new Date().toISOString();
-        }
-        await producaoApiService.apontarLote({
-          numeroOS: numParsed,
-          clienteId: clienteId || (clientes[0]?.id || 'cli-01'),
-          dataEntrada: timestampISO,
-          dataProducao: timestampISO,
-          idempotencyKey: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `lote-${Date.now()}-${Math.random()}`,
-          prioridade,
-          observacoes: observacoes.trim() || undefined,
-          enviarDiretoTeste: true,
-          iniciarProducaoAoVivo: false,
-          modoOperacao: 'DESPACHAR_CQ',
-          itens: itens.map((it) => {
-            const rep = Number(it.quantidadeReparada) || 0;
-            const semDef = Number(it.quantidadeSemDefeito) || 0;
-            const suc = Number(it.quantidadeSucata) || 0;
-            const ant = Number(it.anterioresNaCaixa) || 0;
-            const totalNaCaixa = ant + rep + semDef + suc;
-            return {
-              tipoEquipamentoId: it.tipoEquipamentoId,
-              quantidade: (rep + semDef) > 0 ? (rep + semDef) : (totalNaCaixa || 1),
-              quantidadeTotalCaixa: totalNaCaixa,
-              quantidadeReparada: rep,
-              quantidadeSemDefeito: semDef,
-              quantidadeSucata: suc,
-              quantidadeRestante: 0,
-              tipoCategoria: it.tipoCategoria || 'REPARADO',
-              defeitoRelatado: `Produção diária enviada ao CQ [${rep} rep, ${semDef} sem def, ${suc} suc]`,
-              servicoRealizado: it.servicoRealizado.trim() || `Manutenção finalizada`,
-            };
-          }),
-        });
-      }
-      await producaoApiService.despacharOsParaCQ(numParsed, despacharObservacao.trim() || observacoes.trim() || undefined);
-      setConfirmDespacharModalOpen(false);
-      onSuccess();
-      onClose();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao enviar OS para o CQ.');
-    } finally {
-      setIsDespachandoCq(false);
     }
   };
 
@@ -532,21 +489,6 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                 </Button>
               )}
 
-              {numeroOS && (
-                <Button
-                  type="button"
-                  variant="success"
-                  size="sm"
-                  onClick={() => setConfirmDespacharModalOpen(true)}
-                  disabled={isLoading || isDespachandoCq || isExcluindoOs}
-                  leftIcon={<Send className="w-3.5 h-3.5" />}
-                  className="font-bold text-xs shadow-glow-success whitespace-nowrap"
-                  title="Enviar esta OS e equipamentos reparados para a fila de testes do CQ"
-                >
-                  Mandar para o CQ
-                </Button>
-              )}
-
               {modoOperacao === 'INICIAR_PRODUCAO' ? (
                 <Button
                   variant="success"
@@ -581,7 +523,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                   leftIcon={<Send className="w-3.5 h-3.5" />}
                   className="shadow-glow-success font-bold whitespace-nowrap"
                 >
-                  Despachar Lote ao CQ
+                  Despachar para o CQ
                 </Button>
               )}
             </div>
@@ -1196,60 +1138,6 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
         </div>
       </form>
     </Drawer>
-
-    {confirmDespacharModalOpen && (
-      <Modal
-        isOpen={confirmDespacharModalOpen}
-        onClose={() => setConfirmDespacharModalOpen(false)}
-        title={`Mandar OS #${numeroOS} para o CQ`}
-        subtitle="Envio dos equipamentos reparados para a bancada do tester de qualidade"
-        size="md"
-        footer={
-          <>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setConfirmDespacharModalOpen(false)}
-              disabled={isDespachandoCq}
-            >
-              Cancelar
-            </Button>
-            <Button
-              variant="success"
-              size="sm"
-              onClick={handleDespacharCQ}
-              loading={isDespachandoCq}
-              disabled={isDespachandoCq}
-              leftIcon={<Send className="w-4 h-4" />}
-              className="shadow-glow-success font-bold"
-            >
-              Confirmar Envio ao CQ
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
-          <p>
-            Você está prestes a enviar a <strong>OS #{numeroOS}</strong> para o Controle de Qualidade (CQ).
-          </p>
-          <p className="text-xs text-sky-800 dark:text-sky-300 bg-sky-100/80 dark:bg-sky-950/40 p-2.5 rounded border border-sky-300 dark:border-sky-800/40">
-            ℹ️ A produção informada hoje ({totalReparados} rep{totalSemDefeito ? `, ${totalSemDefeito} sem def` : ''}{totalSucata ? `, ${totalSucata} suc` : ''}) será salva e a OS será encaminhada para os <strong>testes do CQ</strong>.
-          </p>
-          <div className="space-y-1 pt-1">
-            <label className="text-xs font-semibold text-gray-700 dark:text-gray-400 block">
-              Observações / Instruções para o testador CQ (opcional):
-            </label>
-            <textarea
-              rows={2}
-              value={despacharObservacao}
-              onChange={(e) => setDespacharObservacao(e.target.value)}
-              placeholder="Ex: Lote revisado, trocados conectores óticos da porta PON. Pronto para teste de potência."
-              className="w-full bg-surface-base border border-surface-border rounded-lg p-2.5 text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-brand-500 resize-none"
-            />
-          </div>
-        </div>
-      </Modal>
-    )}
 
     {confirmExcluirModalOpen && (
       <Modal

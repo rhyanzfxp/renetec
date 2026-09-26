@@ -752,7 +752,7 @@ export const ProducaoPage: React.FC = () => {
                     className="w-full font-bold text-xs shadow-glow-success"
                     title="Enviar esta OS e equipamentos reparados para a fila de testes do CQ"
                   >
-                    Mandar para o CQ
+                    Despachar para o CQ
                   </Button>
                 </div>
               </div>

@@ -63,6 +63,7 @@ export interface RealizarTestePayload {
   dataTeste?: string;
   quantidadeTestada: number;
   quantidadeAprovada: number;
+  quantidadeSemDefeito?: number;
   quantidadeReprovada: number;
   quantidadeSucata?: number;
   motivoReprovacaoId?: string;
@@ -74,6 +75,7 @@ export interface HistoricoTesteItem {
   id: string;
   quantidadeTestada: number;
   quantidadeAprovada: number;
+  quantidadeSemDefeito?: number;
   quantidadeReprovada: number;
   quantidadeSucata?: number;
   dataTeste: string;

@@ -56,6 +56,7 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
 
   const [quantidadeTestada, setQuantidadeTestada] = useState<number>(0);
   const [quantidadeAprovada, setQuantidadeAprovada] = useState<number>(0);
+  const [quantidadeSemDefeito, setQuantidadeSemDefeito] = useState<number>(0);
   const [quantidadeReprovada, setQuantidadeReprovada] = useState<number>(0);
   const [quantidadeSucata, setQuantidadeSucata] = useState<number>(0);
 
@@ -98,6 +99,7 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
           setNumeroOS('');
           setQuantidadeTestada(10);
           setQuantidadeAprovada(10);
+          setQuantidadeSemDefeito(0);
           setQuantidadeReprovada(0);
           setQuantidadeSucata(0);
           setDetalhesDefeito('');
@@ -113,7 +115,7 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
     setTecnicoDestinoId(newTecId);
   };
 
-  const totalCalculado = Number(quantidadeAprovada) + Number(quantidadeReprovada) + Number(quantidadeSucata);
+  const totalCalculado = Number(quantidadeAprovada) + Number(quantidadeSemDefeito) + Number(quantidadeReprovada) + Number(quantidadeSucata);
   const isSomaValida = totalCalculado === Number(quantidadeTestada) && Number(quantidadeTestada) > 0;
 
   const selectedEquip = tiposEquipamento.find((e) => e.id === tipoEquipamentoId);
@@ -131,7 +133,7 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
 
     if (!isSomaValida) {
       setErrorMessage(
-        `A soma de Aprovadas (${quantidadeAprovada}) + Reprovadas (${quantidadeReprovada}) + Sucata (${quantidadeSucata}) = ${totalCalculado} un deve ser igual ao Total Testado (${quantidadeTestada} un).`
+        `A soma de Aprovadas (${quantidadeAprovada})${quantidadeSemDefeito > 0 ? ` + Sem Defeito (${quantidadeSemDefeito})` : ''} + Reprovadas (${quantidadeReprovada}) + Sucata (${quantidadeSucata}) = ${totalCalculado} un deve ser igual ao Total Testado (${quantidadeTestada} un).`
       );
       return;
     }
@@ -168,6 +170,7 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
         dataTeste: timestampISO,
         quantidadeTestada: Number(quantidadeTestada),
         quantidadeAprovada: Number(quantidadeAprovada),
+        quantidadeSemDefeito: Number(quantidadeSemDefeito),
         quantidadeReprovada: Number(quantidadeReprovada),
         quantidadeSucata: Number(quantidadeSucata),
         motivoReprovacaoId: quantidadeReprovada > 0 ? (motivoReprovacaoId || 'mot-01') : undefined,
@@ -346,7 +349,7 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
                 Total Testado
@@ -361,6 +364,7 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
                   setQuantidadeTestada(v);
                   if (raw !== '') {
                     setQuantidadeAprovada(v);
+                    setQuantidadeSemDefeito(0);
                     setQuantidadeReprovada(0);
                     setQuantidadeSucata(0);
                   }
@@ -390,6 +394,25 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
                 required
               />
               <span className="text-[10px] text-emerald-600 dark:text-emerald-400/80 block text-center font-medium">Meta imediata</span>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-sky-600 dark:text-sky-400 flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5" /> Sem Defeito
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={quantidadeSemDefeito === 0 ? '' : quantidadeSemDefeito}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/\D/g, '');
+                  const v = raw === '' ? 0 : Math.max(0, parseInt(raw));
+                  setQuantidadeSemDefeito(v);
+                }}
+                placeholder="0"
+                className="w-full h-10 px-3 bg-surface-card border border-sky-500/40 rounded-lg text-sm text-center text-sky-600 dark:text-sky-300 font-mono font-bold focus:outline-none focus:border-sky-500"
+              />
+              <span className="text-[10px] text-sky-600 dark:text-sky-400/80 block text-center font-medium">Opcional</span>
             </div>
 
             <div className="space-y-1">
@@ -442,6 +465,11 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
           >
             <span>
               Validação: <strong className="tabular-nums text-emerald-700 dark:text-emerald-400">{quantidadeAprovada}</strong> (Aprov.) +{' '}
+              {quantidadeSemDefeito > 0 ? (
+                <>
+                  <strong className="tabular-nums text-sky-700 dark:text-sky-400">{quantidadeSemDefeito}</strong> (Sem Def.) +{' '}
+                </>
+              ) : null}
               <strong className="tabular-nums text-amber-700 dark:text-amber-400">{quantidadeReprovada}</strong> (Retrab.) +{' '}
               <strong className="tabular-nums text-red-700 dark:text-red-400">{quantidadeSucata}</strong> (Sucata) ={' '}
               <strong className="tabular-nums">{totalCalculado}</strong> / {quantidadeTestada} un testadas

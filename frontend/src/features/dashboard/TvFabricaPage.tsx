@@ -351,34 +351,63 @@ export const TvFabricaPage: React.FC = () => {
 
                   {/* STATS MATRIX GIGANTE ESTILO GRAFANA */}
                   <div className="mt-3 grid grid-cols-4 gap-2 pt-2.5 border-t border-gray-200 dark:border-[#1e293b]">
-                    <div className="text-center p-2 rounded-xl bg-amber-50 dark:bg-[#070c18] border border-amber-200 dark:border-gray-800">
-                      <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">PTS HOJE</p>
-                      <p className="text-2xl font-black text-amber-600 dark:text-amber-300 font-mono tabular-nums leading-tight mt-0.5">
-                        {b.pontosHoje ?? 0}
-                      </p>
-                    </div>
-                    <div className="text-center p-2 rounded-xl bg-gray-50 dark:bg-[#070c18] border border-gray-200 dark:border-gray-800">
-                      <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        {b.funcao?.includes('Qualidade') ? 'TESTADOS' : 'PRODUZIDOS'}
-                      </p>
-                      <p className="text-2xl font-black text-gray-800 dark:text-slate-100 font-mono tabular-nums leading-tight mt-0.5">
-                        {b.funcao?.includes('Qualidade')
-                          ? ((b as any).quantidadeTestadaHoje ?? 0)
-                          : ((b as any).quantidadeProduzidaHoje ?? 0)}
-                      </p>
-                    </div>
-                    <div className="text-center p-2 rounded-xl bg-emerald-50 dark:bg-[#070c18] border border-emerald-200 dark:border-gray-800">
-                      <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">APROVADOS</p>
-                      <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono tabular-nums leading-tight mt-0.5">
-                        {(b as any).quantidadeAprovadaHoje ?? 0}
-                      </p>
-                    </div>
-                    <div className="text-center p-2 rounded-xl bg-rose-50 dark:bg-[#070c18] border border-rose-200 dark:border-gray-800">
-                      <p className="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">RETRABALHO</p>
-                      <p className="text-2xl font-black text-rose-600 dark:text-rose-400 font-mono tabular-nums leading-tight mt-0.5">
-                        {(b as any).retrabalhoHoje ?? 0}
-                      </p>
-                    </div>
+                    {b.funcao?.includes('Qualidade') ? (
+                      <>
+                        {/* Qualidade/Testes (Rhyan): PTS HOJE | TESTADOS | APROVADOS | REPROVADOS */}
+                        <div className="text-center p-2 rounded-xl bg-amber-50 dark:bg-[#070c18] border border-amber-200 dark:border-gray-800">
+                          <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">PTS HOJE</p>
+                          <p className="text-2xl font-black text-amber-600 dark:text-amber-300 font-mono tabular-nums leading-tight mt-0.5">
+                            {b.pontosHoje ?? 0}
+                          </p>
+                        </div>
+                        <div className="text-center p-2 rounded-xl bg-cyan-50 dark:bg-[#070c18] border border-cyan-200 dark:border-gray-800">
+                          <p className="text-[10px] font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-wider">TESTADOS</p>
+                          <p className="text-2xl font-black text-cyan-600 dark:text-cyan-300 font-mono tabular-nums leading-tight mt-0.5">
+                            {b.quantidadeTestadaHoje ?? 0}
+                          </p>
+                        </div>
+                        <div className="text-center p-2 rounded-xl bg-emerald-50 dark:bg-[#070c18] border border-emerald-200 dark:border-gray-800">
+                          <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">APROVADOS</p>
+                          <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono tabular-nums leading-tight mt-0.5">
+                            {b.quantidadeAprovadaHoje ?? 0}
+                          </p>
+                        </div>
+                        <div className="text-center p-2 rounded-xl bg-rose-50 dark:bg-[#070c18] border border-rose-200 dark:border-gray-800">
+                          <p className="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">REPROVADOS</p>
+                          <p className="text-2xl font-black text-rose-600 dark:text-rose-400 font-mono tabular-nums leading-tight mt-0.5">
+                            {b.reprovadosHoje ?? 0}
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {/* Produção (João, Samuel, Joás): REPARADOS | SEM DEFEITO | SUCATA | RETRABALHO */}
+                        <div className="text-center p-2 rounded-xl bg-emerald-50 dark:bg-[#070c18] border border-emerald-200 dark:border-gray-800">
+                          <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">REPARADOS</p>
+                          <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono tabular-nums leading-tight mt-0.5">
+                            {b.reparadosHoje ?? 0}
+                          </p>
+                        </div>
+                        <div className="text-center p-2 rounded-xl bg-sky-50 dark:bg-[#070c18] border border-sky-200 dark:border-gray-800">
+                          <p className="text-[10px] font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wider">SEM DEFEITO</p>
+                          <p className="text-2xl font-black text-sky-600 dark:text-sky-400 font-mono tabular-nums leading-tight mt-0.5">
+                            {b.semDefeitoHoje ?? 0}
+                          </p>
+                        </div>
+                        <div className="text-center p-2 rounded-xl bg-amber-50 dark:bg-[#070c18] border border-amber-200 dark:border-gray-800">
+                          <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">SUCATA</p>
+                          <p className="text-2xl font-black text-amber-600 dark:text-amber-400 font-mono tabular-nums leading-tight mt-0.5">
+                            {b.sucataHoje ?? 0}
+                          </p>
+                        </div>
+                        <div className="text-center p-2 rounded-xl bg-rose-50 dark:bg-[#070c18] border border-rose-200 dark:border-gray-800">
+                          <p className="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">RETRABALHO</p>
+                          <p className="text-2xl font-black text-rose-600 dark:text-rose-400 font-mono tabular-nums leading-tight mt-0.5">
+                            {b.retrabalhoHoje ?? 0}
+                          </p>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}

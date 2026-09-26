@@ -136,7 +136,8 @@ export async function realizarTeste(
   const agora = dados.dataTeste ? new Date(dados.dataTeste) : new Date();
   const temReprovacao = dados.quantidadeReprovada > 0;
   const qtdSucata = Number(dados.quantidadeSucata) || 0;
-  const temAprovacao = dados.quantidadeAprovada > 0;
+  const qtdSemDefeito = Number(dados.quantidadeSemDefeito) || 0;
+  const temAprovacao = dados.quantidadeAprovada > 0 || qtdSemDefeito > 0;
   const novoStatusItem: StatusOS = temReprovacao
     ? 'RETRABALHO'
     : temAprovacao
@@ -249,7 +250,7 @@ export async function realizarTeste(
               quantidade: dados.quantidadeTestada,
               statusItem: novoStatusItem,
               tecnicoAlocadoId: tecnicoRespDbId || inspetorDbId,
-              defeitoRelatado: `Inspeção de bancada CQ (${dados.quantidadeAprovada} aprovadas, ${dados.quantidadeReprovada} retrabalho${qtdSucata > 0 ? `, ${qtdSucata} sucata/morta` : ''})`,
+              defeitoRelatado: `Inspeção de bancada CQ (${dados.quantidadeAprovada} aprovadas${qtdSemDefeito > 0 ? `, ${qtdSemDefeito} sem defeito` : ''}, ${dados.quantidadeReprovada} retrabalho${qtdSucata > 0 ? `, ${qtdSucata} sucata/morta` : ''})`,
             },
           });
       itemOrdemServicoId = itemDb.id;
@@ -266,14 +267,34 @@ export async function realizarTeste(
           dataProducao: agora,
           quantidadeProduzida: 0,
           quantidadeReparada: 0,
-          quantidadeSemDefeito: 0,
+          quantidadeSemDefeito: qtdSemDefeito,
           quantidadeSucata: qtdSucata,
           status: 'FINALIZADO',
           servicoRealizado: 'Inspeção CQ',
-          observacao: `Apontamento de CQ. ${dados.quantidadeAprovada} un aprovadas, ${dados.quantidadeReprovada} un retrabalho${qtdSucata > 0 ? `, ${qtdSucata} un sucata/morta` : ''}.`,
+          observacao: `Apontamento de CQ. ${dados.quantidadeAprovada} un aprovadas${qtdSemDefeito > 0 ? `, ${qtdSemDefeito} un sem defeito` : ''}, ${dados.quantidadeReprovada} un retrabalho${qtdSucata > 0 ? `, ${qtdSucata} un sucata/morta` : ''}.`,
         },
       });
       producaoDbId = novaProd.id;
+
+      // Se foi apontado um técnico responsável na OS direta, registra a produção correspondente para ele
+      if (tecnicoRespDbId && tecnicoRespDbId !== inspetorDbId) {
+        await tx.producao.create({
+          data: {
+            itemOrdemServicoId: itemDb.id,
+            tecnicoId: tecnicoRespDbId,
+            dataInicio: agora,
+            dataFim: agora,
+            dataProducao: agora,
+            quantidadeProduzida: dados.quantidadeAprovada + qtdSemDefeito + qtdSucata,
+            quantidadeReparada: dados.quantidadeAprovada,
+            quantidadeSemDefeito: qtdSemDefeito,
+            quantidadeSucata: qtdSucata,
+            status: 'FINALIZADO',
+            servicoRealizado: 'Reparo de Bancada',
+            observacao: `Apontamento direto via CQ (#OS ${dados.numeroOS || ''})`,
+          },
+        }).catch(() => {});
+      }
     } else {
       // B. Inspeção de item existente da fila
       const itemExistente = await tx.itemOrdemServico.findUnique({
@@ -312,51 +333,73 @@ export async function realizarTeste(
           const prodMaisRecente = itemExistente.producoes?.[0];
           if (prodMaisRecente) {
             producaoDbId = prodMaisRecente.id;
-            if (qtdSucata > 0) {
+            const updateData: any = {};
+            if (qtdSucata > 0) updateData.quantidadeSucata = { increment: qtdSucata };
+            if (qtdSemDefeito > 0) {
+              updateData.quantidadeSemDefeito = { increment: qtdSemDefeito };
+              if (prodMaisRecente.quantidadeReparada >= qtdSemDefeito) {
+                updateData.quantidadeReparada = { decrement: qtdSemDefeito };
+              }
+            }
+            if (Object.keys(updateData).length > 0) {
               await tx.producao.update({
                 where: { id: prodMaisRecente.id },
-                data: { quantidadeSucata: { increment: qtdSucata } },
+                data: updateData,
               }).catch(() => {});
             }
           } else {
             const novaProd = await tx.producao.create({
               data: {
                 itemOrdemServicoId,
-                tecnicoId: inspetorDbId,
+                tecnicoId: itemExistente.tecnicoAlocadoId || inspetorDbId,
                 dataInicio: agora,
                 dataFim: agora,
                 dataProducao: agora,
-                quantidadeProduzida: 0,
-                quantidadeReparada: 0,
-                quantidadeSemDefeito: 0,
+                quantidadeProduzida: dados.quantidadeAprovada + qtdSemDefeito,
+                quantidadeReparada: dados.quantidadeAprovada,
+                quantidadeSemDefeito: qtdSemDefeito,
                 quantidadeSucata: qtdSucata,
                 status: 'FINALIZADO',
-                servicoRealizado: 'Inspeção CQ',
-                observacao: qtdSucata > 0 ? `Identificado ${qtdSucata} un sucata no teste CQ.` : `Inspeção de CQ (${dados.quantidadeAprovada} aprovadas, ${dados.quantidadeReprovada} retrabalho).`,
+                servicoRealizado: 'Reparo de Bancada',
+                observacao: `Concluído via CQ (${dados.quantidadeAprovada} aprovadas${qtdSemDefeito > 0 ? `, ${qtdSemDefeito} sem defeito` : ''}, ${dados.quantidadeReprovada} retrabalho).`,
               },
             });
             producaoDbId = novaProd.id;
           }
-        } else if (qtdSucata > 0) {
-          await tx.producao.update({
-            where: { id: producaoExiste.id },
-            data: { quantidadeSucata: { increment: qtdSucata } },
-          }).catch(() => {});
+        } else {
+          const updateData: any = {};
+          if (qtdSucata > 0) updateData.quantidadeSucata = { increment: qtdSucata };
+          if (qtdSemDefeito > 0) {
+            updateData.quantidadeSemDefeito = { increment: qtdSemDefeito };
+            if (producaoExiste.quantidadeReparada >= qtdSemDefeito) {
+              updateData.quantidadeReparada = { decrement: qtdSemDefeito };
+            }
+          }
+          if (Object.keys(updateData).length > 0) {
+            await tx.producao.update({
+              where: { id: producaoExiste.id },
+              data: updateData,
+            }).catch(() => {});
+          }
         }
       }
     }
 
+    const semDefeitoPrefixo = qtdSemDefeito > 0 ? `[Sem Defeito: ${qtdSemDefeito} un] ` : '';
     const sucataPrefixo = qtdSucata > 0 ? `[Sucata: ${qtdSucata} un] ` : '';
-    const baseObs = dados.observacao || (dados.quantidadeReprovada > 0 ? dados.detalhesDefeito : (qtdSucata > 0 && dados.quantidadeAprovada === 0 ? 'Equipamento sucata / sem conserto' : 'Aprovado em conformidade no CQ'));
-    const obsFinal = `${sucataPrefixo}${baseObs || ''}`.trim();
+    const baseObs = dados.observacao || (dados.quantidadeReprovada > 0 ? dados.detalhesDefeito : (qtdSucata > 0 && dados.quantidadeAprovada === 0 && qtdSemDefeito === 0 ? 'Equipamento sucata / sem conserto' : 'Aprovado em conformidade no CQ'));
+    const obsFinal = `${semDefeitoPrefixo}${sucataPrefixo}${baseObs || ''}`.trim();
 
     // 1. Criar o registro do Teste
+    // Aprovados do teste = Aprovados (reparados) + Sem Defeito (pois ambos passaram no teste)
+    const totalAprovadosTeste = dados.quantidadeAprovada + qtdSemDefeito;
+
     const teste = await tx.teste.create({
       data: {
         producaoId: producaoDbId,
         inspetorId: inspetorDbId,
         quantidadeTestada: dados.quantidadeTestada,
-        quantidadeAprovada: dados.quantidadeAprovada,
+        quantidadeAprovada: totalAprovadosTeste,
         quantidadeReprovada: dados.quantidadeReprovada,
         observacao: obsFinal || null,
         dataTeste: agora,

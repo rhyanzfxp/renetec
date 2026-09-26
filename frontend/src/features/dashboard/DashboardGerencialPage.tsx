@@ -13,8 +13,6 @@ import {
   RefreshCw,
   Flame,
   AlertTriangle,
-  Cpu,
-  Layers,
 } from 'lucide-react';
 
 export const DashboardGerencialPage: React.FC = () => {
@@ -205,73 +203,137 @@ export const DashboardGerencialPage: React.FC = () => {
         />
       </div>
 
-      {/* ─── 3. GRÁFICOS: PARETO DE DEFEITOS & LEAD TIME POR EQUIPAMENTO ──── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Distribuição de Defeitos (Pareto de Retrabalhos) */}
-        <div className="p-5 rounded-2xl bg-surface-card border border-surface-border space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-              <Layers className="w-4 h-4 text-rose-500 dark:text-rose-400" /> Distribuição de Defeitos (Retrabalhos)
-            </h3>
-            <span className="text-[11px] text-gray-500 dark:text-gray-400 font-mono">Taxa: {data.taxaRetrabalho}%</span>
-          </div>
-
-          {data.distribuicaoDefeitos && data.distribuicaoDefeitos.length > 0 ? (
-            <div className="space-y-3">
-              {data.distribuicaoDefeitos.slice(0, 5).map((def, idx) => (
-                <div key={idx} className="space-y-1">
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-gray-700 dark:text-gray-300 truncate">{def.motivo}</span>
-                    <span className="text-rose-600 dark:text-rose-400 tabular-nums font-mono">{def.quantidade} un ({def.percentual}%)</span>
-                  </div>
-                  <div className="w-full bg-surface-elevated rounded-full h-2 overflow-hidden">
-                    <div
-                      className="bg-rose-500 h-2 rounded-full transition-all duration-500"
-                      style={{ width: `${Math.min(100, def.percentual)}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="p-6 text-center text-xs text-gray-500 dark:text-gray-400 bg-surface-elevated/40 rounded-xl border border-surface-border">
-              Nenhum defeito registrado no período selecionado. Excelente controle de qualidade!
-            </div>
-          )}
+      {/* ─── 3. DESEMPENHO POR TÉCNICO ───────────────────────────────────── */}
+      <div className="p-5 rounded-2xl bg-surface-card border border-surface-border space-y-4">
+        <div>
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+            <Users className="w-4 h-4 text-violet-600 dark:text-violet-400" /> Desempenho por Técnico
+          </h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            Quantidade de reparados, sem defeito, sucata e retrabalhos por colaborador no período selecionado.
+          </p>
         </div>
 
-        {/* Lead Time por Tipo de Equipamento */}
-        <div className="p-5 rounded-2xl bg-surface-card border border-surface-border space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-              <Cpu className="w-4 h-4 text-cyan-600 dark:text-cyan-400" /> Lead Time por Equipamento
-            </h3>
-            <span className="text-[11px] text-gray-500 dark:text-gray-400 font-mono">Média: {data.leadTimeMedioGeralMinutos} min</span>
-          </div>
+        {data.desempenhoTecnicos && data.desempenhoTecnicos.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            {data.desempenhoTecnicos.map((tec) => {
+              const isQualidade = tec.funcao?.toLowerCase().includes('qualidade') || tec.funcao?.toLowerCase().includes('testes');
+              const totalItens = isQualidade
+                ? (tec.testados || 0)
+                : ((tec.reparados || 0) + (tec.semDefeito || 0) + (tec.sucata || 0) + (tec.retrabalhos || 0));
 
-          {data.leadTimePorEquipamento && data.leadTimePorEquipamento.length > 0 ? (
-            <div className="space-y-3">
-              {data.leadTimePorEquipamento.slice(0, 5).map((eq, idx) => (
-                <div key={idx} className="space-y-1">
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-gray-700 dark:text-gray-300 truncate">{eq.tipoEquipamentoNome}</span>
-                    <span className="text-cyan-600 dark:text-cyan-400 tabular-nums font-mono">{eq.tempoMedioMinutos} min ({eq.quantidadeConcluida} un)</span>
+              return (
+                <div
+                  key={tec.tecnicoId}
+                  className="p-4 rounded-xl bg-surface-elevated/50 border border-surface-border hover:border-violet-500/30 transition-all duration-200 space-y-3"
+                >
+                  {/* Cabeçalho do card */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black text-white ${
+                        isQualidade
+                          ? 'bg-gradient-to-br from-cyan-500 to-blue-600'
+                          : 'bg-gradient-to-br from-violet-500 to-purple-600'
+                      }`}>
+                        {tec.tecnicoNome?.charAt(0)?.toUpperCase() || '?'}
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-gray-900 dark:text-white leading-tight">
+                          {tec.tecnicoNome}
+                        </p>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider">
+                          {tec.funcao || 'Produção'}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-mono text-gray-500 dark:text-gray-400 bg-surface-base px-2 py-0.5 rounded-md border border-surface-border">
+                      {totalItens} un
+                    </span>
                   </div>
-                  <div className="w-full bg-surface-elevated rounded-full h-2 overflow-hidden">
-                    <div
-                      className="bg-cyan-500 h-2 rounded-full transition-all duration-500"
-                      style={{ width: `${Math.min(100, (eq.tempoMedioMinutos / 120) * 100)}%` }}
-                    />
-                  </div>
+
+                  {/* Métricas */}
+                  {isQualidade ? (
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="text-center p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
+                          <p className="text-lg font-black text-cyan-600 dark:text-cyan-400 tabular-nums">{tec.testados || 0}</p>
+                          <p className="text-[10px] font-semibold text-cyan-700 dark:text-cyan-300 uppercase">Testados</p>
+                        </div>
+                        <div className="text-center p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                          <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 tabular-nums">{tec.aprovados || 0}</p>
+                          <p className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 uppercase">Aprovados</p>
+                        </div>
+                        <div className="text-center p-2 rounded-lg bg-rose-500/10 border border-rose-500/20">
+                          <p className="text-lg font-black text-rose-600 dark:text-rose-400 tabular-nums">{tec.reprovados || 0}</p>
+                          <p className="text-[10px] font-semibold text-rose-700 dark:text-rose-300 uppercase">Reprovados</p>
+                        </div>
+                      </div>
+                      {/* Barra visual de aprovação */}
+                      {tec.testados > 0 && (
+                        <div className="w-full bg-surface-base rounded-full h-1.5 overflow-hidden flex">
+                          <div
+                            className="bg-emerald-500 h-1.5 transition-all duration-500"
+                            style={{ width: `${((tec.aprovados || 0) / tec.testados) * 100}%` }}
+                          />
+                          <div
+                            className="bg-rose-500 h-1.5 transition-all duration-500"
+                            style={{ width: `${((tec.reprovados || 0) / tec.testados) * 100}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="text-center p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                          <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 tabular-nums">{tec.reparados || 0}</p>
+                          <p className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 uppercase">Reparados</p>
+                        </div>
+                        <div className="text-center p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                          <p className="text-lg font-black text-amber-600 dark:text-amber-400 tabular-nums">{tec.sucata || 0}</p>
+                          <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300 uppercase">Sucata</p>
+                        </div>
+                        <div className="text-center p-2 rounded-lg bg-sky-500/10 border border-sky-500/20">
+                          <p className="text-lg font-black text-sky-600 dark:text-sky-400 tabular-nums">{tec.semDefeito || 0}</p>
+                          <p className="text-[10px] font-semibold text-sky-700 dark:text-sky-300 uppercase">Sem Defeito</p>
+                        </div>
+                        <div className="text-center p-2 rounded-lg bg-rose-500/10 border border-rose-500/20">
+                          <p className="text-lg font-black text-rose-600 dark:text-rose-400 tabular-nums">{tec.retrabalhos || 0}</p>
+                          <p className="text-[10px] font-semibold text-rose-700 dark:text-rose-300 uppercase">Retrabalhos</p>
+                        </div>
+                      </div>
+                      {/* Barra visual proporcional */}
+                      {totalItens > 0 && (
+                        <div className="w-full bg-surface-base rounded-full h-1.5 overflow-hidden flex">
+                          <div
+                            className="bg-emerald-500 h-1.5 transition-all duration-500"
+                            style={{ width: `${((tec.reparados || 0) / totalItens) * 100}%` }}
+                          />
+                          <div
+                            className="bg-sky-500 h-1.5 transition-all duration-500"
+                            style={{ width: `${((tec.semDefeito || 0) / totalItens) * 100}%` }}
+                          />
+                          <div
+                            className="bg-amber-500 h-1.5 transition-all duration-500"
+                            style={{ width: `${((tec.sucata || 0) / totalItens) * 100}%` }}
+                          />
+                          <div
+                            className="bg-rose-500 h-1.5 transition-all duration-500"
+                            style={{ width: `${((tec.retrabalhos || 0) / totalItens) * 100}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="p-6 text-center text-xs text-gray-500 dark:text-gray-400 bg-surface-elevated/40 rounded-xl border border-surface-border">
-              Aguardando conclusão de ordens de serviço para cálculo de lead time por modelo.
-            </div>
-          )}
-        </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="p-6 text-center text-xs text-gray-500 dark:text-gray-400 bg-surface-elevated/40 rounded-xl border border-surface-border">
+            Nenhum dado de desempenho disponível para o período selecionado.
+          </div>
+        )}
       </div>
 
       {/* ─── 4. RANKING DE PRODUTIVIDADE DOS TÉCNICOS ──────────────────────── */}

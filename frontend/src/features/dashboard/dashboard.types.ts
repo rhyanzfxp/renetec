@@ -20,6 +20,10 @@ export interface BancadaStatusData {
   quantidadeTestadaHoje?: number;
   quantidadeAprovadaHoje?: number;
   retrabalhoHoje?: number;
+  reprovadosHoje?: number;
+  reparadosHoje?: number;
+  semDefeitoHoje?: number;
+  sucataHoje?: number;
   produzidosHoje?: number;
 }
 
@@ -89,6 +93,21 @@ export interface ProdutividadeTecnicoData {
   tempoMedioPorLoteMinutos: number;
 }
 
+export interface DesempenhoTecnicoData {
+  tecnicoId: string;
+  tecnicoNome: string;
+  funcao: string;
+  // Produção (técnicos de bancada)
+  reparados: number;
+  semDefeito: number;
+  sucata: number;
+  retrabalhos: number;
+  // Qualidade/Testes (inspetor CQ)
+  testados: number;
+  aprovados: number;
+  reprovados: number;
+}
+
 export interface GerencialResponse {
   periodo: string;
   faturamentoEstimado: number;
@@ -103,6 +122,7 @@ export interface GerencialResponse {
   distribuicaoDefeitos: DefeitoDistribuicaoData[];
   leadTimePorEquipamento: LeadTimeEquipamentoData[];
   produtividadeTecnicos: ProdutividadeTecnicoData[];
+  desempenhoTecnicos: DesempenhoTecnicoData[];
   producaoHistoricoDias: {
     data: string;
     pontos?: number;

@@ -22,6 +22,10 @@ export interface BancadaStatus {
   quantidadeTestadaHoje?: number;
   taxaQualidadeHoje?: number;
   quantidadeAprovadaHoje?: number;
+  reprovadosHoje?: number;
+  reparadosHoje?: number;
+  semDefeitoHoje?: number;
+  sucataHoje?: number;
 }
 
 export interface TvFabricaData {
@@ -88,6 +92,21 @@ export interface ProdutividadeTecnico {
   tempoMedioPorLoteMinutos: number;
 }
 
+export interface DesempenhoTecnico {
+  tecnicoId: string;
+  tecnicoNome: string;
+  funcao: string;
+  // Produção (técnicos de bancada)
+  reparados: number;
+  semDefeito: number;
+  sucata: number;
+  retrabalhos: number;
+  // Qualidade/Testes (inspetor CQ)
+  testados: number;
+  aprovados: number;
+  reprovados: number;
+}
+
 export interface GerencialData {
   periodo: string;
   faturamentoEstimado: number;
@@ -100,6 +119,7 @@ export interface GerencialData {
   distribuicaoDefeitos: DefeitoDistribuicao[];
   leadTimePorEquipamento: LeadTimeEquipamento[];
   produtividadeTecnicos: ProdutividadeTecnico[];
+  desempenhoTecnicos: DesempenhoTecnico[];
   producaoHistoricoDias: {
     data: string;
     pontos: number;
@@ -218,9 +238,17 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
 
   if (isDatabaseReady()) {
     try {
-      // Janela de 24 horas para o Painel Renetec (TV da Fábrica):
-      // Garante ciclo de 24h contínuas para não zerar após 2 horas devido ao fuso horário UTC
-      const limite24Horas = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      // Meia-noite de hoje no fuso horário do Brasil (UTC-3)
+      // O servidor (Vercel) roda em UTC, então 00:00 BRT = 03:00 UTC
+      const agoraUtc = new Date();
+      const brasilOffsetMs = -3 * 60 * 60 * 1000;
+      const agoraBrasil = new Date(agoraUtc.getTime() + brasilOffsetMs);
+      const meiaNoiteHojeBrasil = new Date(Date.UTC(
+        agoraBrasil.getUTCFullYear(),
+        agoraBrasil.getUTCMonth(),
+        agoraBrasil.getUTCDate(),
+        3, 0, 0, 0 // 03:00 UTC = 00:00 BRT
+      ));
 
       const [ativas, finalizadas, filaItens, testes] = await Promise.all([
         prisma.producao.findMany({
@@ -241,8 +269,8 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
           where: {
             status: 'FINALIZADO',
             OR: [
-              { dataFim: { gte: limite24Horas } },
-              { dataProducao: { gte: limite24Horas } },
+              { dataFim: { gte: meiaNoiteHojeBrasil } },
+              { dataProducao: { gte: meiaNoiteHojeBrasil } },
             ],
           },
           include: {
@@ -266,7 +294,7 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
           take: 5,
         }),
         prisma.teste.findMany({
-          where: { dataTeste: { gte: limite24Horas } },
+          where: { dataTeste: { gte: meiaNoiteHojeBrasil } },
           include: {
             inspetor: true,
             producao: {
@@ -357,6 +385,10 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
     let qtdProduzidaHoje = 0;
     let qtdAprovadaHoje = 0;
     let retrabalhoHoje = 0;
+    let reparadosHoje = 0;
+    let semDefeitoHoje = 0;
+    let sucataHoje = 0;
+    let reprovadosHoje = 0;
 
     if (b.funcao.includes('Qualidade') || b.nome.toLowerCase().includes('rhyan')) {
       // ─── INSPETOR DE CQ: métricas baseadas nos TESTES que ele realizou ───
@@ -391,6 +423,7 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
           }
           qtdTestadaHoje += qtdTest;
           qtdAprovadaHoje += qtdAprov;
+          reprovadosHoje += t.quantidadeReprovada || 0;
           retrabalhoHoje += t.quantidadeReprovada || 0;
         }
       }
@@ -417,6 +450,9 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
           isTecnicoMatch(tecAlocId, tNome, b.tecId, b.nome)
         ) {
           qtdProduzidaHoje += p.quantidadeProduzida || 0;
+          reparadosHoje += p.quantidadeReparada || 0;
+          semDefeitoHoje += p.quantidadeSemDefeito || 0;
+          sucataHoje += p.quantidadeSucata || 0;
         }
       }
 
@@ -479,7 +515,11 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
       quantidadeProduzidaHoje: isQualidade ? 0 : qtdProduzidaHoje,
       quantidadeTestadaHoje: isQualidade ? qtdTestadaHoje : 0,
       quantidadeAprovadaHoje: qtdAprovadaHoje,
+      reprovadosHoje,
       retrabalhoHoje,
+      reparadosHoje: isQualidade ? 0 : reparadosHoje,
+      semDefeitoHoje: isQualidade ? 0 : semDefeitoHoje,
+      sucataHoje: isQualidade ? 0 : sucataHoje,
       taxaQualidadeHoje,
     };
   });
@@ -637,6 +677,165 @@ export async function getGerencialData(periodo: string = 'mes_atual'): Promise<G
     };
   });
 
+  // ─── Desempenho por Técnico (Reparados / Sem Defeito / Sucata / Retrabalho / Testados / Aprovados / Reprovados) ───
+  let desempenhoTecnicos: DesempenhoTecnico[] = [];
+
+  if (isDatabaseReady()) {
+    try {
+      // Calcular data de início do período selecionado
+      const agora = new Date();
+      let dataInicioPeriodo: Date;
+
+      switch (periodo) {
+        case 'hoje': {
+          dataInicioPeriodo = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+          break;
+        }
+        case '7_dias': {
+          dataInicioPeriodo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        }
+        case 'ano': {
+          dataInicioPeriodo = new Date(agora.getFullYear(), 0, 1); // 1º de janeiro
+          break;
+        }
+        case 'mes_atual':
+        default: {
+          dataInicioPeriodo = new Date(agora.getFullYear(), agora.getMonth(), 1); // 1º do mês atual
+          break;
+        }
+      }
+
+      // Buscar todos os técnicos ativos
+      const todosUsuarios = await prisma.usuario.findMany({
+        where: { ativo: true, perfil: { in: ['TECNICO', 'QUALIDADE'] } },
+        select: { id: true, nome: true, perfil: true },
+      });
+
+      // Produções finalizadas no período (para técnicos de produção)
+      const producoesPeriodo = await prisma.producao.findMany({
+        where: {
+          status: 'FINALIZADO',
+          dataProducao: { gte: dataInicioPeriodo },
+        },
+        select: {
+          tecnicoId: true,
+          quantidadeReparada: true,
+          quantidadeSemDefeito: true,
+          quantidadeSucata: true,
+          quantidadeProduzida: true,
+          servicoRealizado: true,
+          observacao: true,
+        },
+      });
+
+      // Testes no período (para inspetor de qualidade)
+      const testesPeriodo = await prisma.teste.findMany({
+        where: {
+          dataTeste: { gte: dataInicioPeriodo },
+        },
+        select: {
+          inspetorId: true,
+          quantidadeTestada: true,
+          quantidadeAprovada: true,
+          quantidadeReprovada: true,
+        },
+      });
+
+      // Retrabalhos no período para contagem por técnico responsável
+      const retrabalhosPeriodo = await prisma.retrabalho.findMany({
+        where: {
+          dataInicio: { gte: dataInicioPeriodo },
+        },
+        select: {
+          tecnicoResponsavelId: true,
+          quantidadeRetrabalho: true,
+          itemOrdemServico: {
+            select: {
+              tecnicoAlocadoId: true,
+            },
+          },
+        },
+      });
+
+      for (const u of todosUsuarios) {
+        const isQualidade = u.perfil === 'QUALIDADE' || u.nome.toLowerCase().includes('rhyan');
+        const funcao = isQualidade ? 'Qualidade/Testes' : 'Produção';
+
+        if (isQualidade) {
+          // Para inspetor de CQ: agregar testes
+          let testados = 0;
+          let aprovados = 0;
+          let reprovados = 0;
+
+          for (const t of testesPeriodo) {
+            if (t.inspetorId === u.id) {
+              testados += t.quantidadeTestada || 0;
+              aprovados += t.quantidadeAprovada || 0;
+              reprovados += t.quantidadeReprovada || 0;
+            }
+          }
+
+          desempenhoTecnicos.push({
+            tecnicoId: u.id,
+            tecnicoNome: u.nome,
+            funcao,
+            reparados: 0,
+            semDefeito: 0,
+            sucata: 0,
+            retrabalhos: 0,
+            testados,
+            aprovados,
+            reprovados,
+          });
+        } else {
+          // Para técnicos de produção: agregar produções
+          let reparados = 0;
+          let semDefeito = 0;
+          let sucata = 0;
+
+          for (const p of producoesPeriodo) {
+            // Ignorar registros de inspeção do CQ
+            const isCq = p.servicoRealizado === 'Inspeção CQ' ||
+                         p.servicoRealizado === 'Reparo inspecionado e testado pelo CQ' ||
+                         (p.observacao && p.observacao.includes('Apontamento de CQ'));
+            if (isCq) continue;
+
+            if (p.tecnicoId === u.id) {
+              reparados += p.quantidadeReparada || 0;
+              semDefeito += p.quantidadeSemDefeito || 0;
+              sucata += p.quantidadeSucata || 0;
+            }
+          }
+
+          // Contar retrabalhos atribuídos a este técnico
+          let retrabalhosCount = 0;
+          for (const r of retrabalhosPeriodo) {
+            const tecResp = r.tecnicoResponsavelId || r.itemOrdemServico?.tecnicoAlocadoId;
+            if (tecResp === u.id) {
+              retrabalhosCount += r.quantidadeRetrabalho || 1;
+            }
+          }
+
+          desempenhoTecnicos.push({
+            tecnicoId: u.id,
+            tecnicoNome: u.nome,
+            funcao,
+            reparados,
+            semDefeito,
+            sucata,
+            retrabalhos: retrabalhosCount,
+            testados: 0,
+            aprovados: 0,
+            reprovados: 0,
+          });
+        }
+      }
+    } catch (err) {
+      console.error('[getGerencialData] Erro ao calcular desempenho por técnico:', err);
+    }
+  }
+
   return {
     periodo,
     faturamentoEstimado: tvData.meta.faturamentoLancado || 0.0,
@@ -649,6 +848,7 @@ export async function getGerencialData(periodo: string = 'mes_atual'): Promise<G
     distribuicaoDefeitos,
     leadTimePorEquipamento,
     produtividadeTecnicos,
+    desempenhoTecnicos,
     producaoHistoricoDias,
   };
 }
