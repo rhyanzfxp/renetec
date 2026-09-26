@@ -189,7 +189,8 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
       if (testes.length > 0) {
         let ptsProducaoAprovada = 0;
         let fat = 0;
-        const colaboradoresMapPorNome: Record<string, number> = {};
+        const tecnicosMapPorNome: Record<string, number> = {};
+        const inspetoresMapPorNome: Record<string, number> = {};
 
         for (const t of testes) {
           const eqNome = t.producao?.itemOrdemServico?.tipoEquipamento?.nome || '';
@@ -237,12 +238,14 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
               (t.producao?.itemOrdemServico as any)?.tecnicoAlocado?.nome ||
               'desconhecido';
 
-            colaboradoresMapPorNome[tecNome] = (colaboradoresMapPorNome[tecNome] || 0) + pontosLoteAprovado;
+            tecnicosMapPorNome[tecNome] = (tecnicosMapPorNome[tecNome] || 0) + pontosLoteAprovado;
+
+            // Pontos de inspeção do testador no CQ (apenas sobre itens aprovados)
+            const inspNome = t.inspetor?.nome || 'Rhyan';
+            inspetoresMapPorNome[inspNome] = (inspetoresMapPorNome[inspNome] || 0) + pontosLoteAprovado;
 
             const valorOS = Number((t.producao?.itemOrdemServico?.ordemServico as any)?.valorOrcamento || 0);
             fat += valorOS;
-            // NOTA: O inspetor de CQ NÃO recebe pontos de produção duplicados.
-            // Os pontos são creditados apenas ao técnico que reparou o equipamento.
           }
         }
 
@@ -251,9 +254,13 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
 
         colaboradores = COLABORADORES_BASE.map((c) => {
           const primNome = c.nome.split(' ')[0].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-          const pontos = Object.entries(colaboradoresMapPorNome).find(
+          const isQualidade = c.funcao === 'Qualidade/Testes' || primNome === 'rhyan';
+          const mapaOrigem = isQualidade ? inspetoresMapPorNome : tecnicosMapPorNome;
+          const pontos = Object.entries(mapaOrigem).find(
             ([n]) => n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/)[0] === primNome
-          )?.[1] || 0;
+          )?.[1] || (isQualidade ? (Object.entries(tecnicosMapPorNome).find(
+            ([n]) => n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/)[0] === primNome
+          )?.[1] || 0) : 0);
 
           return {
             ...c,
