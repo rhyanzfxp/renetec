@@ -470,7 +470,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
             </div>
 
             <div className="flex flex-wrap items-center justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={onClose} disabled={isLoading || isDespachandoCq || isExcluindoOs} className="whitespace-nowrap">
+              <Button variant="outline" size="sm" onClick={onClose} disabled={isLoading || isExcluindoOs} className="whitespace-nowrap">
                 Cancelar
               </Button>
 
@@ -480,7 +480,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={() => setConfirmExcluirModalOpen(true)}
-                  disabled={isLoading || isDespachandoCq || isExcluindoOs}
+                  disabled={isLoading || isExcluindoOs}
                   leftIcon={<Trash2 className="w-3.5 h-3.5 text-red-400" />}
                   className="text-red-400 hover:bg-red-500/10 font-medium text-xs whitespace-nowrap"
                   title="Excluir esta OS lançada por engano"
@@ -494,7 +494,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                   variant="success"
                   size="sm"
                   onClick={() => handleSubmit('INICIAR_PRODUCAO')}
-                  disabled={isLoading || isDespachandoCq || isExcluindoOs}
+                  disabled={isLoading || isExcluindoOs}
                   loading={isLoading}
                   leftIcon={<Play className="w-3.5 h-3.5 fill-current" />}
                   className="shadow-glow-success font-bold whitespace-nowrap"
@@ -506,7 +506,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                   variant="primary"
                   size="sm"
                   onClick={() => handleSubmit('SALVAR_BANCADA')}
-                  disabled={isLoading || isDespachandoCq || isExcluindoOs}
+                  disabled={isLoading || isExcluindoOs}
                   loading={isLoading}
                   leftIcon={<Save className="w-3.5 h-3.5" />}
                   className="shadow-glow-primary font-bold whitespace-nowrap"
@@ -518,7 +518,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                   variant="success"
                   size="sm"
                   onClick={() => handleSubmit('DESPACHAR_CQ')}
-                  disabled={isLoading || isDespachandoCq || isExcluindoOs}
+                  disabled={isLoading || isExcluindoOs}
                   loading={isLoading}
                   leftIcon={<Send className="w-3.5 h-3.5" />}
                   className="shadow-glow-success font-bold whitespace-nowrap"
