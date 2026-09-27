@@ -304,8 +304,15 @@ export const ProducaoPage: React.FC = () => {
 
   // Reabrir OS para continuar apontamento de unidades
   const handleReabrirOS = (item: FilaItemData) => {
-    setEditingItem(item);
-    setSelectedOsParaContinuar(null);
+    const numOS = item.ordemServico?.numeroOS;
+    const matchingOs = numOS ? osEmAndamento.find((o) => o.numeroOS === numOS) : null;
+    if (matchingOs) {
+      setSelectedOsParaContinuar(matchingOs);
+      setEditingItem(null);
+    } else {
+      setEditingItem(item);
+      setSelectedOsParaContinuar(null);
+    }
     setIsCriarLoteOpen(true);
   };
 
@@ -1348,6 +1355,7 @@ export const ProducaoPage: React.FC = () => {
         isOpen={isCriarLoteOpen}
         initialItem={editingItem}
         initialOs={selectedOsParaContinuar}
+        osEmAndamento={osEmAndamento}
         onClose={() => {
           setIsCriarLoteOpen(false);
           setEditingItem(null);
