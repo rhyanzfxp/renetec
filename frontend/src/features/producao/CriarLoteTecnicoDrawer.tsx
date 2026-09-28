@@ -258,7 +258,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
 
     const osEncontrada = osEmAndamento.find((o) => o.numeroOS === num);
     if (osEncontrada) {
-      if (osEncontrada.clienteId) setClienteId(osEncontrada.clienteId);
+      if (osEncontrada.cliente?.id) setClienteId(osEncontrada.cliente.id);
       if (osEncontrada.prioridade) setPrioridade(osEncontrada.prioridade as any);
       if (osEncontrada.equipamentos && osEncontrada.equipamentos.length > 0) {
         setItens(
@@ -966,11 +966,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
               const antSemDef = Number(item.anterioresSemDefeito) || 0;
               const antSuc = Number(item.anterioresSucata) || 0;
               const antTotal = antRep + antSemDef + antSuc;
-              const antHoje = Number(item.anterioresNaCaixa) || 0;
               const hojeSoma = repHoje + semDefHoje + sucHoje;
-              const totalItemCaixa = item.quantidadeTotalCaixa !== undefined && item.quantidadeTotalCaixa > 0
-                ? Number(item.quantidadeTotalCaixa)
-                : (antTotal > 0 ? (antTotal + hojeSoma) : (antHoje > 0 ? antHoje : (hojeSoma > 0 ? hojeSoma : 1)));
               const subtotalPts = (repHoje + semDefHoje) * ptsUnit;
 
               return (
