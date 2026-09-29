@@ -244,7 +244,12 @@ export const relatorioRepository = {
       const item = t.producao?.itemOrdemServico;
       const os = item?.ordemServico;
       const equip = item?.tipoEquipamento;
-      const tecReparo = t.producao?.tecnico?.nome || item?.tecnicoAlocado?.nome || 'Técnico';
+      const inspNome = t.inspetor?.nome || 'Inspetor CQ';
+      const tecProd = t.producao?.tecnico?.nome;
+      const isTecProdInsp = tecProd && (tecProd === inspNome || tecProd.toLowerCase().includes('qualidade') || tecProd.toLowerCase().includes('rhyan'));
+      const tecReparo = isTecProdInsp
+        ? (item?.tecnicoAlocado?.nome || (os as any)?.tecnicoResponsavel?.nome || tecProd || 'Técnico')
+        : (tecProd || item?.tecnicoAlocado?.nome || 'Técnico');
       const retrabalho = t.retrabalhos?.[0];
       const tecDestino = retrabalho?.tecnicoResponsavel?.nome || tecReparo;
       const motivo = retrabalho?.motivoReprovacao?.descricao || (t.quantidadeReprovada > 0 ? 'Não-conformidade' : null);

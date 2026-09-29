@@ -256,45 +256,29 @@ export async function realizarTeste(
       itemOrdemServicoId = itemDb.id;
 
       // 5. Criar registro de produção vinculado ao teste CQ para chave estrangeira.
-      // REGRA: Testes de CQ NÃO são reparos de bancada! Quantidade reparada deve ser SEMPRE 0,
-      // e o autor é o inspetor do CQ, não o técnico de bancada.
-      const novaProd = await tx.producao.create({
+      // Se foi apontado um técnico responsável na OS direta, ele é o autor do reparo e ganha a pontuação!
+      const tecReparoId = tecnicoRespDbId || inspetorDbId;
+      const isTecnicoDiferenteInspetor = tecnicoRespDbId && tecnicoRespDbId !== inspetorDbId;
+
+      const prodReparo = await tx.producao.create({
         data: {
           itemOrdemServicoId: itemDb.id,
-          tecnicoId: inspetorDbId,
+          tecnicoId: tecReparoId,
           dataInicio: agora,
           dataFim: agora,
           dataProducao: agora,
-          quantidadeProduzida: 0,
-          quantidadeReparada: 0,
+          quantidadeProduzida: dados.quantidadeAprovada + qtdSemDefeito + qtdSucata,
+          quantidadeReparada: dados.quantidadeAprovada,
           quantidadeSemDefeito: qtdSemDefeito,
           quantidadeSucata: qtdSucata,
           status: 'FINALIZADO',
-          servicoRealizado: 'Inspeção CQ',
-          observacao: `Apontamento de CQ. ${dados.quantidadeAprovada} un aprovadas${qtdSemDefeito > 0 ? `, ${qtdSemDefeito} un sem defeito` : ''}, ${dados.quantidadeReprovada} un retrabalho${qtdSucata > 0 ? `, ${qtdSucata} un sucata/morta` : ''}.`,
+          servicoRealizado: isTecnicoDiferenteInspetor ? 'Reparo de Bancada' : 'Inspeção CQ',
+          observacao: isTecnicoDiferenteInspetor
+            ? `Apontamento direto via CQ (#OS ${dados.numeroOS || ''})`
+            : `Apontamento de CQ. ${dados.quantidadeAprovada} un aprovadas${qtdSemDefeito > 0 ? `, ${qtdSemDefeito} un sem defeito` : ''}, ${dados.quantidadeReprovada} un retrabalho${qtdSucata > 0 ? `, ${qtdSucata} un sucata/morta` : ''}.`,
         },
       });
-      producaoDbId = novaProd.id;
-
-      // Se foi apontado um técnico responsável na OS direta, registra a produção correspondente para ele
-      if (tecnicoRespDbId && tecnicoRespDbId !== inspetorDbId) {
-        await tx.producao.create({
-          data: {
-            itemOrdemServicoId: itemDb.id,
-            tecnicoId: tecnicoRespDbId,
-            dataInicio: agora,
-            dataFim: agora,
-            dataProducao: agora,
-            quantidadeProduzida: dados.quantidadeAprovada + qtdSemDefeito + qtdSucata,
-            quantidadeReparada: dados.quantidadeAprovada,
-            quantidadeSemDefeito: qtdSemDefeito,
-            quantidadeSucata: qtdSucata,
-            status: 'FINALIZADO',
-            servicoRealizado: 'Reparo de Bancada',
-            observacao: `Apontamento direto via CQ (#OS ${dados.numeroOS || ''})`,
-          },
-        }).catch(() => {});
-      }
+      producaoDbId = prodReparo.id;
     } else {
       // B. Inspeção de item existente da fila
       const itemExistente = await tx.itemOrdemServico.findUnique({
@@ -550,8 +534,26 @@ export async function getHistoricoTestes(page = 1, limit = 20) {
         const match = t.observacao.match(/\[Sucata:\s*(\d+)\s*un\]/i);
         if (match) sucata = parseInt(match[1], 10);
       }
+
+      // Garante que o técnico que reparou o equipamento não seja ofuscado pelo inspetor de CQ
+      const tecProd = t.producao?.tecnico;
+      const inspNome = t.inspetor?.nome || 'Rhyan';
+      const isInspetor = tecProd?.nome && (
+        tecProd.nome.toLowerCase().includes('rhyan') ||
+        tecProd.nome.toLowerCase().includes('qualidade') ||
+        tecProd.nome === inspNome
+      );
+
+      const tecReal = isInspetor
+        ? (t.producao?.itemOrdemServico?.tecnicoAlocado || t.producao?.itemOrdemServico?.ordemServico?.tecnicoResponsavel || tecProd)
+        : tecProd;
+
       return {
         ...t,
+        producao: t.producao ? {
+          ...t.producao,
+          tecnico: tecReal || t.producao.tecnico,
+        } : t.producao,
         quantidadeSucata: sucata,
       };
     });

@@ -384,7 +384,16 @@ export const QualidadePage: React.FC = () => {
             {currentHistorico.map((h, idx) => {
               const numOS = h.producao?.itemOrdemServico?.ordemServico?.numeroOS;
               const equipNome = h.producao?.itemOrdemServico?.tipoEquipamento?.nome || 'Equipamento';
-              const tecNome = h.producao?.tecnico?.nome || h.producao?.itemOrdemServico?.tecnicoAlocado?.nome || 'Técnico';
+              const inspNome = h.inspetor?.nome || 'CQ';
+              const tecProdNome = h.producao?.tecnico?.nome;
+              const isProdInsp = tecProdNome && (
+                tecProdNome === inspNome ||
+                tecProdNome.toLowerCase().includes('rhyan') ||
+                tecProdNome.toLowerCase().includes('qualidade')
+              );
+              const tecNome = isProdInsp
+                ? (h.producao?.itemOrdemServico?.tecnicoAlocado?.nome || (h.producao?.itemOrdemServico?.ordemServico as any)?.tecnicoResponsavel?.nome || tecProdNome || 'Técnico')
+                : (tecProdNome || h.producao?.itemOrdemServico?.tecnicoAlocado?.nome || 'Técnico');
               const retrabalhoTec = h.retrabalhos?.[0]?.tecnicoResponsavel?.nome;
 
               return (

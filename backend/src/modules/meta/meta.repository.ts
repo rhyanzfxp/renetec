@@ -130,6 +130,46 @@ export function getPontosUnitarios(nome?: string): number {
   return 1.5;
 }
 
+// ─── Resolve o técnico real de bancada responsável pelo reparo ────────────────
+export function resolverTecnicoReparo(t: any): string {
+  // 1. Se veio de retrabalho com técnico responsável definido, credita a ele
+  const retrabalhoRecente = (t.producao?.itemOrdemServico as any)?.retrabalhos?.[0];
+  if (retrabalhoRecente?.tecnicoResponsavel?.nome) {
+    return retrabalhoRecente.tecnicoResponsavel.nome;
+  }
+
+  const tecProd = t.producao?.tecnico?.nome;
+  const inspNome = t.inspetor?.nome || 'Rhyan';
+  const isProdInspector = tecProd && (
+    tecProd.toLowerCase().includes('rhyan') ||
+    tecProd.toLowerCase().includes('qualidade') ||
+    tecProd === inspNome
+  );
+
+  // Se o técnico da produção for o próprio inspetor do CQ (ou perfil de qualidade),
+  // busca o técnico que realmente reparou o item (alocado no item ou responsável na OS)
+  if (isProdInspector) {
+    const tecAlocado = (t.producao?.itemOrdemServico as any)?.tecnicoAlocado?.nome;
+    if (tecAlocado && !tecAlocado.toLowerCase().includes('rhyan') && !tecAlocado.toLowerCase().includes('qualidade')) {
+      return tecAlocado;
+    }
+
+    const tecOS = (t.producao?.itemOrdemServico as any)?.ordemServico?.tecnicoResponsavel?.nome;
+    if (tecOS && !tecOS.toLowerCase().includes('rhyan') && !tecOS.toLowerCase().includes('qualidade')) {
+      return tecOS;
+    }
+  }
+
+  if (tecProd) return tecProd;
+
+  const fallback =
+    (t.producao?.itemOrdemServico as any)?.tecnicoAlocado?.nome ||
+    (t.producao?.itemOrdemServico as any)?.ordemServico?.tecnicoResponsavel?.nome ||
+    'desconhecido';
+
+  return fallback;
+}
+
 // ─── Busca a agregação de pontos realizados no mês corrente (APENAS APROVADOS NO CQ) ──
 export async function getProducaoPontosMes(mes: number, ano: number) {
   let pontosTotais = 0;
@@ -154,7 +194,11 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
                 itemOrdemServico: {
                   include: {
                     tipoEquipamento: true,
-                    ordemServico: true,
+                    ordemServico: {
+                      include: {
+                        tecnicoResponsavel: { select: { id: true, nome: true } },
+                      },
+                    },
                     tecnicoAlocado: { select: { id: true, nome: true } },
                     retrabalhos: {
                       orderBy: { dataFim: 'desc' },
@@ -231,13 +275,7 @@ export async function getProducaoPontosMes(mes: number, ano: number) {
             ptsProducaoAprovada += pontosLoteAprovado;
 
             // Se veio de retrabalho com técnico responsável definido, credita a ele; senão ao técnico da produção/alocado
-            const retrabalhoRecente = (t.producao?.itemOrdemServico as any)?.retrabalhos?.[0];
-            const tecNome =
-              retrabalhoRecente?.tecnicoResponsavel?.nome ||
-              t.producao?.tecnico?.nome ||
-              (t.producao?.itemOrdemServico as any)?.tecnicoAlocado?.nome ||
-              'desconhecido';
-
+            const tecNome = resolverTecnicoReparo(t);
             tecnicosMapPorNome[tecNome] = (tecnicosMapPorNome[tecNome] || 0) + pontosLoteAprovado;
 
             // Pontos de inspeção do testador no CQ (apenas sobre itens aprovados)
