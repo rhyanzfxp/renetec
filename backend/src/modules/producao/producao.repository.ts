@@ -731,6 +731,37 @@ export async function criarApontamentoLote(
           ordemServico: { include: { cliente: true } },
         },
       });
+    } else {
+      // REGRA: Se o item já existia (ex: salvo anteriormente em produção) e o técnico agora
+      // despachou para o CQ ou atualizou o status, o item DEVE transicionar para o status correto!
+      const prevTotal = itemDb.quantidade || 0;
+      const novoTotal = totalCaixaInformado > 0
+        ? totalCaixaInformado
+        : (prevTotal > 0 ? prevTotal : qtdProntaCQ);
+      const updateData: any = {
+        quantidade: novoTotal,
+        tecnicoAlocadoId: itemDb.tecnicoAlocadoId || tecnicoDbId,
+      };
+
+      if (isDiretoCQ) {
+        updateData.statusItem = 'AGUARDANDO_TESTE';
+      } else if (itemDb.statusItem !== 'AGUARDANDO_TESTE' && itemDb.statusItem !== 'AGUARDANDO_NOVO_TESTE') {
+        updateData.statusItem = initialStatus;
+      }
+
+      if (defeito) {
+        updateData.defeitoRelatado = defeito;
+      }
+
+      itemDb = await prisma.itemOrdemServico.update({
+        where: { id: itemDb.id },
+        data: updateData,
+        include: {
+          tipoEquipamento: true,
+          tecnicoAlocado: { select: { id: true, nome: true } },
+          ordemServico: { include: { cliente: true } },
+        },
+      });
     }
 
     // Chave única para este apontamento nesta data/item

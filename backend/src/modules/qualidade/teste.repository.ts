@@ -66,7 +66,15 @@ export async function getFilaTestes() {
 
   try {
     const itens = await prisma.itemOrdemServico.findMany({
-      where: { statusItem: { in: ['AGUARDANDO_TESTE', 'AGUARDANDO_NOVO_TESTE'] } },
+      where: {
+        OR: [
+          { statusItem: { in: ['AGUARDANDO_TESTE', 'AGUARDANDO_NOVO_TESTE'] } },
+          {
+            ordemServico: { status: { in: ['AGUARDANDO_TESTE', 'AGUARDANDO_NOVO_TESTE'] } },
+            statusItem: { notIn: ['APROVADO', 'CONCLUIDO', 'CANCELADO', 'SEM_REPARO'] },
+          },
+        ],
+      },
       include: {
         ordemServico: {
           select: {
@@ -76,6 +84,7 @@ export async function getFilaTestes() {
             status: true,
             dataEntrada: true,
             cliente: { select: { id: true, nomeRazaoSocial: true } },
+            tecnicoResponsavel: { select: { id: true, nome: true } },
           },
         },
         tipoEquipamento: {
@@ -88,7 +97,7 @@ export async function getFilaTestes() {
           where: { status: 'FINALIZADO' },
           orderBy: { dataFim: 'desc' },
           take: 1,
-          select: { id: true, servicoRealizado: true, quantidadeProduzida: true, dataFim: true },
+          select: { id: true, servicoRealizado: true, quantidadeProduzida: true, dataFim: true, tecnico: { select: { id: true, nome: true } } },
         },
         retrabalhos: {
           where: { status: 'CONCLUIDO' },
@@ -103,9 +112,21 @@ export async function getFilaTestes() {
       ],
     });
 
+    // Auto-sincroniza itens cujo statusItem estava desincronizado da OS enviada ao CQ
+    const desincronizados = itens.filter(
+      (it) => it.ordemServico?.status === 'AGUARDANDO_TESTE' && it.statusItem !== 'AGUARDANDO_TESTE' && it.statusItem !== 'AGUARDANDO_NOVO_TESTE'
+    );
+    if (desincronizados.length > 0) {
+      prisma.itemOrdemServico.updateMany({
+        where: { id: { in: desincronizados.map((d) => d.id) } },
+        data: { statusItem: 'AGUARDANDO_TESTE' },
+      }).catch(() => {});
+    }
+
     return itens.map((it) => {
       const prodRecente = it.producoes?.[0];
       const retRecente = it.retrabalhos?.[0];
+      const tecFinal = it.tecnicoAlocado || prodRecente?.tecnico || it.ordemServico?.tecnicoResponsavel || null;
 
       return {
         id: it.id,
@@ -113,10 +134,10 @@ export async function getFilaTestes() {
         tipoEquipamentoId: it.tipoEquipamentoId,
         quantidade: it.quantidade,
         defeitoRelatado: it.defeitoRelatado,
-        servicoRealizado: retRecente?.solucaoAplicada || prodRecente?.servicoRealizado || 'Reparo concluído',
-        statusItem: it.statusItem,
-        tecnicoAlocadoId: it.tecnicoAlocadoId,
-        tecnicoAlocado: it.tecnicoAlocado,
+        servicoRealizado: retRecente?.solucaoAplicada || prodRecente?.servicoRealizado || it.defeitoRelatado || 'Reparo concluído',
+        statusItem: (it.ordemServico?.status === 'AGUARDANDO_TESTE' && it.statusItem === 'EM_PRODUCAO') ? 'AGUARDANDO_TESTE' : it.statusItem,
+        tecnicoAlocadoId: tecFinal?.id || it.tecnicoAlocadoId,
+        tecnicoAlocado: tecFinal,
         ordemServico: it.ordemServico,
         tipoEquipamento: it.tipoEquipamento,
         producoes: it.producoes,
