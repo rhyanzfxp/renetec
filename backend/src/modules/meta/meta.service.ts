@@ -2,6 +2,7 @@ import * as repo from './meta.repository.js';
 import type { UpdateMetaConfigInput, UpdateBonusSimulationInput } from './meta.schema.js';
 import { realtimeService } from '../realtime/realtime.service.js';
 import { log } from '../auditoria/auditoria.service.js';
+import { getMesesDisponiveis } from '../dashboard/dashboard.repository.js';
 
 // Função utilitária para calcular dias úteis (Segunda a Sexta)
 function getDiasUteisInfo(dataRef: Date = new Date()) {
@@ -32,17 +33,26 @@ function getDiasUteisInfo(dataRef: Date = new Date()) {
   return { diasUteisTotais, diasUteisDecorridos, diasUteisRestantes };
 }
 
-export async function getMetasAtual() {
+export async function getMetasAtual(mesDesejado?: number, anoDesejado?: number) {
   const agora = new Date();
-  const mes = agora.getMonth() + 1;
-  const ano = agora.getFullYear();
+  const mes = Number(mesDesejado) || agora.getMonth() + 1;
+  const ano = Number(anoDesejado) || agora.getFullYear();
 
-  const [config, producaoData] = await Promise.all([
+  const isMesPassado =
+    ano < agora.getFullYear() ||
+    (ano === agora.getFullYear() && mes < agora.getMonth() + 1);
+
+  const [config, producaoData, mesesDisponiveis] = await Promise.all([
     repo.getMetaConfig(mes, ano),
     repo.getProducaoPontosMes(mes, ano),
+    getMesesDisponiveis(),
   ]);
 
-  const { diasUteisTotais, diasUteisDecorridos, diasUteisRestantes } = getDiasUteisInfo(agora);
+  const dataRef = isMesPassado ? new Date(ano, mes, 0) : agora;
+  const diasInfo = getDiasUteisInfo(dataRef);
+  const diasUteisTotais = diasInfo.diasUteisTotais;
+  const diasUteisDecorridos = isMesPassado ? diasInfo.diasUteisTotais : diasInfo.diasUteisDecorridos;
+  const diasUteisRestantes = isMesPassado ? 0 : diasInfo.diasUteisRestantes;
 
   // Faixas ativas (considerando Período Piloto se ativado)
   const metaBaseAtiva = config.isPeriodoPiloto ? config.metaPilotoMinima : config.metaBase;
@@ -196,6 +206,8 @@ export async function getMetasAtual() {
     equipe: equipeDetalhada,
     // Configurações raw
     configRaw: config,
+    isMesPassado,
+    mesesDisponiveis,
   };
 }
 

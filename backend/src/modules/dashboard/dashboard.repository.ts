@@ -96,6 +96,7 @@ export interface DesempenhoTecnico {
   tecnicoId: string;
   tecnicoNome: string;
   funcao: string;
+  pontos: number;
   // Produção (técnicos de bancada)
   reparados: number;
   semDefeito: number;
@@ -107,12 +108,37 @@ export interface DesempenhoTecnico {
   reprovados: number;
 }
 
+export interface MesDisponivel {
+  mes: number;
+  ano: number;
+  key: string;
+  label: string;
+  isAtual: boolean;
+}
+
 export interface GerencialData {
   periodo: string;
+  periodoLabel?: string;
+  mesReferencia?: number;
+  anoReferencia?: number;
+  isMesPassado?: boolean;
+  isPeriodoMes?: boolean;
   faturamentoEstimado: number;
   totalOsAtivas: number;
   pontosTotaisRealizados: number;
   metaAlvoPeriodo: number;
+  metaBasePeriodo?: number;
+  metaExcelenciaPeriodo?: number;
+  statusMeta?: string;
+  statusMetaLabel?: string;
+  resumoFabrica?: {
+    totalReparados: number;
+    totalSemDefeito: number;
+    totalSucata: number;
+    totalRetrabalho: number;
+    totalLancamentos: number;
+  };
+  mesesDisponiveis?: MesDisponivel[];
   fpyGeral: number;
   taxaRetrabalho: number;
   leadTimeMedioGeralMinutos: number;
@@ -549,15 +575,167 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
   };
 }
 
+// ─── Busca meses disponíveis no histórico do sistema ─────────────────────────
+export async function getMesesDisponiveis(): Promise<MesDisponivel[]> {
+  const agora = new Date();
+  const monthsSet = new Set<string>();
+  monthsSet.add(`${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`);
+
+  if (isDatabaseReady()) {
+    try {
+      const prods = await prisma.producao.findMany({
+        select: { dataProducao: true, createdAt: true },
+        take: 500,
+        orderBy: { createdAt: 'desc' },
+      });
+      for (const p of prods) {
+        const d = p.dataProducao || p.createdAt;
+        if (d) {
+          const dt = new Date(d);
+          monthsSet.add(`${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`);
+        }
+      }
+    } catch (err) {
+      console.warn('[getMesesDisponiveis] Falha ao consultar meses:', err);
+    }
+  }
+
+  const mesesNomes = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+
+  const sorted = Array.from(monthsSet).sort().reverse();
+  return sorted.map((key) => {
+    const [anoStr, mesStr] = key.split('-');
+    const a = parseInt(anoStr, 10);
+    const m = parseInt(mesStr, 10);
+    const isAtual = a === agora.getFullYear() && m === agora.getMonth() + 1;
+    const nomeMes = mesesNomes[m - 1];
+    return {
+      mes: m,
+      ano: a,
+      key,
+      label: isAtual ? `${nomeMes} / ${a} (Mês Atual)` : `${nomeMes} / ${a} (Fechado)`,
+      isAtual,
+    };
+  });
+}
+
 // ─── Agregação para o Dashboard Gerencial ─────────────────────────────────────
-export async function getGerencialData(periodo: string = 'mes_atual'): Promise<GerencialData> {
+export async function getGerencialData(
+  periodo: string = 'mes_atual',
+  mesQuery?: number,
+  anoQuery?: number
+): Promise<GerencialData> {
+  const agora = new Date();
+  let targetMes = agora.getMonth() + 1;
+  let targetAno = agora.getFullYear();
+  let isPeriodoMes = false;
+  let isMesPassado = false;
+  let periodoLabel = 'Mês Atual';
+  let dataInicioPeriodo: Date;
+  let dataFimPeriodo: Date = new Date(agora.getFullYear(), agora.getMonth() + 1, 0, 23, 59, 59, 999);
+
+  const mesesNomes = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+
+  if (mesQuery && anoQuery) {
+    targetMes = mesQuery;
+    targetAno = anoQuery;
+    isPeriodoMes = true;
+    isMesPassado =
+      targetAno < agora.getFullYear() ||
+      (targetAno === agora.getFullYear() && targetMes < agora.getMonth() + 1);
+    dataInicioPeriodo = new Date(targetAno, targetMes - 1, 1, 0, 0, 0, 0);
+    dataFimPeriodo = new Date(targetAno, targetMes, 0, 23, 59, 59, 999);
+    periodoLabel = isMesPassado
+      ? `${mesesNomes[targetMes - 1]} / ${targetAno} (Mês Fechado)`
+      : `${mesesNomes[targetMes - 1]} / ${targetAno} (Mês Atual)`;
+  } else if (periodo === 'mes_anterior') {
+    isPeriodoMes = true;
+    isMesPassado = true;
+    let prevM = agora.getMonth(); // 0 is December of last year
+    let prevA = agora.getFullYear();
+    if (prevM === 0) {
+      prevM = 12;
+      prevA -= 1;
+    }
+    targetMes = prevM;
+    targetAno = prevA;
+    dataInicioPeriodo = new Date(targetAno, targetMes - 1, 1, 0, 0, 0, 0);
+    dataFimPeriodo = new Date(targetAno, targetMes, 0, 23, 59, 59, 999);
+    periodoLabel = `${mesesNomes[targetMes - 1]} / ${targetAno} (Mês Fechado)`;
+  } else if (/^(\d{4})-(\d{2})$/.test(periodo)) {
+    const match = periodo.match(/^(\d{4})-(\d{2})$/)!;
+    targetAno = parseInt(match[1], 10);
+    targetMes = parseInt(match[2], 10);
+    isPeriodoMes = true;
+    isMesPassado =
+      targetAno < agora.getFullYear() ||
+      (targetAno === agora.getFullYear() && targetMes < agora.getMonth() + 1);
+    dataInicioPeriodo = new Date(targetAno, targetMes - 1, 1, 0, 0, 0, 0);
+    dataFimPeriodo = new Date(targetAno, targetMes, 0, 23, 59, 59, 999);
+    periodoLabel = isMesPassado
+      ? `${mesesNomes[targetMes - 1]} / ${targetAno} (Mês Fechado)`
+      : `${mesesNomes[targetMes - 1]} / ${targetAno} (Mês Atual)`;
+  } else {
+    switch (periodo) {
+      case 'hoje': {
+        dataInicioPeriodo = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), 0, 0, 0, 0);
+        dataFimPeriodo = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), 23, 59, 59, 999);
+        periodoLabel = 'Hoje';
+        break;
+      }
+      case '7_dias': {
+        dataInicioPeriodo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        dataFimPeriodo = new Date();
+        periodoLabel = 'Últimos 7 Dias';
+        break;
+      }
+      case 'ano': {
+        dataInicioPeriodo = new Date(agora.getFullYear(), 0, 1, 0, 0, 0, 0);
+        dataFimPeriodo = new Date(agora.getFullYear(), 11, 31, 23, 59, 59, 999);
+        periodoLabel = `Ano ${agora.getFullYear()}`;
+        break;
+      }
+      case 'mes_atual':
+      default: {
+        isPeriodoMes = true;
+        targetMes = agora.getMonth() + 1;
+        targetAno = agora.getFullYear();
+        dataInicioPeriodo = new Date(targetAno, targetMes - 1, 1, 0, 0, 0, 0);
+        dataFimPeriodo = new Date(targetAno, targetMes, 0, 23, 59, 59, 999);
+        periodoLabel = `${mesesNomes[targetMes - 1]} / ${targetAno} (Mês Atual)`;
+        break;
+      }
+    }
+  }
+
   const tvData = await getTvFabricaData();
+
+  // Carregar dados de metas correspondentes ao período
+  let metasDataPeriodo: any = null;
+  if (isPeriodoMes) {
+    try {
+      const { getMetasAtual } = await import('../meta/meta.service.js');
+      metasDataPeriodo = await getMetasAtual(targetMes, targetAno);
+    } catch (e) {
+      console.warn('[getGerencialData] Erro ao carregar metas do mês:', e);
+    }
+  }
 
   let leadTimeMedioGeralMinutos = 0;
   let totalOsAtivas = tvData.filaPrioritaria.length + tvData.bancadas.filter((b) => b.status === 'EM_PRODUCAO').length;
   let distribuicaoDefeitos: DefeitoDistribuicao[] = [];
   let leadTimePorEquipamento: LeadTimeEquipamento[] = [];
   let producaoHistoricoDias: { data: string; pontos: number; reprovados: number }[] = [];
+  let totalReparados = 0;
+  let totalSemDefeito = 0;
+  let totalSucata = 0;
+  let totalRetrabalho = 0;
 
   if (isDatabaseReady()) {
     try {
@@ -567,9 +745,17 @@ export async function getGerencialData(periodo: string = 'mes_atual'): Promise<G
       });
       totalOsAtivas = osAtivasCount;
 
-      // 2. Lead Time real calculado a partir das produções finalizadas
+      // 2. Lead Time real calculado a partir das produções finalizadas no período
       const producoesFinalizadas = await prisma.producao.findMany({
-        where: { status: 'FINALIZADO', dataFim: { not: null } },
+        where: {
+          status: 'FINALIZADO',
+          dataFim: { not: null },
+          OR: [
+            { dataProducao: { gte: dataInicioPeriodo, lte: dataFimPeriodo } },
+            { dataInicio: { gte: dataInicioPeriodo, lte: dataFimPeriodo } },
+            { createdAt: { gte: dataInicioPeriodo, lte: dataFimPeriodo } },
+          ],
+        },
         include: { itemOrdemServico: { include: { tipoEquipamento: true } } },
         orderBy: { dataFim: 'desc' },
         take: 100,
@@ -600,12 +786,20 @@ export async function getGerencialData(periodo: string = 'mes_atual'): Promise<G
         }));
       }
 
-      // 3. Distribuição real de defeitos (Retrabalhos)
+      // 3. Distribuição real de defeitos (Retrabalhos do período)
       const retrabalhos = await prisma.retrabalho.findMany({
+        where: {
+          OR: [
+            { dataInicio: { gte: dataInicioPeriodo, lte: dataFimPeriodo } },
+            { createdAt: { gte: dataInicioPeriodo, lte: dataFimPeriodo } },
+          ],
+        },
         include: { motivoReprovacao: true },
         orderBy: { dataInicio: 'desc' },
         take: 100,
       });
+
+      totalRetrabalho = retrabalhos.reduce((acc, r) => acc + (r.quantidadeRetrabalho || 1), 0);
 
       if (retrabalhos.length > 0) {
         const defeitosMap: Record<string, { count: number; categoria: string; codigo: string }> = {};
@@ -632,10 +826,9 @@ export async function getGerencialData(periodo: string = 'mes_atual'): Promise<G
     }
   }
 
-  // Produtividade da equipe: se o período for 'hoje', usa ptsHoje da bancada; se for 'mes_atual', usa os pontos reais acumulados no mês da meta!
+  // Produtividade da equipe:
   const isHoje = periodo === 'hoje';
 
-  // Pontos reais de produção da equipe hoje (exclui inspeção do CQ para não duplicar pontos)
   const pontosProducaoEquipeHoje = Number(
     tvData.bancadas
       .filter((b) => !b.funcao.toLowerCase().includes('qualidade'))
@@ -645,10 +838,14 @@ export async function getGerencialData(periodo: string = 'mes_atual'): Promise<G
 
   const totalPts = isHoje
     ? (pontosProducaoEquipeHoje || 1)
+    : metasDataPeriodo
+    ? (metasDataPeriodo.pontosRealizados || 1)
     : (tvData.meta.pontosRealizados || 1);
 
   const colaboradoresLista =
-    (tvData.meta as any)?.colaboradores && (tvData.meta as any).colaboradores.length > 0
+    metasDataPeriodo?.equipe && metasDataPeriodo.equipe.length > 0
+      ? metasDataPeriodo.equipe
+      : (tvData.meta as any)?.colaboradores && (tvData.meta as any).colaboradores.length > 0
       ? (tvData.meta as any).colaboradores
       : (tvData.meta as any)?.equipe && (tvData.meta as any).equipe.length > 0
       ? (tvData.meta as any).equipe
@@ -677,46 +874,27 @@ export async function getGerencialData(periodo: string = 'mes_atual'): Promise<G
     };
   });
 
-  // ─── Desempenho por Técnico (Reparados / Sem Defeito / Sucata / Retrabalho / Testados / Aprovados / Reprovados) ───
+  // ─── Desempenho por Técnico (Reparados / Sem Defeito / Sucata / Retrabalho / Testados / Aprovados / Reprovados / Pontos) ───
   let desempenhoTecnicos: DesempenhoTecnico[] = [];
+  let producoesPeriodoTotalCount = 0;
 
   if (isDatabaseReady()) {
     try {
-      // Calcular data de início do período selecionado
-      const agora = new Date();
-      let dataInicioPeriodo: Date;
-
-      switch (periodo) {
-        case 'hoje': {
-          dataInicioPeriodo = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
-          break;
-        }
-        case '7_dias': {
-          dataInicioPeriodo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-          break;
-        }
-        case 'ano': {
-          dataInicioPeriodo = new Date(agora.getFullYear(), 0, 1); // 1º de janeiro
-          break;
-        }
-        case 'mes_atual':
-        default: {
-          dataInicioPeriodo = new Date(agora.getFullYear(), agora.getMonth(), 1); // 1º do mês atual
-          break;
-        }
-      }
-
       // Buscar todos os técnicos ativos
       const todosUsuarios = await prisma.usuario.findMany({
         where: { ativo: true, perfil: { in: ['TECNICO', 'QUALIDADE'] } },
         select: { id: true, nome: true, perfil: true },
       });
 
-      // Produções finalizadas no período (para técnicos de produção)
+      // Produções finalizadas no período especificado
       const producoesPeriodo = await prisma.producao.findMany({
         where: {
           status: 'FINALIZADO',
-          dataProducao: { gte: dataInicioPeriodo },
+          OR: [
+            { dataProducao: { gte: dataInicioPeriodo, lte: dataFimPeriodo } },
+            { dataInicio: { gte: dataInicioPeriodo, lte: dataFimPeriodo } },
+            { createdAt: { gte: dataInicioPeriodo, lte: dataFimPeriodo } },
+          ],
         },
         select: {
           tecnicoId: true,
@@ -729,10 +907,15 @@ export async function getGerencialData(periodo: string = 'mes_atual'): Promise<G
         },
       });
 
-      // Testes no período (para inspetor de qualidade)
+      producoesPeriodoTotalCount = producoesPeriodo.length;
+
+      // Testes no período especificado
       const testesPeriodo = await prisma.teste.findMany({
         where: {
-          dataTeste: { gte: dataInicioPeriodo },
+          OR: [
+            { dataTeste: { gte: dataInicioPeriodo, lte: dataFimPeriodo } },
+            { createdAt: { gte: dataInicioPeriodo, lte: dataFimPeriodo } },
+          ],
         },
         select: {
           inspetorId: true,
@@ -742,10 +925,13 @@ export async function getGerencialData(periodo: string = 'mes_atual'): Promise<G
         },
       });
 
-      // Retrabalhos no período para contagem por técnico responsável
+      // Retrabalhos no período especificado
       const retrabalhosPeriodo = await prisma.retrabalho.findMany({
         where: {
-          dataInicio: { gte: dataInicioPeriodo },
+          OR: [
+            { dataInicio: { gte: dataInicioPeriodo, lte: dataFimPeriodo } },
+            { createdAt: { gte: dataInicioPeriodo, lte: dataFimPeriodo } },
+          ],
         },
         select: {
           tecnicoResponsavelId: true,
@@ -762,8 +948,15 @@ export async function getGerencialData(periodo: string = 'mes_atual'): Promise<G
         const isQualidade = u.perfil === 'QUALIDADE' || u.nome.toLowerCase().includes('rhyan');
         const funcao = isQualidade ? 'Qualidade/Testes' : 'Produção';
 
+        // Buscar pontos deste colaborador para o período
+        const colabPontos = colaboradoresLista.find((c: any) =>
+          isTecnicoMatch(c.id, c.nome, u.id, u.nome)
+        );
+        const pontosTecnico = isHoje
+          ? (tvData.bancadas.find((b) => isTecnicoMatch(b.tecnicoId, b.tecnicoNome, u.id, u.nome))?.pontosHoje || 0)
+          : (colabPontos?.pontosRealizados || 0);
+
         if (isQualidade) {
-          // Para inspetor de CQ: agregar testes
           let testados = 0;
           let aprovados = 0;
           let reprovados = 0;
@@ -780,6 +973,7 @@ export async function getGerencialData(periodo: string = 'mes_atual'): Promise<G
             tecnicoId: u.id,
             tecnicoNome: u.nome,
             funcao,
+            pontos: pontosTecnico,
             reparados: 0,
             semDefeito: 0,
             sucata: 0,
@@ -789,13 +983,11 @@ export async function getGerencialData(periodo: string = 'mes_atual'): Promise<G
             reprovados,
           });
         } else {
-          // Para técnicos de produção: agregar produções
           let reparados = 0;
           let semDefeito = 0;
           let sucata = 0;
 
           for (const p of producoesPeriodo) {
-            // Ignorar registros de inspeção do CQ
             const isCq = p.servicoRealizado === 'Inspeção CQ' ||
                          p.servicoRealizado === 'Reparo inspecionado e testado pelo CQ' ||
                          (p.observacao && p.observacao.includes('Apontamento de CQ'));
@@ -808,7 +1000,6 @@ export async function getGerencialData(periodo: string = 'mes_atual'): Promise<G
             }
           }
 
-          // Contar retrabalhos atribuídos a este técnico
           let retrabalhosCount = 0;
           for (const r of retrabalhosPeriodo) {
             const tecResp = r.tecnicoResponsavelId || r.itemOrdemServico?.tecnicoAlocadoId;
@@ -817,10 +1008,15 @@ export async function getGerencialData(periodo: string = 'mes_atual'): Promise<G
             }
           }
 
+          totalReparados += reparados;
+          totalSemDefeito += semDefeito;
+          totalSucata += sucata;
+
           desempenhoTecnicos.push({
             tecnicoId: u.id,
             tecnicoNome: u.nome,
             funcao,
+            pontos: pontosTecnico,
             reparados,
             semDefeito,
             sucata,
@@ -836,14 +1032,36 @@ export async function getGerencialData(periodo: string = 'mes_atual'): Promise<G
     }
   }
 
+  // Meses disponíveis no histórico
+  const mesesDisponiveis = await getMesesDisponiveis();
+
+  const metaFinal = metasDataPeriodo || tvData.meta;
+
   return {
     periodo,
-    faturamentoEstimado: tvData.meta.faturamentoLancado || 0.0,
+    periodoLabel,
+    mesReferencia: targetMes,
+    anoReferencia: targetAno,
+    isMesPassado,
+    isPeriodoMes,
+    faturamentoEstimado: metaFinal.faturamentoLancado || metaFinal.faturamentoBaseCalculo || 0.0,
     totalOsAtivas,
-    pontosTotaisRealizados: isHoje ? pontosProducaoEquipeHoje : tvData.meta.pontosRealizados,
-    metaAlvoPeriodo: tvData.meta.metaAlvo,
+    pontosTotaisRealizados: isHoje ? pontosProducaoEquipeHoje : metaFinal.pontosRealizados,
+    metaAlvoPeriodo: metaFinal.metaAlvo || 300,
+    metaBasePeriodo: metaFinal.metaBase || 250,
+    metaExcelenciaPeriodo: metaFinal.metaExcelencia || 350,
+    statusMeta: metaFinal.statusMeta || 'ABAIXO_DA_META',
+    statusMetaLabel: metaFinal.statusMetaLabel || '🔴 ABAIXO DA META',
+    resumoFabrica: {
+      totalReparados,
+      totalSemDefeito,
+      totalSucata,
+      totalRetrabalho,
+      totalLancamentos: producoesPeriodoTotalCount,
+    },
+    mesesDisponiveis,
     fpyGeral: tvData.fpyHoje.fpyPercentual,
-    taxaRetrabalho: tvData.meta.taxaRetrabalho,
+    taxaRetrabalho: metaFinal.taxaRetrabalho || 0.0,
     leadTimeMedioGeralMinutos: leadTimeMedioGeralMinutos || (tvData.filaPrioritaria.length > 0 ? 30 : 0),
     distribuicaoDefeitos,
     leadTimePorEquipamento,
@@ -851,4 +1069,25 @@ export async function getGerencialData(periodo: string = 'mes_atual'): Promise<G
     desempenhoTecnicos,
     producaoHistoricoDias,
   };
+}
+
+// ─── Fechamento Mensal Consolidado (Exclusivo Admin) ──────────────────────────
+export async function getFechamentoMensal(mes?: number, ano?: number) {
+  const agora = new Date();
+  let m = mes;
+  let a = ano;
+
+  // Se não foi passado mês/ano, por padrão carrega o mês anterior (fechado)
+  if (!m || !a) {
+    let prevM = agora.getMonth();
+    let prevA = agora.getFullYear();
+    if (prevM === 0) {
+      prevM = 12;
+      prevA -= 1;
+    }
+    m = prevM;
+    a = prevA;
+  }
+
+  return getGerencialData(undefined, m, a);
 }

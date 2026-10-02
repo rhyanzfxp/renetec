@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { dashboardApiService } from './dashboard.service';
 import type { GerencialResponse } from './dashboard.types';
 import { useRealtime } from '../realtime/RealtimeContext';
+import { useAuth } from '../auth/AuthContext';
 import { KpiCard } from '../../components/ui/KpiCard';
 import { Button } from '../../components/ui/Button';
 import {
@@ -13,11 +14,16 @@ import {
   RefreshCw,
   Flame,
   AlertTriangle,
+  Archive,
+  Calendar,
+  Award,
 } from 'lucide-react';
 
 export const DashboardGerencialPage: React.FC = () => {
+  const { user } = useAuth();
   const [data, setData] = useState<GerencialResponse | null>(null);
   const [periodo, setPeriodo] = useState<string>('mes_atual');
+  const [selectedMesAno, setSelectedMesAno] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const { subscribe } = useRealtime();
@@ -104,8 +110,8 @@ export const DashboardGerencialPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* ─── 1. SELETOR DE PERÍODO & AÇÕES ───────────────────────────────── */}
-      <div className="p-4 rounded-2xl bg-surface-card border border-surface-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* ─── 1. SELETOR DE PERÍODO & HISTÓRICO MENSAL (ADMIN) ─────────────── */}
+      <div className="p-4 rounded-2xl bg-surface-card border border-surface-border flex flex-col xl:flex-row xl:items-center justify-between gap-4">
         <div>
           <h2 className="text-base font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
             <BarChart2 className="w-5 h-5 text-brand-500 dark:text-brand-400" /> Indicadores Executivos e Operacionais — Renetec
@@ -115,11 +121,11 @@ export const DashboardGerencialPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex bg-surface-base p-1 rounded-xl border border-surface-border text-xs">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap bg-surface-base p-1 rounded-xl border border-surface-border text-xs">
             <button
               type="button"
-              onClick={() => setPeriodo('hoje')}
+              onClick={() => { setPeriodo('hoje'); setSelectedMesAno(''); }}
               className={`px-3 py-1.5 rounded-lg font-semibold transition-colors ${
                 periodo === 'hoje'
                   ? 'bg-brand-600 text-white shadow-sm'
@@ -130,7 +136,7 @@ export const DashboardGerencialPage: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => setPeriodo('7_dias')}
+              onClick={() => { setPeriodo('7_dias'); setSelectedMesAno(''); }}
               className={`px-3 py-1.5 rounded-lg font-semibold transition-colors ${
                 periodo === '7_dias'
                   ? 'bg-brand-600 text-white shadow-sm'
@@ -141,7 +147,7 @@ export const DashboardGerencialPage: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => setPeriodo('mes_atual')}
+              onClick={() => { setPeriodo('mes_atual'); setSelectedMesAno(''); }}
               className={`px-3 py-1.5 rounded-lg font-semibold transition-colors ${
                 periodo === 'mes_atual'
                   ? 'bg-brand-600 text-white shadow-sm'
@@ -152,7 +158,19 @@ export const DashboardGerencialPage: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => setPeriodo('ano')}
+              onClick={() => { setPeriodo('mes_anterior'); setSelectedMesAno('mes_anterior'); }}
+              className={`px-3 py-1.5 rounded-lg font-semibold transition-colors flex items-center gap-1.5 ${
+                periodo === 'mes_anterior'
+                  ? 'bg-amber-600 text-white shadow-sm font-bold'
+                  : 'text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-200'
+              }`}
+            >
+              <Archive className="w-3.5 h-3.5" />
+              Mês Passado
+            </button>
+            <button
+              type="button"
+              onClick={() => { setPeriodo('ano'); setSelectedMesAno(''); }}
               className={`px-3 py-1.5 rounded-lg font-semibold transition-colors ${
                 periodo === 'ano'
                   ? 'bg-brand-600 text-white shadow-sm'
@@ -163,11 +181,102 @@ export const DashboardGerencialPage: React.FC = () => {
             </button>
           </div>
 
+          {/* Seletor de Histórico Mensal para Admin */}
+          {user?.perfil === 'ADMIN' && data?.mesesDisponiveis && data.mesesDisponiveis.length > 0 && (
+            <div className="flex items-center gap-1.5 bg-surface-base px-2.5 py-1 rounded-xl border border-amber-500/30 text-xs">
+              <Calendar className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+              <span className="font-semibold text-gray-700 dark:text-gray-300 hidden sm:inline">Histórico:</span>
+              <select
+                value={selectedMesAno || (periodo === 'mes_anterior' ? 'mes_anterior' : periodo === 'mes_atual' ? 'mes_atual' : '')}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSelectedMesAno(val);
+                  setPeriodo(val);
+                }}
+                className="bg-transparent text-xs font-bold text-gray-900 dark:text-white outline-none cursor-pointer py-0.5"
+              >
+                <option value="mes_atual" className="bg-surface-card text-gray-900 dark:text-white">
+                  Outubro / 2026 (Mês Atual)
+                </option>
+                <option value="mes_anterior" className="bg-surface-card text-gray-900 dark:text-white">
+                  Setembro / 2026 (Mês Passado - Fechado)
+                </option>
+                {data.mesesDisponiveis
+                  .filter((m) => !m.isAtual && m.key !== '2026-09')
+                  .map((m) => (
+                    <option key={m.key} value={m.key} className="bg-surface-card text-gray-900 dark:text-white">
+                      {m.label}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          )}
+
           <Button variant="ghost" size="sm" onClick={loadData} leftIcon={<RefreshCw className="w-3.5 h-3.5" />}>
             Atualizar
           </Button>
         </div>
       </div>
+
+      {/* ─── BANNER DE FECHAMENTO MENSAL CONSOLIDADO (ADMIN / MÊS PASSADO) ─── */}
+      {data.isMesPassado && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-950/40 via-yellow-950/20 to-surface-card border border-amber-500/40 shadow-sm space-y-3 animate-fadeIn">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 flex-shrink-0">
+                <Award className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                    Histórico & Fechamento Oficial
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 text-[10px] font-black border border-amber-300 dark:border-amber-500/40">
+                    {data.periodoLabel || 'Mês Fechado'}
+                  </span>
+                </div>
+                <h3 className="text-base sm:text-lg font-black text-gray-900 dark:text-white mt-0.5 flex flex-wrap items-center gap-2">
+                  Produção Consolidada: {data.pontosTotaisRealizados ?? 0} Pontos Conquistados!
+                  <span className="text-xs font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    {data.statusMetaLabel || 'META BASE'}
+                  </span>
+                </h3>
+              </div>
+            </div>
+            {data.metaBasePeriodo && (
+              <div className="text-right text-xs text-gray-500 dark:text-gray-400">
+                Meta Base: <span className="font-bold text-gray-900 dark:text-white">{data.metaBasePeriodo} pts</span> | Meta Alvo: <span className="font-bold text-gray-900 dark:text-white">{data.metaAlvoPeriodo} pts</span>
+              </div>
+            )}
+          </div>
+
+          {/* Cards Rápidos de Totais da Fábrica no Mês Fechado */}
+          {data.resumoFabrica && (
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-2 border-t border-amber-500/20 text-xs">
+              <div className="bg-surface-elevated/70 p-2.5 rounded-xl border border-surface-border text-center">
+                <p className="text-base font-black text-emerald-600 dark:text-emerald-400">{data.resumoFabrica.totalReparados}</p>
+                <p className="text-[10px] uppercase font-semibold text-gray-500 dark:text-gray-400">Peças Reparadas</p>
+              </div>
+              <div className="bg-surface-elevated/70 p-2.5 rounded-xl border border-surface-border text-center">
+                <p className="text-base font-black text-amber-600 dark:text-amber-400">{data.resumoFabrica.totalSucata}</p>
+                <p className="text-[10px] uppercase font-semibold text-gray-500 dark:text-gray-400">Sucatas</p>
+              </div>
+              <div className="bg-surface-elevated/70 p-2.5 rounded-xl border border-surface-border text-center">
+                <p className="text-base font-black text-sky-600 dark:text-sky-400">{data.resumoFabrica.totalSemDefeito}</p>
+                <p className="text-[10px] uppercase font-semibold text-gray-500 dark:text-gray-400">Sem Defeito</p>
+              </div>
+              <div className="bg-surface-elevated/70 p-2.5 rounded-xl border border-surface-border text-center">
+                <p className="text-base font-black text-rose-600 dark:text-rose-400">{data.resumoFabrica.totalRetrabalho}</p>
+                <p className="text-[10px] uppercase font-semibold text-gray-500 dark:text-gray-400">Retrabalhos</p>
+              </div>
+              <div className="bg-surface-elevated/70 p-2.5 rounded-xl border border-surface-border text-center col-span-2 sm:col-span-1">
+                <p className="text-base font-black text-brand-600 dark:text-brand-400">{data.resumoFabrica.totalLancamentos}</p>
+                <p className="text-[10px] uppercase font-semibold text-gray-500 dark:text-gray-400">Lançamentos</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ─── 2. CARDS EXECUTIVOS DE TOPO ─────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -246,9 +355,16 @@ export const DashboardGerencialPage: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                    <span className="text-[10px] font-mono text-gray-500 dark:text-gray-400 bg-surface-base px-2 py-0.5 rounded-md border border-surface-border">
-                      {totalItens} un
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {tec.pontos !== undefined && (
+                        <span className="text-xs font-black text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
+                          {tec.pontos} pts
+                        </span>
+                      )}
+                      <span className="text-[10px] font-mono text-gray-500 dark:text-gray-400 bg-surface-base px-2 py-0.5 rounded-md border border-surface-border">
+                        {totalItens} un
+                      </span>
+                    </div>
                   </div>
 
                   {/* Métricas */}

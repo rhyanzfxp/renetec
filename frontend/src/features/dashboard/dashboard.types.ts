@@ -97,6 +97,7 @@ export interface DesempenhoTecnicoData {
   tecnicoId: string;
   tecnicoNome: string;
   funcao: string;
+  pontos?: number;
   // Produção (técnicos de bancada)
   reparados: number;
   semDefeito: number;
@@ -108,12 +109,37 @@ export interface DesempenhoTecnicoData {
   reprovados: number;
 }
 
+export interface MesDisponivel {
+  mes: number;
+  ano: number;
+  key: string;
+  label: string;
+  isAtual: boolean;
+}
+
 export interface GerencialResponse {
   periodo: string;
+  periodoLabel?: string;
+  mesReferencia?: number;
+  anoReferencia?: number;
+  isMesPassado?: boolean;
+  isPeriodoMes?: boolean;
   faturamentoEstimado: number;
   totalOsAtivas: number;
   pontosTotaisRealizados?: number;
   metaAlvoPeriodo?: number;
+  metaBasePeriodo?: number;
+  metaExcelenciaPeriodo?: number;
+  statusMeta?: string;
+  statusMetaLabel?: string;
+  resumoFabrica?: {
+    totalReparados: number;
+    totalSemDefeito: number;
+    totalSucata: number;
+    totalRetrabalho: number;
+    totalLancamentos: number;
+  };
+  mesesDisponiveis?: MesDisponivel[];
   totalItensProduzidos?: number;
   totalItensAprovadosCQ?: number;
   fpyGeral: number;

@@ -11,7 +11,11 @@ export const metaRoutes: FastifyPluginAsync = async (fastify) => {
     '/metas/atual',
     { preHandler: [authenticate] },
     async (request, reply) => {
-      const dados = await service.getMetasAtual();
+      const { mes, ano } = request.query as { mes?: string; ano?: string };
+      const dados = await service.getMetasAtual(
+        mes ? parseInt(mes, 10) : undefined,
+        ano ? parseInt(ano, 10) : undefined
+      );
       return reply.send({ success: true, data: dados });
     }
   );

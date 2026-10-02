@@ -528,8 +528,79 @@ export async function updateMetaIndividualColaboradores(statusMap: Record<string
 }
 
 // ─── Histórico de metas dos meses anteriores ──────────────────────────────────
-export async function getHistoricoMetas(ano: number): Promise<HistoricoMetaRecord[]> {
-  return [];
+export async function getHistoricoMetas(ano?: number): Promise<HistoricoMetaRecord[]> {
+  if (!isDatabaseReady()) return [];
+  try {
+    const prods = await prisma.producao.findMany({
+      select: { dataProducao: true, createdAt: true },
+    });
+    const monthsSet = new Set<string>();
+    const agora = new Date();
+    monthsSet.add(`${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`);
+    for (const p of prods) {
+      const d = p.dataProducao || p.createdAt;
+      if (d) {
+        const dt = new Date(d);
+        if (!ano || dt.getFullYear() === ano) {
+          monthsSet.add(`${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`);
+        }
+      }
+    }
+
+    const mesesNomes = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+
+    const sorted = Array.from(monthsSet).sort().reverse();
+    const records: HistoricoMetaRecord[] = [];
+
+    for (const key of sorted) {
+      const [anoStr, mesStr] = key.split('-');
+      const a = parseInt(anoStr, 10);
+      const m = parseInt(mesStr, 10);
+      const [config, producaoData] = await Promise.all([
+        getMetaConfig(m, a),
+        getProducaoPontosMes(m, a),
+      ]);
+
+      const metaBaseAtiva = config.isPeriodoPiloto ? config.metaPilotoMinima : config.metaBase;
+      const metaAlvoAtiva = config.isPeriodoPiloto ? config.metaPilotoAlvo : config.metaAlvo;
+      const metaExcelenciaAtiva = config.isPeriodoPiloto ? config.metaPilotoExcelencia : config.metaExcelencia;
+      const pts = producaoData.pontosTotais;
+
+      let statusMeta = 'ABAIXO_DA_META';
+      let statusMetaLabel = '🔴 ABAIXO DA META';
+      if (pts >= metaExcelenciaAtiva) {
+        statusMeta = 'META_EXCELENCIA';
+        statusMetaLabel = '🏆 META EXCELÊNCIA';
+      } else if (pts >= metaAlvoAtiva) {
+        statusMeta = 'META_ALVO';
+        statusMetaLabel = '🟢 META ALVO';
+      } else if (pts >= metaBaseAtiva) {
+        statusMeta = 'META_BASE';
+        statusMetaLabel = '🟡 META BASE';
+      }
+
+      records.push({
+        id: `hist-${a}-${m}`,
+        mesReferencia: m,
+        anoReferencia: a,
+        metaBase: metaBaseAtiva,
+        metaAlvo: metaAlvoAtiva,
+        metaExcelencia: metaExcelenciaAtiva,
+        pontosRealizados: pts,
+        taxaRetrabalho: producaoData.taxaRetrabalho,
+        statusMeta,
+        bonusDistribuido: 0,
+      });
+    }
+
+    return records;
+  } catch (err) {
+    console.error('[getHistoricoMetas] Erro ao buscar histórico de metas:', err);
+    return [];
+  }
 }
 
 export function getTabelaPontuacao(): TabelaPontuacaoItem[] {

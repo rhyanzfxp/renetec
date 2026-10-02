@@ -50,25 +50,31 @@ export const MetasPage: React.FC = () => {
   const [isUpdatingBonus, setIsUpdatingBonus] = useState(false);
   const [bonusFeedback, setBonusFeedback] = useState<string | null>(null);
 
-  // Ref para garantir que o faturamento só é pré-preenchido uma vez (primeiro carregamento)
-  // Evita que o loadData reponha o valor quando o usuário apaga o campo
-  const faturamentoInicializadoRef = React.useRef(false);
+  // Filtro de Mês Histórico (Exclusivo ADMIN)
+  const [mesSelecionado, setMesSelecionado] = useState<string>('atual');
 
   const loadData = useCallback(async () => {
     try {
       setErrorMessage(null);
+      let mesArg: number | undefined;
+      let anoArg: number | undefined;
+      if (mesSelecionado !== 'atual') {
+        const [anoStr, mesStr] = mesSelecionado.split('-');
+        anoArg = parseInt(anoStr, 10);
+        mesArg = parseInt(mesStr, 10);
+      }
+
       const [metaData, ptData, guiaData] = await Promise.all([
-        metaApiService.getMetaAtual(),
+        metaApiService.getMetaAtual(mesArg, anoArg),
         metaApiService.getTabelaPontuacao(),
         metaApiService.getGuiaComoUsar(),
       ]);
       setData(metaData);
       setTabelaPontuacao(ptData);
       setGuiaComoUsar(guiaData);
-      // Pré-preenche apenas na primeira carga — jamais sobrescreve edições do usuário
-      if (!faturamentoInicializadoRef.current && metaData.faturamentoBaseCalculo > 0) {
+      // Pré-preenche apenas na primeira carga ou na troca de mês se houver faturamento
+      if (metaData.faturamentoBaseCalculo > 0) {
         setSimuladorFaturamento(metaData.faturamentoBaseCalculo.toString());
-        faturamentoInicializadoRef.current = true;
       }
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } }; message?: string };
@@ -76,7 +82,7 @@ export const MetasPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []); // sem dependência de simuladorFaturamento: não causa loop
+  }, [mesSelecionado]);
 
   // Recarrega apenas em eventos de aprovação e metas (debounce 600ms — página pesada)
   usePageData({
@@ -346,68 +352,138 @@ export const MetasPage: React.FC = () => {
         </div>
       )}
 
-      {/* ─── NAVEGAÇÃO ENTRE ABAS (EXCLUSIVO PARA ADMIN) ──────────────────── */}
+      {/* ─── NAVEGAÇÃO ENTRE ABAS & FILTRO HISTÓRICO (EXCLUSIVO PARA ADMIN) ── */}
       {user?.perfil === 'ADMIN' && (
-        <div className="flex items-center gap-2 border-b border-surface-border/60 pb-3 overflow-x-auto">
-          <button
-            type="button"
-            onClick={() => setActiveTab('dashboard')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer select-none ${
-              activeTab === 'dashboard'
-                ? 'bg-brand-600 text-white shadow-glow-primary'
-                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-surface-elevated'
-            }`}
-          >
-            <Award className="w-4 h-4" /> Dashboard da Meta
-          </button>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-surface-border/60 pb-3">
+          <div className="flex items-center gap-2 overflow-x-auto">
+            <button
+              type="button"
+              onClick={() => setActiveTab('dashboard')}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer select-none ${
+                activeTab === 'dashboard'
+                  ? 'bg-brand-600 text-white shadow-glow-primary'
+                  : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-surface-elevated'
+              }`}
+            >
+              <Award className="w-4 h-4" /> Dashboard da Meta
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('bonus')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer select-none ${
-              activeTab === 'bonus'
-                ? 'bg-brand-600 text-white shadow-glow-primary'
-                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-surface-elevated'
-            }`}
-          >
-            <Calculator className="w-4 h-4" /> Gestão & Simulador de Bônus
-          </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('bonus')}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer select-none ${
+                activeTab === 'bonus'
+                  ? 'bg-brand-600 text-white shadow-glow-primary'
+                  : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-surface-elevated'
+              }`}
+            >
+              <Calculator className="w-4 h-4" /> Gestão & Simulador de Bônus
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('pontuacao')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer select-none ${
-              activeTab === 'pontuacao'
-                ? 'bg-brand-600 text-white shadow-glow-primary'
-                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-surface-elevated'
-            }`}
-          >
-            <ListOrdered className="w-4 h-4" /> Tabela de Pontuação ({tabelaPontuacao.length})
-          </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('pontuacao')}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer select-none ${
+                activeTab === 'pontuacao'
+                  ? 'bg-brand-600 text-white shadow-glow-primary'
+                  : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-surface-elevated'
+              }`}
+            >
+              <ListOrdered className="w-4 h-4" /> Tabela de Pontuação ({tabelaPontuacao.length})
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('guia')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer select-none ${
-              activeTab === 'guia'
-                ? 'bg-brand-600 text-white shadow-glow-primary'
-                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-surface-elevated'
-            }`}
-          >
-            <BookOpen className="w-4 h-4" /> Como Usar (Guia Operacional)
-          </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('guia')}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer select-none ${
+                activeTab === 'guia'
+                  ? 'bg-brand-600 text-white shadow-glow-primary'
+                  : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-surface-elevated'
+              }`}
+            >
+              <BookOpen className="w-4 h-4" /> Como Usar (Guia Operacional)
+            </button>
+          </div>
 
-          {/* Separador e botão de reset */}
-          <div className="flex-1" />
+          {/* Controles de Período e Auditoria (Admin) */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Seletor de Mês Histórico */}
+            <div className="flex items-center gap-1.5 bg-surface-elevated/80 border border-surface-border px-3 py-1.5 rounded-xl text-xs shadow-inner">
+              <Calendar className="w-3.5 h-3.5 text-brand-500 flex-shrink-0" />
+              <span className="font-semibold text-gray-500 dark:text-gray-400">Mês:</span>
+              <select
+                value={mesSelecionado}
+                onChange={(e) => setMesSelecionado(e.target.value)}
+                className="bg-transparent font-bold text-gray-900 dark:text-white outline-none cursor-pointer text-xs"
+              >
+                <option value="atual" className="bg-surface-card text-gray-900 dark:text-white font-bold">
+                  Mês Atual ({new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })})
+                </option>
+                {data?.mesesDisponiveis?.filter((m) => !m.isAtual).map((m) => (
+                  <option
+                    key={`${m.ano}-${m.mes}`}
+                    value={`${m.ano}-${String(m.mes).padStart(2, '0')}`}
+                    className="bg-surface-card text-gray-900 dark:text-white"
+                  >
+                    📁 {m.label} (Fechado)
+                  </option>
+                ))}
+                {(!data?.mesesDisponiveis || data.mesesDisponiveis.filter((m) => !m.isAtual).length === 0) && (
+                  <option value="2026-09" className="bg-surface-card text-gray-900 dark:text-white">
+                    📁 Setembro/2026 (Fechado)
+                  </option>
+                )}
+              </select>
+            </div>
+
+            {/* Apenas mostra Reset se for o mês corrente */}
+            {!data.isMesPassado ? (
+              <button
+                type="button"
+                onClick={() => setIsResetConfirmOpen(true)}
+                disabled={isResetting}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/30 border border-red-200 dark:border-red-800/30 hover:border-red-400 dark:hover:border-red-700/50 transition-all disabled:opacity-50 cursor-pointer"
+                title="Limpar produções e metas de teste do período"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Resetar
+              </button>
+            ) : (
+              <span className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Mês Auditado
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Banner de Fechamento Histórico */}
+      {data.isMesPassado && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-brand-500/10 to-surface-card border border-amber-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 animate-fadeIn">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-500 flex-shrink-0">
+              <Calendar className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                  Fechamento Consolidado da Fábrica
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                  {data.nomeMes}/{data.anoReferencia}
+                </span>
+              </div>
+              <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">
+                Visualizando registros arquivados de metas, pontuações dos técnicos e bônus deste mês encerrado.
+              </p>
+            </div>
+          </div>
           <button
             type="button"
-            onClick={() => setIsResetConfirmOpen(true)}
-            disabled={isResetting}
-            className="ml-auto px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/30 border border-red-200 dark:border-red-800/30 hover:border-red-400 dark:hover:border-red-700/50 transition-all disabled:opacity-50"
-            title="Limpar produções e metas de teste do período"
+            onClick={() => setMesSelecionado('atual')}
+            className="text-xs font-bold px-3 py-1.5 rounded-lg bg-surface-elevated hover:bg-surface-border text-gray-700 dark:text-gray-300 border border-surface-border transition-colors flex-shrink-0 cursor-pointer"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Resetar
+            Voltar ao Mês Atual
           </button>
         </div>
       )}

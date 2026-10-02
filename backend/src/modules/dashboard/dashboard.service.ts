@@ -4,6 +4,15 @@ export async function getTvFabricaData() {
   return repo.getTvFabricaData();
 }
 
-export async function getGerencialData(periodo?: string) {
-  return repo.getGerencialData(periodo);
+export async function getGerencialData(periodo?: string, mes?: number, ano?: number) {
+  return repo.getGerencialData(periodo, mes, ano);
 }
+
+export async function getFechamentoMensal(mes?: number, ano?: number) {
+  return repo.getFechamentoMensal(mes, ano);
+}
+
+export async function getMesesDisponiveis() {
+  return repo.getMesesDisponiveis();
+}
+

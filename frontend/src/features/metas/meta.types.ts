@@ -19,6 +19,8 @@ export interface MetaAtualData {
   mesReferencia: number;
   anoReferencia: number;
   nomeMes: string;
+  isMesPassado?: boolean;
+  mesesDisponiveis?: { mes: number; ano: number; label: string; isAtual: boolean }[];
   // Pontos
   pontosRealizados: number;
   metaBase: number;

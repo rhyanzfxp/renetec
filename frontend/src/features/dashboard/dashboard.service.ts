@@ -9,9 +9,21 @@ export const dashboardApiService = {
   },
 
   // Retorna os dados executivos do Dashboard Gerencial
-  async getGerencial(periodo: string = 'mes_atual'): Promise<GerencialResponse> {
+  async getGerencial(
+    periodo: string = 'mes_atual',
+    mes?: number,
+    ano?: number
+  ): Promise<GerencialResponse> {
     const response = await api.get<{ success: boolean; data: GerencialResponse }>('/dashboard/gerencial', {
-      params: { periodo },
+      params: { periodo, mes, ano },
+    });
+    return response.data.data;
+  },
+
+  // Retorna o fechamento mensal consolidado (exclusivo para ADMIN)
+  async getFechamentoMensal(mes?: number, ano?: number): Promise<GerencialResponse> {
+    const response = await api.get<{ success: boolean; data: GerencialResponse }>('/dashboard/fechamento-mensal', {
+      params: { mes, ano },
     });
     return response.data.data;
   },

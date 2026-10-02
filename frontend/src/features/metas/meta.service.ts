@@ -9,9 +9,11 @@ import type {
 } from './meta.types';
 
 export const metaApiService = {
-  // Retorna os dados completos do mês atual
-  async getMetaAtual(): Promise<MetaAtualData> {
-    const response = await api.get<{ success: boolean; data: MetaAtualData }>('/metas/atual');
+  // Retorna os dados completos do mês atual ou de um mês específico
+  async getMetaAtual(mes?: number, ano?: number): Promise<MetaAtualData> {
+    const response = await api.get<{ success: boolean; data: MetaAtualData }>('/metas/atual', {
+      params: { mes, ano },
+    });
     return response.data?.data;
   },
 
