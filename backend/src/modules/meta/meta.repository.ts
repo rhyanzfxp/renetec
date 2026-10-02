@@ -1,5 +1,6 @@
 import { prisma, isDatabaseReady } from '../../database/prisma.js';
 import type { UpdateMetaConfigInput } from './meta.schema.js';
+import { getFechamentoMensalOficial, getChavesMesesFechados } from './fechamento.store.js';
 
 export interface MetaConfigRecord {
   id: string;
@@ -172,6 +173,32 @@ export function resolverTecnicoReparo(t: any): string {
 
 // ─── Busca a agregação de pontos realizados no mês corrente (APENAS APROVADOS NO CQ) ──
 export async function getProducaoPontosMes(mes: number, ano: number) {
+  const fechamento = getFechamentoMensalOficial(mes, ano);
+  if (fechamento) {
+    const colabs = COLABORADORES_BASE.map((c) => {
+      const tec = fechamento.tecnicos.find((t) =>
+        t.tecnicoNome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().split(/\s+/)[0] ===
+        c.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().split(/\s+/)[0]
+      );
+      const pts = tec ? tec.pontos : 0;
+      return {
+        ...c,
+        pontosRealizados: pts,
+        percentualTotal: fechamento.pontosTotais > 0 ? Number(((pts / fechamento.pontosTotais) * 100).toFixed(1)) : 0,
+        metaIndividualCumprida: tec?.metaIndividualCumprida ?? true,
+      };
+    });
+
+    return {
+      pontosTotais: fechamento.pontosTotais,
+      faturamentoLancado: fechamento.faturamentoLancado,
+      totalLancamentos: fechamento.totalLancamentos,
+      totalRetrabalho: fechamento.totalRetrabalho,
+      taxaRetrabalho: fechamento.taxaRetrabalho,
+      colaboradores: colabs,
+    };
+  }
+
   let pontosTotais = 0;
   let faturamentoLancado = 0;
   let totalLancamentos = 0;
@@ -537,6 +564,12 @@ export async function getHistoricoMetas(ano?: number): Promise<HistoricoMetaReco
     const monthsSet = new Set<string>();
     const agora = new Date();
     monthsSet.add(`${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`);
+    for (const k of getChavesMesesFechados()) {
+      const [anoStr] = k.split('-');
+      if (!ano || parseInt(anoStr, 10) === ano) {
+        monthsSet.add(k);
+      }
+    }
     for (const p of prods) {
       const d = p.dataProducao || p.createdAt;
       if (d) {
@@ -559,6 +592,24 @@ export async function getHistoricoMetas(ano?: number): Promise<HistoricoMetaReco
       const [anoStr, mesStr] = key.split('-');
       const a = parseInt(anoStr, 10);
       const m = parseInt(mesStr, 10);
+
+      const fechamento = getFechamentoMensalOficial(m, a);
+      if (fechamento) {
+        records.push({
+          id: `hist-${a}-${m}`,
+          mesReferencia: m,
+          anoReferencia: a,
+          metaBase: fechamento.metaBase,
+          metaAlvo: fechamento.metaAlvo,
+          metaExcelencia: fechamento.metaExcelencia,
+          pontosRealizados: fechamento.pontosTotais,
+          taxaRetrabalho: fechamento.taxaRetrabalho,
+          statusMeta: fechamento.statusMeta,
+          bonusDistribuido: 0,
+        });
+        continue;
+      }
+
       const [config, producaoData] = await Promise.all([
         getMetaConfig(m, a),
         getProducaoPontosMes(m, a),

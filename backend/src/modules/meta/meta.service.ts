@@ -3,6 +3,7 @@ import type { UpdateMetaConfigInput, UpdateBonusSimulationInput } from './meta.s
 import { realtimeService } from '../realtime/realtime.service.js';
 import { log } from '../auditoria/auditoria.service.js';
 import { getMesesDisponiveis } from '../dashboard/dashboard.repository.js';
+import { getFechamentoMensalOficial } from './fechamento.store.js';
 
 // Função utilitária para calcular dias úteis (Segunda a Sexta)
 function getDiasUteisInfo(dataRef: Date = new Date()) {
@@ -54,34 +55,58 @@ export async function getMetasAtual(mesDesejado?: number, anoDesejado?: number) 
   const diasUteisDecorridos = isMesPassado ? diasInfo.diasUteisTotais : diasInfo.diasUteisDecorridos;
   const diasUteisRestantes = isMesPassado ? 0 : diasInfo.diasUteisRestantes;
 
-  // Faixas ativas (considerando Período Piloto se ativado)
-  const metaBaseAtiva = config.isPeriodoPiloto ? config.metaPilotoMinima : config.metaBase;
-  const metaAlvoAtiva = config.isPeriodoPiloto ? config.metaPilotoAlvo : config.metaAlvo;
-  const metaExcelenciaAtiva = config.isPeriodoPiloto ? config.metaPilotoExcelencia : config.metaExcelencia;
+  const fechamentoOficial = isMesPassado ? getFechamentoMensalOficial(mes, ano) : null;
 
-  const pontosRealizados = producaoData.pontosTotais;
+  // Faixas ativas (considerando Período Piloto se ativado ou Fechamento Oficial)
+  const metaBaseAtiva = fechamentoOficial
+    ? fechamentoOficial.metaBase
+    : config.isPeriodoPiloto
+    ? config.metaPilotoMinima
+    : config.metaBase;
+  const metaAlvoAtiva = fechamentoOficial
+    ? fechamentoOficial.metaAlvo
+    : config.isPeriodoPiloto
+    ? config.metaPilotoAlvo
+    : config.metaAlvo;
+  const metaExcelenciaAtiva = fechamentoOficial
+    ? fechamentoOficial.metaExcelencia
+    : config.isPeriodoPiloto
+    ? config.metaPilotoExcelencia
+    : config.metaExcelencia;
+
+  const pontosRealizados = fechamentoOficial
+    ? fechamentoOficial.pontosTotais
+    : producaoData.pontosTotais;
 
   // Status Oficial da Meta (Planilha: Dashboard R11)
-  let statusMeta: 'META_EXCELENCIA' | 'META_ALVO' | 'META_BASE' | 'ABAIXO_DA_META' = 'ABAIXO_DA_META';
-  let statusMetaLabel = '🔴 ABAIXO DA META';
-  if (pontosRealizados >= metaExcelenciaAtiva) {
-    statusMeta = 'META_EXCELENCIA';
-    statusMetaLabel = '🏆 META EXCELÊNCIA';
-  } else if (pontosRealizados >= metaAlvoAtiva) {
-    statusMeta = 'META_ALVO';
-    statusMetaLabel = '🟢 META ALVO';
-  } else if (pontosRealizados >= metaBaseAtiva) {
-    statusMeta = 'META_BASE';
-    statusMetaLabel = '🟡 META BASE';
+  let statusMeta: 'META_EXCELENCIA' | 'META_ALVO' | 'META_BASE' | 'ABAIXO_DA_META' = fechamentoOficial
+    ? fechamentoOficial.statusMeta
+    : 'ABAIXO_DA_META';
+  let statusMetaLabel = fechamentoOficial
+    ? fechamentoOficial.statusMetaLabel
+    : '🔴 ABAIXO DA META';
+  if (!fechamentoOficial) {
+    if (pontosRealizados >= metaExcelenciaAtiva) {
+      statusMeta = 'META_EXCELENCIA';
+      statusMetaLabel = '🏆 META EXCELÊNCIA';
+    } else if (pontosRealizados >= metaAlvoAtiva) {
+      statusMeta = 'META_ALVO';
+      statusMetaLabel = '🟢 META ALVO';
+    } else if (pontosRealizados >= metaBaseAtiva) {
+      statusMeta = 'META_BASE';
+      statusMetaLabel = '🟡 META BASE';
+    }
   }
 
   // Qualidade e Retrabalho (Planilha: Dashboard R07 e R08)
-  const taxaRetrabalho = producaoData.taxaRetrabalho;
+  const taxaRetrabalho = fechamentoOficial ? fechamentoOficial.taxaRetrabalho : producaoData.taxaRetrabalho;
+  const totalLancamentos = fechamentoOficial ? fechamentoOficial.totalLancamentos : producaoData.totalLancamentos;
+  const totalRetrabalho = fechamentoOficial ? fechamentoOficial.totalRetrabalho : producaoData.totalRetrabalho;
   const limiteRetrabalhoPct = Number((config.retrabalhoMaximo * 100).toFixed(1));
   let statusQualidade: 'SEM_DADOS' | 'DENTRO_DA_META' | 'ACIMA_DO_LIMITE' = 'SEM_DADOS';
   let statusQualidadeLabel = 'Sem dados';
 
-  if (producaoData.totalLancamentos > 0) {
+  if (totalLancamentos > 0) {
     if (taxaRetrabalho <= limiteRetrabalhoPct) {
       statusQualidade = 'DENTRO_DA_META';
       statusQualidadeLabel = 'Dentro da meta';
@@ -112,7 +137,9 @@ export async function getMetasAtual(mesDesejado?: number, anoDesejado?: number) 
   const percentualExcelencia = Number(((pontosRealizados / metaExcelenciaAtiva) * 100).toFixed(1));
 
   // ─── CÁLCULO E SIMULAÇÃO DE BÔNUS (Planilha: Aba 'Bônus') ────────────────────
-  const faturamentoBase = config.faturamentoRecebido > 0 ? config.faturamentoRecebido : producaoData.faturamentoLancado;
+  const faturamentoBase = config.faturamentoRecebido > 0
+    ? config.faturamentoRecebido
+    : (fechamentoOficial ? fechamentoOficial.faturamentoLancado : producaoData.faturamentoLancado);
   const fundoPotencial = Number((faturamentoBase * config.percentualFundoBonus).toFixed(2));
   const razaoAtingimento = metaAlvoAtiva > 0 ? pontosRealizados / metaAlvoAtiva : 0;
 
@@ -133,25 +160,48 @@ export async function getMetasAtual(mesDesejado?: number, anoDesejado?: number) 
   const parteIndividualTotal = Number((bonusFinal * config.percentualIndividual).toFixed(2));
 
   // Rateio detalhado por colaborador
-  const equipeDetalhada = producaoData.colaboradores.map((c) => {
-    const bonusColetivo = Number((parteColetivaTotal * c.pesoBonus).toFixed(2));
-    const bonusIndividual = c.metaIndividualCumprida ? Number((parteIndividualTotal * c.pesoBonus).toFixed(2)) : 0;
-    const bonusTotal = Number((bonusColetivo + bonusIndividual).toFixed(2));
+  const equipeDetalhada = fechamentoOficial
+    ? fechamentoOficial.tecnicos
+        .filter((t) => t.tecnicoNome !== 'Controle de Qualidade')
+        .map((c) => {
+          const pesoBonus = c.pesoBonus ?? (c.funcao.includes('Qualidade') ? 0.17 : 0.22);
+          const bonusColetivo = Number((parteColetivaTotal * pesoBonus).toFixed(2));
+          const bonusIndividual = c.metaIndividualCumprida ? Number((parteIndividualTotal * pesoBonus).toFixed(2)) : 0;
+          const bonusTotal = Number((bonusColetivo + bonusIndividual).toFixed(2));
 
-    return {
-      id: c.id,
-      nome: c.nome,
-      funcao: c.funcao,
-      pesoBonus: c.pesoBonus,
-      pesoBonusPercentual: Number((c.pesoBonus * 100).toFixed(0)),
-      pontosRealizados: c.pontosRealizados,
-      percentualTotal: pontosRealizados > 0 ? Number(((c.pontosRealizados / pontosRealizados) * 100).toFixed(1)) : 0,
-      metaIndividualCumprida: c.metaIndividualCumprida,
-      bonusColetivo,
-      bonusIndividual,
-      bonusTotal,
-    };
-  });
+          return {
+            id: c.tecnicoId,
+            nome: c.tecnicoNome,
+            funcao: c.funcao,
+            pesoBonus,
+            pesoBonusPercentual: Number((pesoBonus * 100).toFixed(0)),
+            pontosRealizados: c.pontos,
+            percentualTotal: pontosRealizados > 0 ? Number(((c.pontos / pontosRealizados) * 100).toFixed(1)) : 0,
+            metaIndividualCumprida: c.metaIndividualCumprida ?? true,
+            bonusColetivo,
+            bonusIndividual,
+            bonusTotal,
+          };
+        })
+    : producaoData.colaboradores.map((c) => {
+        const bonusColetivo = Number((parteColetivaTotal * c.pesoBonus).toFixed(2));
+        const bonusIndividual = c.metaIndividualCumprida ? Number((parteIndividualTotal * c.pesoBonus).toFixed(2)) : 0;
+        const bonusTotal = Number((bonusColetivo + bonusIndividual).toFixed(2));
+
+        return {
+          id: c.id,
+          nome: c.nome,
+          funcao: c.funcao,
+          pesoBonus: c.pesoBonus,
+          pesoBonusPercentual: Number((c.pesoBonus * 100).toFixed(0)),
+          pontosRealizados: c.pontosRealizados,
+          percentualTotal: pontosRealizados > 0 ? Number(((c.pontosRealizados / pontosRealizados) * 100).toFixed(1)) : 0,
+          metaIndividualCumprida: c.metaIndividualCumprida,
+          bonusColetivo,
+          bonusIndividual,
+          bonusTotal,
+        };
+      });
 
   const mesesNomes = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -175,8 +225,8 @@ export async function getMetasAtual(mesDesejado?: number, anoDesejado?: number) 
     statusQualidadeLabel,
     taxaRetrabalho,
     limiteRetrabalhoPct,
-    totalRetrabalho: producaoData.totalRetrabalho,
-    totalLancamentos: producaoData.totalLancamentos,
+    totalRetrabalho,
+    totalLancamentos,
     // Ritmos e Projeção
     diasUteisTotais,
     diasUteisDecorridos,
@@ -193,7 +243,7 @@ export async function getMetasAtual(mesDesejado?: number, anoDesejado?: number) 
     percentualAlvo,
     percentualExcelencia,
     // Bônus e Faturamento
-    faturamentoLancado: producaoData.faturamentoLancado,
+    faturamentoLancado: fechamentoOficial ? fechamentoOficial.faturamentoLancado : producaoData.faturamentoLancado,
     faturamentoRecebido: config.faturamentoRecebido,
     faturamentoBaseCalculo: faturamentoBase,
     percentualFundoBonus: config.percentualFundoBonus,

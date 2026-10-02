@@ -1,4 +1,5 @@
 import { prisma, isDatabaseReady } from '../../database/prisma.js';
+import { getFechamentoMensalOficial, getChavesMesesFechados } from '../meta/fechamento.store.js';
 
 export interface BancadaStatus {
   tecnicoId: string;
@@ -581,6 +582,11 @@ export async function getMesesDisponiveis(): Promise<MesDisponivel[]> {
   const monthsSet = new Set<string>();
   monthsSet.add(`${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`);
 
+  // Inclui todos os meses que possuem fechamento oficial salvo no store
+  for (const k of getChavesMesesFechados()) {
+    monthsSet.add(k);
+  }
+
   if (isDatabaseReady()) {
     try {
       const prods = await prisma.producao.findMany({
@@ -836,49 +842,92 @@ export async function getGerencialData(
       .toFixed(1)
   );
 
+  // Se for consulta de mês fechado, verifica se há fechamento oficial persistido
+  const fechamentoOficial = isPeriodoMes ? getFechamentoMensalOficial(targetMes, targetAno) : null;
+
   const totalPts = isHoje
     ? (pontosProducaoEquipeHoje || 1)
+    : fechamentoOficial
+    ? (fechamentoOficial.pontosTotais || 1)
     : metasDataPeriodo
     ? (metasDataPeriodo.pontosRealizados || 1)
     : (tvData.meta.pontosRealizados || 1);
 
-  const colaboradoresLista =
-    metasDataPeriodo?.equipe && metasDataPeriodo.equipe.length > 0
-      ? metasDataPeriodo.equipe
-      : (tvData.meta as any)?.colaboradores && (tvData.meta as any).colaboradores.length > 0
-      ? (tvData.meta as any).colaboradores
-      : (tvData.meta as any)?.equipe && (tvData.meta as any).equipe.length > 0
-      ? (tvData.meta as any).equipe
-      : [
-          { id: 'colab-samuel', nome: 'Samuel', funcao: 'Produção', pesoBonus: 0.22, pontosRealizados: 0 },
-          { id: 'colab-joao', nome: 'João', funcao: 'Produção', pesoBonus: 0.22, pontosRealizados: 0 },
-          { id: 'colab-joas', nome: 'Joás', funcao: 'Produção', pesoBonus: 0.22, pontosRealizados: 0 },
-          { id: 'colab-rhyan', nome: 'Rhyan', funcao: 'Qualidade/Testes', pesoBonus: 0.17, pontosRealizados: 0 },
-          { id: 'colab-luana', nome: 'Luana', funcao: 'Atendimento/Comercial', pesoBonus: 0.17, pontosRealizados: 0 },
-        ];
+  const colaboradoresLista = fechamentoOficial
+    ? fechamentoOficial.tecnicos.map((t) => ({
+        id: t.tecnicoId,
+        nome: t.tecnicoNome,
+        funcao: t.funcao,
+        pesoBonus: t.pesoBonus ?? (t.funcao.includes('Qualidade') ? 0.17 : 0.22),
+        pontosRealizados: t.pontos,
+        metaIndividualCumprida: t.metaIndividualCumprida ?? true,
+      }))
+    : metasDataPeriodo?.equipe && metasDataPeriodo.equipe.length > 0
+    ? metasDataPeriodo.equipe
+    : (tvData.meta as any)?.colaboradores && (tvData.meta as any).colaboradores.length > 0
+    ? (tvData.meta as any).colaboradores
+    : (tvData.meta as any)?.equipe && (tvData.meta as any).equipe.length > 0
+    ? (tvData.meta as any).equipe
+    : [
+        { id: 'colab-samuel', nome: 'Samuel', funcao: 'Produção', pesoBonus: 0.22, pontosRealizados: 0 },
+        { id: 'colab-joao', nome: 'João', funcao: 'Produção', pesoBonus: 0.22, pontosRealizados: 0 },
+        { id: 'colab-joas', nome: 'Joás', funcao: 'Produção', pesoBonus: 0.22, pontosRealizados: 0 },
+        { id: 'colab-rhyan', nome: 'Rhyan', funcao: 'Qualidade/Testes', pesoBonus: 0.17, pontosRealizados: 0 },
+        { id: 'colab-luana', nome: 'Luana', funcao: 'Atendimento/Comercial', pesoBonus: 0.17, pontosRealizados: 0 },
+      ];
 
-  const produtividadeTecnicos: ProdutividadeTecnico[] = colaboradoresLista.map((c: any) => {
-    const bancada = tvData.bancadas.find((b) => isTecnicoMatch(b.tecnicoId || b.id || '', b.tecnicoNome || b.nome || '', c.id, c.nome));
-    const pts = isHoje ? (bancada?.pontosHoje || 0) : (c.pontosRealizados ?? 0);
-    const taxaAprov = bancada ? (bancada.taxaQualidadeHoje ?? 100.0) : 100.0;
+  const produtividadeTecnicos: ProdutividadeTecnico[] = fechamentoOficial
+    ? fechamentoOficial.tecnicos.map((t) => ({
+        tecnicoId: t.tecnicoId,
+        tecnicoNome: t.tecnicoNome,
+        funcao: t.funcao,
+        pesoBonus: t.pesoBonus ?? (t.funcao.includes('Qualidade') ? 0.17 : 0.22),
+        pontosRealizados: t.pontos,
+        percentualTotal: fechamentoOficial.pontosTotais > 0 ? Number(((t.pontos / fechamentoOficial.pontosTotais) * 100).toFixed(1)) : 0,
+        taxaAprovacao: 100.0,
+        tempoMedioPorLoteMinutos: fechamentoOficial.leadTimeMedioGeralMinutos || 38,
+      }))
+    : colaboradoresLista.map((c: any) => {
+        const bancada = tvData.bancadas.find((b) => isTecnicoMatch(b.tecnicoId || b.id || '', b.tecnicoNome || b.nome || '', c.id, c.nome));
+        const pts = isHoje ? (bancada?.pontosHoje || 0) : (c.pontosRealizados ?? 0);
+        const taxaAprov = bancada ? (bancada.taxaQualidadeHoje ?? 100.0) : 100.0;
 
-    return {
-      tecnicoId: c.id,
-      tecnicoNome: c.nome,
-      funcao: c.funcao || 'Produção',
-      pesoBonus: c.pesoBonus ?? 0.2,
-      pontosRealizados: pts,
-      percentualTotal: totalPts > 0 ? Number(((pts / totalPts) * 100).toFixed(1)) : 0,
-      taxaAprovacao: taxaAprov,
-      tempoMedioPorLoteMinutos: leadTimeMedioGeralMinutos || 35,
-    };
-  });
+        return {
+          tecnicoId: c.id,
+          tecnicoNome: c.nome,
+          funcao: c.funcao || 'Produção',
+          pesoBonus: c.pesoBonus ?? 0.2,
+          pontosRealizados: pts,
+          percentualTotal: totalPts > 0 ? Number(((pts / totalPts) * 100).toFixed(1)) : 0,
+          taxaAprovacao: taxaAprov,
+          tempoMedioPorLoteMinutos: leadTimeMedioGeralMinutos || 35,
+        };
+      });
 
   // ─── Desempenho por Técnico (Reparados / Sem Defeito / Sucata / Retrabalho / Testados / Aprovados / Reprovados / Pontos) ───
   let desempenhoTecnicos: DesempenhoTecnico[] = [];
   let producoesPeriodoTotalCount = 0;
 
-  if (isDatabaseReady()) {
+  if (fechamentoOficial) {
+    desempenhoTecnicos = fechamentoOficial.tecnicos.map((t) => ({
+      tecnicoId: t.tecnicoId,
+      tecnicoNome: t.tecnicoNome,
+      funcao: t.funcao,
+      pontos: t.pontos,
+      reparados: t.reparados,
+      semDefeito: t.semDefeito,
+      sucata: t.sucata,
+      retrabalhos: t.retrabalhos,
+      testados: t.testados || 0,
+      aprovados: t.aprovados || 0,
+      reprovados: t.reprovados || 0,
+    }));
+    totalReparados = fechamentoOficial.totalReparadas;
+    totalSemDefeito = fechamentoOficial.totalSemDefeito;
+    totalSucata = fechamentoOficial.totalSucata;
+    totalRetrabalho = fechamentoOficial.totalRetrabalho;
+    producoesPeriodoTotalCount = fechamentoOficial.totalLancamentos;
+  } else if (isDatabaseReady()) {
     try {
       // Buscar todos os técnicos ativos
       const todosUsuarios = await prisma.usuario.findMany({
@@ -1037,6 +1086,26 @@ export async function getGerencialData(
 
   const metaFinal = metasDataPeriodo || tvData.meta;
 
+  const pontosTotaisFinal = fechamentoOficial
+    ? fechamentoOficial.pontosTotais
+    : isHoje
+    ? pontosProducaoEquipeHoje
+    : metaFinal.pontosRealizados;
+
+  const metaAlvoFinal = fechamentoOficial ? fechamentoOficial.metaAlvo : (metaFinal.metaAlvo || 300);
+  const metaBaseFinal = fechamentoOficial ? fechamentoOficial.metaBase : (metaFinal.metaBase || 250);
+  const metaExcelenciaFinal = fechamentoOficial ? fechamentoOficial.metaExcelencia : (metaFinal.metaExcelencia || 350);
+  const statusMetaFinal = fechamentoOficial ? fechamentoOficial.statusMeta : (metaFinal.statusMeta || 'ABAIXO_DA_META');
+  const statusMetaLabelFinal = fechamentoOficial ? fechamentoOficial.statusMetaLabel : (metaFinal.statusMetaLabel || '🔴 ABAIXO DA META');
+  const taxaRetrabalhoFinal = fechamentoOficial ? fechamentoOficial.taxaRetrabalho : (metaFinal.taxaRetrabalho || 0.0);
+  const fpyFinal = fechamentoOficial ? fechamentoOficial.fpyGeral : tvData.fpyHoje.fpyPercentual;
+  const leadTimeFinal = fechamentoOficial
+    ? fechamentoOficial.leadTimeMedioGeralMinutos
+    : leadTimeMedioGeralMinutos || (tvData.filaPrioritaria.length > 0 ? 30 : 0);
+  const faturamentoFinal = fechamentoOficial
+    ? fechamentoOficial.faturamentoLancado
+    : metaFinal.faturamentoLancado || metaFinal.faturamentoBaseCalculo || 0.0;
+
   return {
     periodo,
     periodoLabel,
@@ -1044,14 +1113,14 @@ export async function getGerencialData(
     anoReferencia: targetAno,
     isMesPassado,
     isPeriodoMes,
-    faturamentoEstimado: metaFinal.faturamentoLancado || metaFinal.faturamentoBaseCalculo || 0.0,
+    faturamentoEstimado: faturamentoFinal,
     totalOsAtivas,
-    pontosTotaisRealizados: isHoje ? pontosProducaoEquipeHoje : metaFinal.pontosRealizados,
-    metaAlvoPeriodo: metaFinal.metaAlvo || 300,
-    metaBasePeriodo: metaFinal.metaBase || 250,
-    metaExcelenciaPeriodo: metaFinal.metaExcelencia || 350,
-    statusMeta: metaFinal.statusMeta || 'ABAIXO_DA_META',
-    statusMetaLabel: metaFinal.statusMetaLabel || '🔴 ABAIXO DA META',
+    pontosTotaisRealizados: pontosTotaisFinal,
+    metaAlvoPeriodo: metaAlvoFinal,
+    metaBasePeriodo: metaBaseFinal,
+    metaExcelenciaPeriodo: metaExcelenciaFinal,
+    statusMeta: statusMetaFinal,
+    statusMetaLabel: statusMetaLabelFinal,
     resumoFabrica: {
       totalReparados,
       totalSemDefeito,
@@ -1060,9 +1129,9 @@ export async function getGerencialData(
       totalLancamentos: producoesPeriodoTotalCount,
     },
     mesesDisponiveis,
-    fpyGeral: tvData.fpyHoje.fpyPercentual,
-    taxaRetrabalho: metaFinal.taxaRetrabalho || 0.0,
-    leadTimeMedioGeralMinutos: leadTimeMedioGeralMinutos || (tvData.filaPrioritaria.length > 0 ? 30 : 0),
+    fpyGeral: fpyFinal,
+    taxaRetrabalho: taxaRetrabalhoFinal,
+    leadTimeMedioGeralMinutos: leadTimeFinal,
     distribuicaoDefeitos,
     leadTimePorEquipamento,
     produtividadeTecnicos,
