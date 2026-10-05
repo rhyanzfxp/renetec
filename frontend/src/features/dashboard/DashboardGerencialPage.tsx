@@ -327,13 +327,24 @@ export const DashboardGerencialPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             {data.desempenhoTecnicos
               .filter((tec) => {
-                const f = (tec.funcao || '').toLowerCase();
-                return !f.includes('qualidade') && !f.includes('testes') && !f.includes('inspetor') && !f.includes('cq');
+                const nome = (tec.tecnicoNome || '').toLowerCase().trim();
+                return nome !== 'controle de qualidade' && !nome.startsWith('controle de qualidade');
               })
               .map((tec) => {
-                const totalItens = (tec.reparados || 0) + (tec.semDefeito || 0) + (tec.sucata || 0) + (tec.retrabalhos || 0);
-                const aprovados = tec.aprovados || 0;
-                const taxaAprov = tec.reparados > 0 ? Math.round((aprovados / tec.reparados) * 100) : 0;
+                const f = (tec.funcao || '').toLowerCase();
+                const isQualidade = f.includes('qualidade') || f.includes('testes') || f.includes('inspetor') || f.includes('cq');
+
+                const totalItens = isQualidade
+                  ? (tec.testados || 0)
+                  : ((tec.reparados || 0) + (tec.semDefeito || 0) + (tec.sucata || 0) + (tec.retrabalhos || 0));
+
+                const aprovados = (tec.aprovados !== undefined && tec.aprovados > 0)
+                  ? tec.aprovados
+                  : (isQualidade ? (tec.aprovados || 0) : Math.max(0, (tec.reparados || 0) - (tec.retrabalhos || 0)));
+
+                const taxaAprov = isQualidade
+                  ? (tec.testados > 0 ? Math.round(((tec.aprovados || 0) / tec.testados) * 100) : 100)
+                  : (tec.reparados > 0 ? Math.round((aprovados / tec.reparados) * 100) : 0);
 
                 return (
                   <div
@@ -343,7 +354,11 @@ export const DashboardGerencialPage: React.FC = () => {
                     {/* Cabeçalho do card */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black text-white bg-gradient-to-br from-violet-500 to-purple-600">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black text-white ${
+                          isQualidade
+                            ? 'bg-gradient-to-br from-cyan-500 to-blue-600'
+                            : 'bg-gradient-to-br from-violet-500 to-purple-600'
+                        }`}>
                           {tec.tecnicoNome?.charAt(0)?.toUpperCase() || '?'}
                         </div>
                         <div>
@@ -351,7 +366,7 @@ export const DashboardGerencialPage: React.FC = () => {
                             {tec.tecnicoNome}
                           </p>
                           <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider">
-                            {tec.funcao || 'Produção'}
+                            {tec.funcao || (isQualidade ? 'Qualidade/Testes' : 'Produção')}
                           </p>
                         </div>
                       </div>
@@ -367,53 +382,99 @@ export const DashboardGerencialPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Métricas — linha principal (3 colunas) */}
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="text-center p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                        <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 tabular-nums">{tec.reparados || 0}</p>
-                        <p className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 uppercase">Reparados</p>
-                      </div>
-                      <div className="text-center p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                        <p className="text-lg font-black text-blue-600 dark:text-blue-400 tabular-nums">{aprovados}</p>
-                        <p className="text-[10px] font-semibold text-blue-700 dark:text-blue-300 uppercase">Aprovados</p>
-                      </div>
-                      <div className="text-center p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                        <p className="text-lg font-black text-amber-600 dark:text-amber-400 tabular-nums">{tec.sucata || 0}</p>
-                        <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300 uppercase">Sucata</p>
-                      </div>
-                    </div>
-
-                    {/* Linha secundária (2 colunas) */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="text-center p-2 rounded-lg bg-sky-500/10 border border-sky-500/20">
-                        <p className="text-base font-black text-sky-600 dark:text-sky-400 tabular-nums">{tec.semDefeito || 0}</p>
-                        <p className="text-[10px] font-semibold text-sky-700 dark:text-sky-300 uppercase">Sem Defeito</p>
-                      </div>
-                      <div className="text-center p-2 rounded-lg bg-rose-500/10 border border-rose-500/20">
-                        <p className="text-base font-black text-rose-600 dark:text-rose-400 tabular-nums">{tec.retrabalhos || 0}</p>
-                        <p className="text-[10px] font-semibold text-rose-700 dark:text-rose-300 uppercase">Retrabalhos</p>
-                      </div>
-                    </div>
-
-                    {/* Barra visual: aprovados vs reparados */}
-                    {tec.reparados > 0 && (
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
-                          <span>Taxa de aprovação CQ</span>
-                          <span className={`font-bold ${taxaAprov >= 90 ? 'text-emerald-500' : taxaAprov >= 70 ? 'text-amber-500' : 'text-rose-500'}`}>
-                            {taxaAprov}%
-                          </span>
+                    {/* Métricas conforme o papel do colaborador */}
+                    {isQualidade ? (
+                      /* Layout de Controle de Qualidade / Testes (Rhyan) */
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="text-center p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
+                            <p className="text-lg font-black text-cyan-600 dark:text-cyan-400 tabular-nums">{tec.testados || 0}</p>
+                            <p className="text-[10px] font-semibold text-cyan-700 dark:text-cyan-300 uppercase">Testados</p>
+                          </div>
+                          <div className="text-center p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                            <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 tabular-nums">{tec.aprovados || 0}</p>
+                            <p className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 uppercase">Aprovados</p>
+                          </div>
+                          <div className="text-center p-2 rounded-lg bg-rose-500/10 border border-rose-500/20">
+                            <p className="text-lg font-black text-rose-600 dark:text-rose-400 tabular-nums">{tec.reprovados || 0}</p>
+                            <p className="text-[10px] font-semibold text-rose-700 dark:text-rose-300 uppercase">Reprovados</p>
+                          </div>
                         </div>
-                        <div className="w-full bg-surface-base rounded-full h-1.5 overflow-hidden flex">
-                          <div
-                            className="bg-blue-500 h-1.5 transition-all duration-500"
-                            style={{ width: `${taxaAprov}%` }}
-                          />
-                          <div
-                            className="bg-rose-500/60 h-1.5 transition-all duration-500"
-                            style={{ width: `${100 - taxaAprov}%` }}
-                          />
+
+                        {/* Barra visual de aprovação CQ */}
+                        {tec.testados > 0 && (
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
+                              <span>Índice de Aprovação CQ (FPY)</span>
+                              <span className={`font-bold ${taxaAprov >= 90 ? 'text-emerald-500' : taxaAprov >= 70 ? 'text-amber-500' : 'text-rose-500'}`}>
+                                {taxaAprov}%
+                              </span>
+                            </div>
+                            <div className="w-full bg-surface-base rounded-full h-1.5 overflow-hidden flex">
+                              <div
+                                className="bg-emerald-500 h-1.5 transition-all duration-500"
+                                style={{ width: `${taxaAprov}%` }}
+                              />
+                              <div
+                                className="bg-rose-500/70 h-1.5 transition-all duration-500"
+                                style={{ width: `${100 - taxaAprov}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      /* Layout de Técnicos de Bancada / Produção */
+                      <div className="space-y-3">
+                        {/* Métricas principais (3 colunas: Reparados, Aprovados, Sucata) */}
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="text-center p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                            <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 tabular-nums">{tec.reparados || 0}</p>
+                            <p className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 uppercase">Reparados</p>
+                          </div>
+                          <div className="text-center p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                            <p className="text-lg font-black text-blue-600 dark:text-blue-400 tabular-nums">{aprovados}</p>
+                            <p className="text-[10px] font-semibold text-blue-700 dark:text-blue-300 uppercase">Aprovados</p>
+                          </div>
+                          <div className="text-center p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                            <p className="text-lg font-black text-amber-600 dark:text-amber-400 tabular-nums">{tec.sucata || 0}</p>
+                            <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300 uppercase">Sucata</p>
+                          </div>
                         </div>
+
+                        {/* Linha secundária (2 colunas: Sem Defeito, Retrabalhos) */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="text-center p-2 rounded-lg bg-sky-500/10 border border-sky-500/20">
+                            <p className="text-base font-black text-sky-600 dark:text-sky-400 tabular-nums">{tec.semDefeito || 0}</p>
+                            <p className="text-[10px] font-semibold text-sky-700 dark:text-sky-300 uppercase">Sem Defeito</p>
+                          </div>
+                          <div className="text-center p-2 rounded-lg bg-rose-500/10 border border-rose-500/20">
+                            <p className="text-base font-black text-rose-600 dark:text-rose-400 tabular-nums">{tec.retrabalhos || 0}</p>
+                            <p className="text-[10px] font-semibold text-rose-700 dark:text-rose-300 uppercase">Retrabalhos</p>
+                          </div>
+                        </div>
+
+                        {/* Barra visual: aprovados vs retrabalhos */}
+                        {tec.reparados > 0 && (
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
+                              <span>Taxa de aprovação CQ</span>
+                              <span className={`font-bold ${taxaAprov >= 90 ? 'text-emerald-500' : taxaAprov >= 70 ? 'text-amber-500' : 'text-rose-500'}`}>
+                                {taxaAprov}%
+                              </span>
+                            </div>
+                            <div className="w-full bg-surface-base rounded-full h-1.5 overflow-hidden flex">
+                              <div
+                                className="bg-blue-500 h-1.5 transition-all duration-500"
+                                style={{ width: `${taxaAprov}%` }}
+                              />
+                              <div
+                                className="bg-rose-500/60 h-1.5 transition-all duration-500"
+                                style={{ width: `${100 - taxaAprov}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -454,7 +515,12 @@ export const DashboardGerencialPage: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-surface-border">
               {data.produtividadeTecnicos && data.produtividadeTecnicos.length > 0 ? (
-                data.produtividadeTecnicos.map((tec) => (
+                data.produtividadeTecnicos
+                  .filter((tec) => {
+                    const n = (tec.tecnicoNome || '').toLowerCase().trim();
+                    return n !== 'controle de qualidade' && !n.startsWith('controle de qualidade');
+                  })
+                  .map((tec) => (
                   <tr key={tec.tecnicoId} className="hover:bg-surface-elevated/30 transition-colors">
                     <td className="py-3 px-3 font-bold text-gray-900 dark:text-white flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-emerald-500" />

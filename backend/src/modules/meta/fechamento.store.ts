@@ -81,7 +81,7 @@ const FECHAMENTOS_INICIAIS: Record<string, FechamentoMensal> = {
         semDefeito: 2,
         retrabalhos: 25,
         testados: 0,
-        aprovados: 0,
+        aprovados: 381,
         reprovados: 0,
         pesoBonus: 0.22,
         metaIndividualCumprida: true,
@@ -96,7 +96,7 @@ const FECHAMENTOS_INICIAIS: Record<string, FechamentoMensal> = {
         semDefeito: 2,
         retrabalhos: 8,
         testados: 0,
-        aprovados: 0,
+        aprovados: 177,
         reprovados: 0,
         pesoBonus: 0.22,
         metaIndividualCumprida: true,
@@ -111,7 +111,7 @@ const FECHAMENTOS_INICIAIS: Record<string, FechamentoMensal> = {
         semDefeito: 1,
         retrabalhos: 12,
         testados: 0,
-        aprovados: 0,
+        aprovados: 169,
         reprovados: 0,
         pesoBonus: 0.22,
         metaIndividualCumprida: true,
@@ -146,32 +146,25 @@ const FECHAMENTOS_INICIAIS: Record<string, FechamentoMensal> = {
         pesoBonus: 0.17,
         metaIndividualCumprida: true,
       },
-      {
-        tecnicoId: '98a08c37-f016-4ea9-ad16-fc35d0d40980',
-        tecnicoNome: 'Controle de Qualidade',
-        funcao: 'Qualidade/Testes',
-        pontos: 0.0,
-        reparados: 0,
-        sucata: 0,
-        semDefeito: 0,
-        retrabalhos: 0,
-        testados: 0,
-        aprovados: 0,
-        reprovados: 0,
-        pesoBonus: 0.0,
-        metaIndividualCumprida: true,
-      },
     ],
   },
 };
 
-// Caminho de persistência em disco fixo em backend/src/database/fechamentos_historicos.json
+// Caminho de persistência em disco fixo
 function getStorageFilePath(): string {
   const cwd = process.cwd();
-  if (cwd.endsWith('backend')) {
-    return path.resolve(cwd, 'src/database/fechamentos_historicos.json');
+  const candidates = [
+    path.resolve(cwd, 'database/fechamentos_historicos.json'),
+    path.resolve(cwd, '../database/fechamentos_historicos.json'),
+    path.resolve(cwd, 'src/database/fechamentos_historicos.json'),
+    path.resolve(cwd, 'backend/src/database/fechamentos_historicos.json'),
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
   }
-  return path.resolve(cwd, 'backend/src/database/fechamentos_historicos.json');
+  return cwd.endsWith('backend')
+    ? path.resolve(cwd, '../database/fechamentos_historicos.json')
+    : path.resolve(cwd, 'database/fechamentos_historicos.json');
 }
 
 const STORAGE_FILE = getStorageFilePath();

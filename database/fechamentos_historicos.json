@@ -32,7 +32,7 @@
         "semDefeito": 2,
         "retrabalhos": 25,
         "testados": 0,
-        "aprovados": 0,
+        "aprovados": 381,
         "reprovados": 0,
         "pesoBonus": 0.22,
         "metaIndividualCumprida": true
@@ -47,7 +47,7 @@
         "semDefeito": 2,
         "retrabalhos": 8,
         "testados": 0,
-        "aprovados": 0,
+        "aprovados": 177,
         "reprovados": 0,
         "pesoBonus": 0.22,
         "metaIndividualCumprida": true
@@ -62,7 +62,7 @@
         "semDefeito": 1,
         "retrabalhos": 12,
         "testados": 0,
-        "aprovados": 0,
+        "aprovados": 169,
         "reprovados": 0,
         "pesoBonus": 0.22,
         "metaIndividualCumprida": true
@@ -95,21 +95,6 @@
         "aprovados": 0,
         "reprovados": 0,
         "pesoBonus": 0.17,
-        "metaIndividualCumprida": true
-      },
-      {
-        "tecnicoId": "98a08c37-f016-4ea9-ad16-fc35d0d40980",
-        "tecnicoNome": "Controle de Qualidade",
-        "funcao": "Qualidade/Testes",
-        "pontos": 0,
-        "reparados": 0,
-        "sucata": 0,
-        "semDefeito": 0,
-        "retrabalhos": 0,
-        "testados": 0,
-        "aprovados": 0,
-        "reprovados": 0,
-        "pesoBonus": 0,
         "metaIndividualCumprida": true
       }
     ]

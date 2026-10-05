@@ -877,7 +877,9 @@ export async function getGerencialData(
       ];
 
   const produtividadeTecnicos: ProdutividadeTecnico[] = fechamentoOficial
-    ? fechamentoOficial.tecnicos.map((t) => ({
+    ? fechamentoOficial.tecnicos
+        .filter((t) => (t.tecnicoNome || '').toLowerCase().trim() !== 'controle de qualidade')
+        .map((t) => ({
         tecnicoId: t.tecnicoId,
         tecnicoNome: t.tecnicoNome,
         funcao: t.funcao,
@@ -909,20 +911,30 @@ export async function getGerencialData(
   let producoesPeriodoTotalCount = 0;
 
   if (fechamentoOficial) {
-    desempenhoTecnicos = fechamentoOficial.tecnicos.map((t) => ({
-      tecnicoId: t.tecnicoId,
-      tecnicoNome: t.tecnicoNome,
-      funcao: t.funcao,
-      pontos: t.pontos,
-      reparados: t.reparados,
-      semDefeito: t.semDefeito,
-      sucata: t.sucata,
-      retrabalhos: t.retrabalhos,
-      testados: t.testados || 0,
-      aprovados: t.aprovados || 0,
-      reprovados: t.reprovados || 0,
-    }));
-    totalReparados = fechamentoOficial.totalReparadas;
+    desempenhoTecnicos = fechamentoOficial.tecnicos
+      .filter((t) => (t.tecnicoNome || '').toLowerCase().trim() !== 'controle de qualidade')
+      .map((t) => {
+        const isQualidade = (t.funcao || '').toLowerCase().includes('qualidade') ||
+                            (t.funcao || '').toLowerCase().includes('testes');
+        const aprovadosCalc = (t.aprovados !== undefined && t.aprovados > 0)
+          ? t.aprovados
+          : (isQualidade ? (t.aprovados || 0) : Math.max(0, (t.reparados || 0) - (t.retrabalhos || 0)));
+
+        return {
+          tecnicoId: t.tecnicoId,
+          tecnicoNome: t.tecnicoNome,
+          funcao: t.funcao,
+          pontos: t.pontos,
+          reparados: t.reparados,
+          semDefeito: t.semDefeito,
+          sucata: t.sucata,
+          retrabalhos: t.retrabalhos,
+          testados: t.testados || 0,
+          aprovados: aprovadosCalc,
+          reprovados: t.reprovados || 0,
+        };
+      });
+    totalReparadas = fechamentoOficial.totalReparadas;
     totalSemDefeito = fechamentoOficial.totalSemDefeito;
     totalSucata = fechamentoOficial.totalSucata;
     totalRetrabalho = fechamentoOficial.totalRetrabalho;
@@ -971,6 +983,16 @@ export async function getGerencialData(
           quantidadeTestada: true,
           quantidadeAprovada: true,
           quantidadeReprovada: true,
+          producao: {
+            select: {
+              tecnicoId: true,
+              itemOrdemServico: {
+                select: {
+                  tecnicoAlocadoId: true,
+                },
+              },
+            },
+          },
         },
       });
 
@@ -994,6 +1016,7 @@ export async function getGerencialData(
       });
 
       for (const u of todosUsuarios) {
+        if (u.nome.toLowerCase().includes('controle de qualidade')) continue;
         const isQualidade = u.perfil === 'QUALIDADE' || u.nome.toLowerCase().includes('rhyan');
         const funcao = isQualidade ? 'Qualidade/Testes' : 'Produção';
 
@@ -1057,6 +1080,18 @@ export async function getGerencialData(
             }
           }
 
+          let aprovadosCqCount = 0;
+          for (const t of testesPeriodo) {
+            const tecProdId = (t as any).producao?.tecnicoId || (t as any).producao?.itemOrdemServico?.tecnicoAlocadoId;
+            if (tecProdId === u.id) {
+              aprovadosCqCount += t.quantidadeAprovada || 0;
+            }
+          }
+
+          const aprovadosFinal = aprovadosCqCount > 0
+            ? aprovadosCqCount
+            : Math.max(0, reparados - retrabalhosCount);
+
           totalReparados += reparados;
           totalSemDefeito += semDefeito;
           totalSucata += sucata;
@@ -1071,8 +1106,8 @@ export async function getGerencialData(
             sucata,
             retrabalhos: retrabalhosCount,
             testados: 0,
-            aprovados: 0,
-            reprovados: 0,
+            aprovados: aprovadosFinal,
+            reprovados: retrabalhosCount,
           });
         }
       }
