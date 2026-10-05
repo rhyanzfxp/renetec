@@ -41,21 +41,22 @@ export async function realizarTeste(inspetorId: string, dados: RealizarTesteInpu
       usuarioId: inspetorId,
       entidade: 'Teste',
       entidadeId: teste.id,
-      descricao: `Laudo de CQ: ${dados.quantidadeAprovada} aprovadas${semDefeito > 0 ? `, ${semDefeito} sem defeito` : ''}, ${dados.quantidadeReprovada} reprovadas (encaminhadas para retrabalho).`,
+      descricao: `Laudo de CQ: ${dados.quantidadeAprovada} aprovadas (reparadas)${semDefeito > 0 ? `, ${semDefeito} sem defeito (não pontuam)` : ''}, ${dados.quantidadeReprovada} reprovadas (encaminhadas para retrabalho).`,
       detalhes: { quantidadeAprovada: dados.quantidadeAprovada, quantidadeSemDefeito: semDefeito, quantidadeReprovada: dados.quantidadeReprovada },
     }).catch(() => {});
   }
 
-  const totalAprovadas = dados.quantidadeAprovada + semDefeito;
-  if (totalAprovadas > 0) {
+  // REGRA DE NEGÓCIO: Aprovados são APENAS as peças reparadas aprovadas.
+  // "Sem Defeito" NÃO conta como aprovado nem gera pontos na meta.
+  if (dados.quantidadeAprovada > 0) {
     realtimeService.broadcast('qualidade:aprovado', { teste });
-    realtimeService.broadcast('meta:atualizada', { aprovadas: totalAprovadas });
+    realtimeService.broadcast('meta:atualizada', { aprovadas: dados.quantidadeAprovada });
     log({
       acao: 'TESTE_APROVADO',
       usuarioId: inspetorId,
       entidade: 'Teste',
       entidadeId: teste.id,
-      descricao: `Lote com peças aprovadas no CQ: ${totalAprovadas} unidades (${dados.quantidadeAprovada} reparadas${semDefeito > 0 ? `, ${semDefeito} sem defeito` : ''}).`,
+      descricao: `Lote com peças reparadas aprovadas no CQ: ${dados.quantidadeAprovada} unidades${semDefeito > 0 ? ` (${semDefeito} sem defeito sem pontuação)` : ''}.`,
       detalhes: { quantidadeAprovada: dados.quantidadeAprovada, quantidadeSemDefeito: semDefeito },
     }).catch(() => {});
   }

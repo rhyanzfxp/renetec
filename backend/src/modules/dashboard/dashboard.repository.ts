@@ -449,7 +449,8 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
             ptsHoje += qtdPontuavel * ptsUnit;
           }
           qtdTestadaHoje += qtdTest;
-          qtdAprovadaHoje += qtdAprov;
+          // REGRA DE NEGÓCIO: Apenas peças reparadas aprovadas contam em aprovadas (sem defeito não conta como aprovado nem gera pontos)
+          qtdAprovadaHoje += qtdPontuavel;
           reprovadosHoje += t.quantidadeReprovada || 0;
           retrabalhoHoje += t.quantidadeReprovada || 0;
         }
@@ -519,7 +520,8 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
           if (qtdPontuavel > 0) {
             ptsHoje += qtdPontuavel * ptsUnit;
           }
-          qtdAprovadaHoje += qtdAprov;
+          // REGRA DE NEGÓCIO: Apenas peças reparadas aprovadas contam em aprovadas
+          qtdAprovadaHoje += qtdPontuavel;
           retrabalhoHoje += t.quantidadeReprovada || 0;
         }
       }
@@ -1036,7 +1038,10 @@ export async function getGerencialData(
           for (const t of testesPeriodo) {
             if (t.inspetorId === u.id) {
               testados += t.quantidadeTestada || 0;
-              aprovados += t.quantidadeAprovada || 0;
+              const repQtd = (t as any).producao?.quantidadeReparada !== undefined
+                ? (t as any).producao.quantidadeReparada
+                : (t.quantidadeAprovada || 0);
+              aprovados += Math.min(t.quantidadeAprovada || 0, repQtd);
               reprovados += t.quantidadeReprovada || 0;
             }
           }
@@ -1084,7 +1089,10 @@ export async function getGerencialData(
           for (const t of testesPeriodo) {
             const tecProdId = (t as any).producao?.tecnicoId || (t as any).producao?.itemOrdemServico?.tecnicoAlocadoId;
             if (tecProdId === u.id) {
-              aprovadosCqCount += t.quantidadeAprovada || 0;
+              const repQtd = (t as any).producao?.quantidadeReparada !== undefined
+                ? (t as any).producao.quantidadeReparada
+                : (t.quantidadeAprovada || 0);
+              aprovadosCqCount += Math.min(t.quantidadeAprovada || 0, repQtd);
             }
           }
 

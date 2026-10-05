@@ -225,7 +225,7 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
             {/* 1. Aprovadas */}
             <div className="space-y-1">
               <label className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Aprovadas (Meta)
+                <CheckCircle2 className="w-3.5 h-3.5" /> Aprovadas (Reparadas)
               </label>
               <Input
                 type="number"
@@ -239,7 +239,7 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
                 placeholder="0"
                 required
               />
-              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 block font-medium">Contam p/ meta</span>
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 block font-medium">Reparadas / Gera pontos</span>
             </div>
 
             {/* 2. Sem Defeito (Opcional) */}
@@ -258,7 +258,7 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
                 }}
                 placeholder="0"
               />
-              <span className="text-[10px] text-sky-600 dark:text-sky-400 block font-medium">Não pontua na meta</span>
+              <span className="text-[10px] text-sky-600 dark:text-sky-400 block font-medium">0 pts / Não conta como aprovado</span>
             </div>
 
             {/* 3. Reprovadas (Retrabalho) */}

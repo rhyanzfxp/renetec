@@ -199,8 +199,16 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
           <div className="flex flex-wrap items-center gap-2 text-xs text-gray-700 dark:text-gray-300">
             <span className="font-bold text-emerald-600 dark:text-emerald-400 tabular-nums flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5" /> +{quantidadeAprovada} aprovadas
+              <CheckCircle2 className="w-3.5 h-3.5" /> +{quantidadeAprovada} aprovadas (reparadas)
             </span>
+            {quantidadeSemDefeito > 0 && (
+              <>
+                <span className="text-gray-400 dark:text-gray-500">•</span>
+                <span className="text-sky-600 dark:text-sky-400 font-semibold tabular-nums">
+                  {quantidadeSemDefeito} sem defeito (0 pts)
+                </span>
+              </>
+            )}
             {quantidadeReprovada > 0 && (
               <>
                 <span className="text-gray-400 dark:text-gray-500">•</span>
@@ -393,7 +401,7 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
                 className="w-full h-10 px-3 bg-surface-card border border-emerald-500/50 rounded-lg text-sm text-center text-emerald-600 dark:text-emerald-300 font-mono font-black focus:outline-none focus:border-emerald-400 ring-1 ring-emerald-500/30"
                 required
               />
-              <span className="text-[10px] text-emerald-600 dark:text-emerald-400/80 block text-center font-medium">Meta imediata</span>
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400/80 block text-center font-medium">Reparadas / Meta</span>
             </div>
 
             <div className="space-y-1">
@@ -412,7 +420,7 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
                 placeholder="0"
                 className="w-full h-10 px-3 bg-surface-card border border-sky-500/40 rounded-lg text-sm text-center text-sky-600 dark:text-sky-300 font-mono font-bold focus:outline-none focus:border-sky-500"
               />
-              <span className="text-[10px] text-sky-600 dark:text-sky-400/80 block text-center font-medium">Opcional</span>
+              <span className="text-[10px] text-sky-600 dark:text-sky-400/80 block text-center font-medium">0 pts / Não aprovado</span>
             </div>
 
             <div className="space-y-1">
@@ -464,10 +472,10 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
             }`}
           >
             <span>
-              Validação: <strong className="tabular-nums text-emerald-700 dark:text-emerald-400">{quantidadeAprovada}</strong> (Aprov.) +{' '}
+              Validação: <strong className="tabular-nums text-emerald-700 dark:text-emerald-400">{quantidadeAprovada}</strong> (Aprov. Reparadas) +{' '}
               {quantidadeSemDefeito > 0 ? (
                 <>
-                  <strong className="tabular-nums text-sky-700 dark:text-sky-400">{quantidadeSemDefeito}</strong> (Sem Def.) +{' '}
+                  <strong className="tabular-nums text-sky-700 dark:text-sky-400">{quantidadeSemDefeito}</strong> (Sem Def. / 0 pts) +{' '}
                 </>
               ) : null}
               <strong className="tabular-nums text-amber-700 dark:text-amber-400">{quantidadeReprovada}</strong> (Retrab.) +{' '}

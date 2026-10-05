@@ -396,15 +396,14 @@ export async function realizarTeste(
     const obsFinal = `${semDefeitoPrefixo}${sucataPrefixo}${baseObs || ''}`.trim();
 
     // 1. Criar o registro do Teste
-    // Aprovados do teste = Aprovados (reparados) + Sem Defeito (pois ambos passaram no teste)
-    const totalAprovadosTeste = dados.quantidadeAprovada + qtdSemDefeito;
-
+    // REGRA DE NEGÓCIO: Aprovados = APENAS as peças reparadas aprovadas.
+    // "Sem Defeito" NÃO conta como aprovado nem gera pontos (apenas compõe o volume total testado).
     const teste = await tx.teste.create({
       data: {
         producaoId: producaoDbId,
         inspetorId: inspetorDbId,
         quantidadeTestada: dados.quantidadeTestada,
-        quantidadeAprovada: totalAprovadosTeste,
+        quantidadeAprovada: dados.quantidadeAprovada,
         quantidadeReprovada: dados.quantidadeReprovada,
         observacao: obsFinal || null,
         dataTeste: agora,
