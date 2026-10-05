@@ -461,8 +461,24 @@ const TabelaQualidade: React.FC<{ dados: ItemRelatorioQualidade[]; onExport: () 
   const [filtros, setFiltros] = useState<FiltrosLocais>({ busca: '', tecnico: '', inspetor: '', cliente: '', status: '' });
 
   const inspetorOpts = useMemo(() => [...new Set(dados.map((d) => d.inspetorNome))].sort(), [dados]);
-  const tecnicoOpts = useMemo(() => [...new Set(dados.map((d) => d.tecnicoReparoNome))].sort(), [dados]);
+  // Deriva a lista de técnicos do dataset completo (garante que todos apareçam, mesmo com poucos laudos)
+  const tecnicoOpts = useMemo(() => [...new Set(dados.map((d) => d.tecnicoReparoNome))].filter(Boolean).sort(), [dados]);
   const clienteOpts = useMemo(() => [...new Set(dados.map((d) => d.clienteNome))].sort(), [dados]);
+
+  // Totais por técnico de reparo (calculado sempre do dataset completo — independente de filtros)
+  const totaisPorTecnico = useMemo(() => {
+    const map = new Map<string, { nome: string; testadas: number; aprovadas: number; reprovadas: number; laudos: number }>();
+    for (const d of dados) {
+      const nome = d.tecnicoReparoNome || 'Desconhecido';
+      const cur = map.get(nome) || { nome, testadas: 0, aprovadas: 0, reprovadas: 0, laudos: 0 };
+      cur.testadas += d.quantidadeTestada;
+      cur.aprovadas += d.quantidadeAprovada;
+      cur.reprovadas += d.quantidadeReprovada;
+      cur.laudos += 1;
+      map.set(nome, cur);
+    }
+    return Array.from(map.values()).sort((a, b) => b.aprovadas - a.aprovadas);
+  }, [dados]);
   const statusOpts = ['APROVADO_TOTAL', 'APROVADO_PARCIAL', 'REPROVADO_TOTAL'];
 
   const filtrados = useMemo(() => {
@@ -482,7 +498,71 @@ const TabelaQualidade: React.FC<{ dados: ItemRelatorioQualidade[]; onExport: () 
   if (!dados.length) return <EmptyState />;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
+      {/* ── Painel de Totais por Técnico de Reparo ── */}
+      {totaisPorTecnico.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+            <User className="w-3.5 h-3.5" /> Aprovados por Técnico de Reparo
+            <span className="text-[10px] normal-case font-normal text-gray-400 dark:text-gray-500">(clique no card para filtrar)</span>
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5">
+            {totaisPorTecnico.map((t) => {
+              const fpy = t.testadas > 0 ? ((t.aprovadas / t.testadas) * 100) : 100;
+              const isActive = filtros.tecnico === t.nome;
+              return (
+                <button
+                  key={t.nome}
+                  type="button"
+                  onClick={() => setFiltros((f) => ({ ...f, tecnico: isActive ? '' : t.nome }))}
+                  className={`relative p-3 rounded-xl border text-left transition-all hover:scale-[1.02] cursor-pointer ${
+                    isActive
+                      ? 'border-brand-500/60 bg-brand-500/10 ring-1 ring-brand-500/40 shadow-glow-primary'
+                      : 'border-surface-border bg-surface-elevated/40 hover:bg-surface-elevated/70 hover:border-surface-border/80'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        isActive ? 'bg-brand-500/30 border border-brand-500/50' : 'bg-emerald-500/15 border border-emerald-500/25'
+                      }`}>
+                        <User className={`w-2.5 h-2.5 ${isActive ? 'text-brand-400' : 'text-emerald-500 dark:text-emerald-400'}`} />
+                      </div>
+                      <span className="text-xs font-bold text-gray-900 dark:text-white truncate">{t.nome}</span>
+                    </div>
+                    <span className={`text-[9px] font-bold px-1 py-0.5 rounded border flex-shrink-0 ${
+                      fpy >= 95 ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                      : fpy >= 80 ? 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20'
+                      : 'text-red-600 dark:text-red-400 bg-red-500/10 border-red-500/20'
+                    }`}>
+                      {fpy.toFixed(0)}%
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-0.5 text-center">
+                    <div className="py-1 rounded-lg bg-emerald-500/10">
+                      <div className="text-base font-black text-emerald-600 dark:text-emerald-400 tabular-nums leading-none">{t.aprovadas}</div>
+                      <div className="text-[9px] text-gray-500 dark:text-gray-400 mt-0.5">Aprov.</div>
+                    </div>
+                    <div className="py-1 rounded-lg bg-amber-500/10">
+                      <div className="text-base font-black text-amber-600 dark:text-amber-400 tabular-nums leading-none">{t.reprovadas}</div>
+                      <div className="text-[9px] text-gray-500 dark:text-gray-400 mt-0.5">Retrab.</div>
+                    </div>
+                    <div className="py-1 rounded-lg bg-gray-500/10">
+                      <div className="text-base font-black text-gray-700 dark:text-gray-300 tabular-nums leading-none">{t.testadas}</div>
+                      <div className="text-[9px] text-gray-500 dark:text-gray-400 mt-0.5">Total</div>
+                    </div>
+                  </div>
+                  <div className="mt-1.5 text-[9px] text-gray-500 dark:text-gray-400 text-right">{t.laudos} laudo{t.laudos !== 1 ? 's' : ''}</div>
+                  {isActive && (
+                    <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-brand-400 animate-pulse" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <FiltrosLocaisBar
         filtros={filtros} onChange={setFiltros}
         tecnicoOpts={tecnicoOpts} inspetorOpts={inspetorOpts} clienteOpts={clienteOpts}

@@ -246,10 +246,27 @@ export const relatorioRepository = {
       const equip = item?.tipoEquipamento;
       const inspNome = t.inspetor?.nome || 'Inspetor CQ';
       const tecProd = t.producao?.tecnico?.nome;
-      const isTecProdInsp = tecProd && (tecProd === inspNome || tecProd.toLowerCase().includes('qualidade') || tecProd.toLowerCase().includes('rhyan'));
-      const tecReparo = isTecProdInsp
-        ? (item?.tecnicoAlocado?.nome || (os as any)?.tecnicoResponsavel?.nome || tecProd || 'Técnico')
-        : (tecProd || item?.tecnicoAlocado?.nome || 'Técnico');
+      const isQualidade = (nome?: string | null) =>
+        !!nome && (nome.toLowerCase().includes('rhyan') || nome.toLowerCase().includes('qualidade') || nome.toLowerCase().includes('inspetor') || nome === inspNome);
+
+      // Se o técnico da produção é o próprio inspetor/CQ, tenta resolver o real técnico de reparo
+      const isTecProdInsp = isQualidade(tecProd);
+
+      let tecReparo: string;
+      if (isTecProdInsp) {
+        // Ordem de prioridade: técnico alocado no item > responsável da OS > tecProd (fallback)
+        const tecAlocNome = item?.tecnicoAlocado?.nome;
+        const tecOSNome = (os as any)?.tecnicoResponsavel?.nome;
+        tecReparo =
+          (tecAlocNome && !isQualidade(tecAlocNome) ? tecAlocNome : null) ||
+          (tecOSNome && !isQualidade(tecOSNome) ? tecOSNome : null) ||
+          tecProd ||
+          'Técnico';
+      } else {
+        // Técnico da produção é o reparo real
+        tecReparo = tecProd || item?.tecnicoAlocado?.nome || 'Técnico';
+      }
+
       const retrabalho = t.retrabalhos?.[0];
       const tecDestino = retrabalho?.tecnicoResponsavel?.nome || tecReparo;
       const motivo = retrabalho?.motivoReprovacao?.descricao || (t.quantidadeReprovada > 0 ? 'Não-conformidade' : null);
