@@ -325,125 +325,100 @@ export const DashboardGerencialPage: React.FC = () => {
 
         {data.desempenhoTecnicos && data.desempenhoTecnicos.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            {data.desempenhoTecnicos.map((tec) => {
-              const isQualidade = tec.funcao?.toLowerCase().includes('qualidade') || tec.funcao?.toLowerCase().includes('testes');
-              const totalItens = isQualidade
-                ? (tec.testados || 0)
-                : ((tec.reparados || 0) + (tec.semDefeito || 0) + (tec.sucata || 0) + (tec.retrabalhos || 0));
+            {data.desempenhoTecnicos
+              .filter((tec) => {
+                const f = (tec.funcao || '').toLowerCase();
+                return !f.includes('qualidade') && !f.includes('testes') && !f.includes('inspetor') && !f.includes('cq');
+              })
+              .map((tec) => {
+                const totalItens = (tec.reparados || 0) + (tec.semDefeito || 0) + (tec.sucata || 0) + (tec.retrabalhos || 0);
+                const aprovados = tec.aprovados || 0;
+                const taxaAprov = tec.reparados > 0 ? Math.round((aprovados / tec.reparados) * 100) : 0;
 
-              return (
-                <div
-                  key={tec.tecnicoId}
-                  className="p-4 rounded-xl bg-surface-elevated/50 border border-surface-border hover:border-violet-500/30 transition-all duration-200 space-y-3"
-                >
-                  {/* Cabeçalho do card */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black text-white ${
-                        isQualidade
-                          ? 'bg-gradient-to-br from-cyan-500 to-blue-600'
-                          : 'bg-gradient-to-br from-violet-500 to-purple-600'
-                      }`}>
-                        {tec.tecnicoNome?.charAt(0)?.toUpperCase() || '?'}
+                return (
+                  <div
+                    key={tec.tecnicoId}
+                    className="p-4 rounded-xl bg-surface-elevated/50 border border-surface-border hover:border-violet-500/30 transition-all duration-200 space-y-3"
+                  >
+                    {/* Cabeçalho do card */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black text-white bg-gradient-to-br from-violet-500 to-purple-600">
+                          {tec.tecnicoNome?.charAt(0)?.toUpperCase() || '?'}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-gray-900 dark:text-white leading-tight">
+                            {tec.tecnicoNome}
+                          </p>
+                          <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider">
+                            {tec.funcao || 'Produção'}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-bold text-gray-900 dark:text-white leading-tight">
-                          {tec.tecnicoNome}
-                        </p>
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider">
-                          {tec.funcao || 'Produção'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      {tec.pontos !== undefined && (
-                        <span className="text-xs font-black text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
-                          {tec.pontos} pts
+                      <div className="flex items-center gap-1.5">
+                        {tec.pontos !== undefined && (
+                          <span className="text-xs font-black text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
+                            {tec.pontos} pts
+                          </span>
+                        )}
+                        <span className="text-[10px] font-mono text-gray-500 dark:text-gray-400 bg-surface-base px-2 py-0.5 rounded-md border border-surface-border">
+                          {totalItens} un
                         </span>
-                      )}
-                      <span className="text-[10px] font-mono text-gray-500 dark:text-gray-400 bg-surface-base px-2 py-0.5 rounded-md border border-surface-border">
-                        {totalItens} un
-                      </span>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Métricas */}
-                  {isQualidade ? (
-                    <div className="space-y-2">
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="text-center p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
-                          <p className="text-lg font-black text-cyan-600 dark:text-cyan-400 tabular-nums">{tec.testados || 0}</p>
-                          <p className="text-[10px] font-semibold text-cyan-700 dark:text-cyan-300 uppercase">Testados</p>
-                        </div>
-                        <div className="text-center p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                          <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 tabular-nums">{tec.aprovados || 0}</p>
-                          <p className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 uppercase">Aprovados</p>
-                        </div>
-                        <div className="text-center p-2 rounded-lg bg-rose-500/10 border border-rose-500/20">
-                          <p className="text-lg font-black text-rose-600 dark:text-rose-400 tabular-nums">{tec.reprovados || 0}</p>
-                          <p className="text-[10px] font-semibold text-rose-700 dark:text-rose-300 uppercase">Reprovados</p>
-                        </div>
+                    {/* Métricas — linha principal (3 colunas) */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="text-center p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                        <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 tabular-nums">{tec.reparados || 0}</p>
+                        <p className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 uppercase">Reparados</p>
                       </div>
-                      {/* Barra visual de aprovação */}
-                      {tec.testados > 0 && (
+                      <div className="text-center p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                        <p className="text-lg font-black text-blue-600 dark:text-blue-400 tabular-nums">{aprovados}</p>
+                        <p className="text-[10px] font-semibold text-blue-700 dark:text-blue-300 uppercase">Aprovados</p>
+                      </div>
+                      <div className="text-center p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                        <p className="text-lg font-black text-amber-600 dark:text-amber-400 tabular-nums">{tec.sucata || 0}</p>
+                        <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300 uppercase">Sucata</p>
+                      </div>
+                    </div>
+
+                    {/* Linha secundária (2 colunas) */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="text-center p-2 rounded-lg bg-sky-500/10 border border-sky-500/20">
+                        <p className="text-base font-black text-sky-600 dark:text-sky-400 tabular-nums">{tec.semDefeito || 0}</p>
+                        <p className="text-[10px] font-semibold text-sky-700 dark:text-sky-300 uppercase">Sem Defeito</p>
+                      </div>
+                      <div className="text-center p-2 rounded-lg bg-rose-500/10 border border-rose-500/20">
+                        <p className="text-base font-black text-rose-600 dark:text-rose-400 tabular-nums">{tec.retrabalhos || 0}</p>
+                        <p className="text-[10px] font-semibold text-rose-700 dark:text-rose-300 uppercase">Retrabalhos</p>
+                      </div>
+                    </div>
+
+                    {/* Barra visual: aprovados vs reparados */}
+                    {tec.reparados > 0 && (
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
+                          <span>Taxa de aprovação CQ</span>
+                          <span className={`font-bold ${taxaAprov >= 90 ? 'text-emerald-500' : taxaAprov >= 70 ? 'text-amber-500' : 'text-rose-500'}`}>
+                            {taxaAprov}%
+                          </span>
+                        </div>
                         <div className="w-full bg-surface-base rounded-full h-1.5 overflow-hidden flex">
                           <div
-                            className="bg-emerald-500 h-1.5 transition-all duration-500"
-                            style={{ width: `${((tec.aprovados || 0) / tec.testados) * 100}%` }}
+                            className="bg-blue-500 h-1.5 transition-all duration-500"
+                            style={{ width: `${taxaAprov}%` }}
                           />
                           <div
-                            className="bg-rose-500 h-1.5 transition-all duration-500"
-                            style={{ width: `${((tec.reprovados || 0) / tec.testados) * 100}%` }}
+                            className="bg-rose-500/60 h-1.5 transition-all duration-500"
+                            style={{ width: `${100 - taxaAprov}%` }}
                           />
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="text-center p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                          <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 tabular-nums">{tec.reparados || 0}</p>
-                          <p className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 uppercase">Reparados</p>
-                        </div>
-                        <div className="text-center p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                          <p className="text-lg font-black text-amber-600 dark:text-amber-400 tabular-nums">{tec.sucata || 0}</p>
-                          <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300 uppercase">Sucata</p>
-                        </div>
-                        <div className="text-center p-2 rounded-lg bg-sky-500/10 border border-sky-500/20">
-                          <p className="text-lg font-black text-sky-600 dark:text-sky-400 tabular-nums">{tec.semDefeito || 0}</p>
-                          <p className="text-[10px] font-semibold text-sky-700 dark:text-sky-300 uppercase">Sem Defeito</p>
-                        </div>
-                        <div className="text-center p-2 rounded-lg bg-rose-500/10 border border-rose-500/20">
-                          <p className="text-lg font-black text-rose-600 dark:text-rose-400 tabular-nums">{tec.retrabalhos || 0}</p>
-                          <p className="text-[10px] font-semibold text-rose-700 dark:text-rose-300 uppercase">Retrabalhos</p>
                         </div>
                       </div>
-                      {/* Barra visual proporcional */}
-                      {totalItens > 0 && (
-                        <div className="w-full bg-surface-base rounded-full h-1.5 overflow-hidden flex">
-                          <div
-                            className="bg-emerald-500 h-1.5 transition-all duration-500"
-                            style={{ width: `${((tec.reparados || 0) / totalItens) * 100}%` }}
-                          />
-                          <div
-                            className="bg-sky-500 h-1.5 transition-all duration-500"
-                            style={{ width: `${((tec.semDefeito || 0) / totalItens) * 100}%` }}
-                          />
-                          <div
-                            className="bg-amber-500 h-1.5 transition-all duration-500"
-                            style={{ width: `${((tec.sucata || 0) / totalItens) * 100}%` }}
-                          />
-                          <div
-                            className="bg-rose-500 h-1.5 transition-all duration-500"
-                            style={{ width: `${((tec.retrabalhos || 0) / totalItens) * 100}%` }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                    )}
+                  </div>
+                );
+              })}
           </div>
         ) : (
           <div className="p-6 text-center text-xs text-gray-500 dark:text-gray-400 bg-surface-elevated/40 rounded-xl border border-surface-border">
@@ -452,7 +427,9 @@ export const DashboardGerencialPage: React.FC = () => {
         )}
       </div>
 
+
       {/* ─── 4. RANKING DE PRODUTIVIDADE DOS TÉCNICOS ──────────────────────── */}
+
       <div className="p-5 rounded-2xl bg-surface-card border border-surface-border space-y-4">
         <div>
           <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
