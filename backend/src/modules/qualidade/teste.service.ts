@@ -12,12 +12,13 @@ export async function getFilaTestes() {
 }
 
 export async function realizarTeste(inspetorId: string, dados: RealizarTesteInput) {
-  // Validação estrita da equação invariável de negócio (Aprovados + Reprovados + Sucata == Testados)
+  // Validação estrita da equação invariável de negócio (Aprovados + Sem Defeito + Reprovados + Sucata == Testados)
   const sucata = dados.quantidadeSucata || 0;
-  if (dados.quantidadeAprovada + dados.quantidadeReprovada + sucata !== dados.quantidadeTestada) {
+  const semDefeito = dados.quantidadeSemDefeito || 0;
+  if (dados.quantidadeAprovada + semDefeito + dados.quantidadeReprovada + sucata !== dados.quantidadeTestada) {
     throw {
       statusCode: 400,
-      message: 'Inconsistência quantitativa: Aprovados + Reprovados + Sucata deve ser igual a Testados.',
+      message: 'Inconsistência quantitativa: Aprovados + Sem Defeito + Reprovados + Sucata deve ser igual a Testados.',
     };
   }
 
@@ -40,21 +41,22 @@ export async function realizarTeste(inspetorId: string, dados: RealizarTesteInpu
       usuarioId: inspetorId,
       entidade: 'Teste',
       entidadeId: teste.id,
-      descricao: `Laudo de CQ: ${dados.quantidadeAprovada} aprovadas, ${dados.quantidadeReprovada} reprovadas (encaminhadas para retrabalho).`,
-      detalhes: { quantidadeAprovada: dados.quantidadeAprovada, quantidadeReprovada: dados.quantidadeReprovada },
+      descricao: `Laudo de CQ: ${dados.quantidadeAprovada} aprovadas${semDefeito > 0 ? `, ${semDefeito} sem defeito` : ''}, ${dados.quantidadeReprovada} reprovadas (encaminhadas para retrabalho).`,
+      detalhes: { quantidadeAprovada: dados.quantidadeAprovada, quantidadeSemDefeito: semDefeito, quantidadeReprovada: dados.quantidadeReprovada },
     }).catch(() => {});
   }
 
-  if (dados.quantidadeAprovada > 0) {
+  const totalAprovadas = dados.quantidadeAprovada + semDefeito;
+  if (totalAprovadas > 0) {
     realtimeService.broadcast('qualidade:aprovado', { teste });
-    realtimeService.broadcast('meta:atualizada', { aprovadas: dados.quantidadeAprovada });
+    realtimeService.broadcast('meta:atualizada', { aprovadas: totalAprovadas });
     log({
       acao: 'TESTE_APROVADO',
       usuarioId: inspetorId,
       entidade: 'Teste',
       entidadeId: teste.id,
-      descricao: `Lote com peças aprovadas no CQ: ${dados.quantidadeAprovada} unidades.`,
-      detalhes: { quantidadeAprovada: dados.quantidadeAprovada },
+      descricao: `Lote com peças aprovadas no CQ: ${totalAprovadas} unidades (${dados.quantidadeAprovada} reparadas${semDefeito > 0 ? `, ${semDefeito} sem defeito` : ''}).`,
+      detalhes: { quantidadeAprovada: dados.quantidadeAprovada, quantidadeSemDefeito: semDefeito },
     }).catch(() => {});
   }
 

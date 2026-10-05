@@ -934,7 +934,7 @@ export async function getGerencialData(
           reprovados: t.reprovados || 0,
         };
       });
-    totalReparadas = fechamentoOficial.totalReparadas;
+    totalReparados = fechamentoOficial.totalReparadas;
     totalSemDefeito = fechamentoOficial.totalSemDefeito;
     totalSucata = fechamentoOficial.totalSucata;
     totalRetrabalho = fechamentoOficial.totalRetrabalho;

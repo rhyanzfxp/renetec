@@ -56,12 +56,13 @@ export const qualidadeRoutes: FastifyPluginAsync = async (fastify) => {
 
       try {
         const teste = await service.realizarTeste(user.sub, body);
+        const totalAprov = body.quantidadeAprovada + (body.quantidadeSemDefeito || 0);
         return reply.status(201).send({
           success: true,
           message:
             body.quantidadeReprovada > 0
-              ? `Teste concluído: ${body.quantidadeAprovada} aprovados e ${body.quantidadeReprovada} encaminhados para retrabalho.`
-              : `Lote 100% aprovado! ${body.quantidadeAprovada} unidades válidas contabilizadas para a meta.`,
+              ? `Teste concluído: ${totalAprov} aprovados e ${body.quantidadeReprovada} encaminhados para retrabalho.`
+              : `Lote 100% aprovado! ${totalAprov} unidades válidas contabilizadas para a meta.`,
           data: teste,
         });
       } catch (err: unknown) {
