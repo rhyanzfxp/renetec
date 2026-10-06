@@ -1,5 +1,6 @@
 import { prisma } from '../../database/prisma.js';
 import { getPontosUnitarios } from '../meta/meta.repository.js';
+import { isProducaoCq } from '../producao/producao.repository.js';
 
 export interface FiltrosRelatorio {
   dataInicio?: string;
@@ -86,7 +87,7 @@ export const relatorioRepository = {
       },
     });
 
-    return producoes.map((p) => {
+    return producoes.filter((p) => !isProducaoCq(p)).map((p) => {
       const item = p.itemOrdemServico;
       const os = item?.ordemServico;
       const equip = item?.tipoEquipamento;

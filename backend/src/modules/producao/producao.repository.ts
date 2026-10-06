@@ -41,6 +41,52 @@ export interface ProducaoRecord {
   };
 }
 
+// ─── Identifica com precisão se uma produção foi gerada por Teste/CQ ──────────
+export function isProducaoCq(p: { servicoRealizado?: string | null; observacao?: string | null } | null | undefined): boolean {
+  if (!p) return false;
+  const serv = (p.servicoRealizado || '').toLowerCase().trim();
+  const obs = (p.observacao || '').toLowerCase().trim();
+
+  // Apontamentos legítimos feitos pelo técnico na bancada
+  if (
+    obs.includes('salvo na bancada') ||
+    obs.includes('iniciada ao vivo') ||
+    obs.includes('despachado ao cq') ||
+    obs.includes('despachado para o cq')
+  ) {
+    return false;
+  }
+
+  // 1. Serviço realizado é inspeção / CQ
+  if (
+    serv === 'inspeção cq' ||
+    serv === 'inspecao cq' ||
+    serv.includes('inspeção cq') ||
+    serv.includes('inspecao cq') ||
+    serv.includes('testado pelo cq') ||
+    serv.includes('inspecionado e testado pelo cq') ||
+    serv.startsWith('inspeção') ||
+    serv.startsWith('inspecao')
+  ) {
+    return true;
+  }
+
+  // 2. Observação contém indicações de registro feito pelo / via CQ
+  if (
+    obs.includes('apontamento de cq') ||
+    obs.includes('apontamento direto via cq') ||
+    obs.includes('concluído via cq') ||
+    obs.includes('concluido via cq') ||
+    obs.includes('inspeção de bancada cq') ||
+    obs.includes('inspecao de bancada cq') ||
+    obs.includes('via cq')
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 // ─── Busca a fila de OSs disponíveis para um técnico específico ───────────────
 export async function getMinhaFila(tecnicoId: string) {
   if (!isDatabaseReady()) return [];
@@ -164,12 +210,7 @@ export async function getMinhasCaixas(tecnicoId: string) {
         const allProds = prod.itemOrdemServico.producoes || [];
         
         // Apenas produções reais do técnico na bancada (ignorar registros de inspeção do CQ)
-        const itemProdsTecnico = allProds.filter((p) => {
-          const isCq = p.servicoRealizado === 'Inspeção CQ' ||
-                       p.servicoRealizado === 'Reparo inspecionado e testado pelo CQ' ||
-                       (p.observacao && p.observacao.includes('Apontamento de CQ'));
-          return !isCq;
-        });
+        const itemProdsTecnico = allProds.filter((p) => !isProducaoCq(p));
 
         // Produção mais recente do técnico (se houver)
         const ultimaProdTecnico = itemProdsTecnico[0] || null;
@@ -882,10 +923,7 @@ export async function getMinhasOsEmAndamento(tecnicoId: string) {
 
         for (const p of it.producoes) {
           // Ignorar produções de CQ para as contagens de reparo do técnico
-          const isCq = p.servicoRealizado === 'Inspeção CQ' ||
-                       p.servicoRealizado === 'Reparo inspecionado e testado pelo CQ' ||
-                       (p.observacao && p.observacao.includes('Apontamento de CQ'));
-          if (isCq) continue;
+          if (isProducaoCq(p)) continue;
 
           const dProd = new Date(p.dataProducao || p.dataFim || p.dataInicio || p.createdAt);
           if (dProd > ultimaAtividade) {
@@ -1084,10 +1122,7 @@ export async function getProducaoHojeTecnico(tecnicoId: string) {
     for (const p of producoes) {
       // REGRA OFICIAL: Ignorar registros de inspeção/testes do CQ!
       // A produção de hoje do técnico deve mostrar APENAS o que o técnico consertou na bancada.
-      const isCq = p.servicoRealizado === 'Inspeção CQ' ||
-                   p.servicoRealizado === 'Reparo inspecionado e testado pelo CQ' ||
-                   (p.observacao && p.observacao.includes('Apontamento de CQ'));
-      if (isCq) continue;
+      if (isProducaoCq(p)) continue;
 
       const rep = p.quantidadeReparada || 0;
       const semDef = p.quantidadeSemDefeito || 0;

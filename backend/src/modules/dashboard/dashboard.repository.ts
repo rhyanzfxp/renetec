@@ -1,5 +1,6 @@
 import { prisma, isDatabaseReady } from '../../database/prisma.js';
 import { getFechamentoMensalOficial, getChavesMesesFechados } from '../meta/fechamento.store.js';
+import { isProducaoCq } from '../producao/producao.repository.js';
 
 export interface BancadaStatus {
   tecnicoId: string;
@@ -462,10 +463,7 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
       // 2a. Contar quantas peças este técnico PRODUZIU hoje (produções finalizadas na bancada)
       for (const p of producoesFinalizadasHoje) {
         // Ignorar registros de inspeção do CQ para a contagem de volume
-        const isCq = p.servicoRealizado === 'Inspeção CQ' ||
-                     p.servicoRealizado === 'Reparo inspecionado e testado pelo CQ' ||
-                     (p.observacao && p.observacao.includes('Apontamento de CQ'));
-        if (isCq) continue;
+        if (isProducaoCq(p)) continue;
 
         const tId = p.tecnicoId || p.tecnico?.id;
         const tNome = p.tecnico?.nome || p.itemOrdemServico?.tecnicoAlocado?.nome;
@@ -774,6 +772,7 @@ export async function getGerencialData(
         const equipMap: Record<string, { somaMin: number; qtd: number }> = {};
 
         for (const p of producoesFinalizadas) {
+          if (isProducaoCq(p)) continue;
           if (p.dataInicio && p.dataFim) {
             const diffMin = Math.max(1, Math.round((new Date(p.dataFim).getTime() - new Date(p.dataInicio).getTime()) / 60000));
             somaMinutos += diffMin;
@@ -1065,10 +1064,7 @@ export async function getGerencialData(
           let sucata = 0;
 
           for (const p of producoesPeriodo) {
-            const isCq = p.servicoRealizado === 'Inspeção CQ' ||
-                         p.servicoRealizado === 'Reparo inspecionado e testado pelo CQ' ||
-                         (p.observacao && p.observacao.includes('Apontamento de CQ'));
-            if (isCq) continue;
+            if (isProducaoCq(p)) continue;
 
             if (p.tecnicoId === u.id) {
               reparados += p.quantidadeReparada || 0;

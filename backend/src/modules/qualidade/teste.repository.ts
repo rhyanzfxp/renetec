@@ -293,9 +293,9 @@ export async function realizarTeste(
           quantidadeSemDefeito: qtdSemDefeito,
           quantidadeSucata: qtdSucata,
           status: 'FINALIZADO',
-          servicoRealizado: isTecnicoDiferenteInspetor ? 'Reparo de Bancada' : 'Inspeção CQ',
+          servicoRealizado: 'Inspeção CQ',
           observacao: isTecnicoDiferenteInspetor
-            ? `Apontamento direto via CQ (#OS ${dados.numeroOS || ''})`
+            ? `Apontamento de CQ direto (#OS ${dados.numeroOS || ''})`
             : `Apontamento de CQ. ${dados.quantidadeAprovada} un aprovadas${qtdSemDefeito > 0 ? `, ${qtdSemDefeito} un sem defeito` : ''}, ${dados.quantidadeReprovada} un retrabalho${qtdSucata > 0 ? `, ${qtdSucata} un sucata/morta` : ''}.`,
         },
       });
@@ -365,8 +365,8 @@ export async function realizarTeste(
                 quantidadeSemDefeito: qtdSemDefeito,
                 quantidadeSucata: qtdSucata,
                 status: 'FINALIZADO',
-                servicoRealizado: 'Reparo de Bancada',
-                observacao: `Concluído via CQ (${dados.quantidadeAprovada} aprovadas${qtdSemDefeito > 0 ? `, ${qtdSemDefeito} sem defeito` : ''}, ${dados.quantidadeReprovada} retrabalho).`,
+                servicoRealizado: 'Inspeção CQ',
+                observacao: `Apontamento de CQ - Concluído via CQ (${dados.quantidadeAprovada} aprovadas${qtdSemDefeito > 0 ? `, ${qtdSemDefeito} sem defeito` : ''}, ${dados.quantidadeReprovada} retrabalho).`,
               },
             });
             producaoDbId = novaProd.id;
