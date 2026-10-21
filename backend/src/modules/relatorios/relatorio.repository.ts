@@ -159,7 +159,7 @@ export const relatorioRepository = {
         servicoRealizado: p.servicoRealizado || 'Manutenção efetuada',
         statusOS: os?.status || 'EM_PRODUCAO',
       };
-    });
+    }).filter((item) => (item.quantidadeReparada + item.quantidadeSemDefeito + item.quantidadeSucata) > 0);
   },
 
   /**

@@ -784,7 +784,7 @@ export async function criarApontamentoLote(
         tecnicoAlocadoId: itemDb.tecnicoAlocadoId || tecnicoDbId,
       };
 
-      if (isDiretoCQ) {
+      if (isDiretoCQ && totalHoje > 0) {
         updateData.statusItem = 'AGUARDANDO_TESTE';
       } else if (itemDb.statusItem !== 'AGUARDANDO_TESTE' && itemDb.statusItem !== 'AGUARDANDO_NOVO_TESTE') {
         updateData.statusItem = initialStatus;
@@ -811,35 +811,39 @@ export async function criarApontamentoLote(
       : null;
 
     // Criar registro de produção tipado para a produção realizada hoje
-    const prodDb = await prisma.producao.create({
-      data: {
-        itemOrdemServicoId: itemDb.id,
-        tecnicoId: tecnicoDbId,
-        dataInicio: dataRegistro,
-        dataFim: isAoVivo ? null : agora,
-        dataProducao: dataProd,
-        quantidadeProduzida: qtdProntaCQ,
+    // REGRA: Se o técnico não produziu nada neste equipamento hoje (0 rep, 0 semDef, 0 sucata)
+    // e não é produção ao vivo, NÃO cria registro de produção fantasma com zero para não poluir relatórios.
+    if (totalHoje > 0 || isAoVivo) {
+      const prodDb = await prisma.producao.create({
+        data: {
+          itemOrdemServicoId: itemDb.id,
+          tecnicoId: tecnicoDbId,
+          dataInicio: dataRegistro,
+          dataFim: isAoVivo ? null : agora,
+          dataProducao: dataProd,
+          quantidadeProduzida: qtdProntaCQ,
+          quantidadeReparada: rep,
+          quantidadeSemDefeito: semDef,
+          quantidadeSucata: suc,
+          idempotencyKey: itemKey,
+          servicoRealizado: servico,
+          observacao: isDiretoCQ
+            ? `Apontamento despachado ao CQ por ${tecnicoNome}. Categoria: ${categoria}${infoCaixa}`
+            : isAoVivo
+            ? `Produção iniciada ao vivo na bancada por ${tecnicoNome}. Categoria: ${categoria}${infoCaixa}`
+            : `Progresso de OS salvo na bancada por ${tecnicoNome}. Categoria: ${categoria}${infoCaixa}`,
+          status: isAoVivo ? 'EM_ANDAMENTO' : 'FINALIZADO',
+        },
+      });
+
+      createdItens.push({
+        ...itemDb,
         quantidadeReparada: rep,
         quantidadeSemDefeito: semDef,
         quantidadeSucata: suc,
-        idempotencyKey: itemKey,
-        servicoRealizado: servico,
-        observacao: isDiretoCQ
-          ? `Apontamento despachado ao CQ por ${tecnicoNome}. Categoria: ${categoria}${infoCaixa}`
-          : isAoVivo
-          ? `Produção iniciada ao vivo na bancada por ${tecnicoNome}. Categoria: ${categoria}${infoCaixa}`
-          : `Progresso de OS salvo na bancada por ${tecnicoNome}. Categoria: ${categoria}${infoCaixa}`,
-        status: isAoVivo ? 'EM_ANDAMENTO' : 'FINALIZADO',
-      },
-    });
-
-    createdItens.push({
-      ...itemDb,
-      quantidadeReparada: rep,
-      quantidadeSemDefeito: semDef,
-      quantidadeSucata: suc,
-    });
-    createdProducoes.push(prodDb);
+      });
+      createdProducoes.push(prodDb);
+    }
   }
 
   const osRecord = {

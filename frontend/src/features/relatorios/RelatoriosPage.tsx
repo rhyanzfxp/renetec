@@ -388,6 +388,7 @@ const TabelaProducao: React.FC<{ dados: ItemRelatorioProducao[]; onExport: () =>
   const filtrados = useMemo(() => {
     const b = filtros.busca.toLowerCase();
     return dados.filter((d) => {
+      if ((d.quantidadeReparada + d.quantidadeSemDefeito + d.quantidadeSucata) <= 0) return false;
       if (b && !`${d.numeroOS ?? ''} ${d.clienteNome} ${d.tecnicoNome} ${d.tipoEquipamentoNome}`.toLowerCase().includes(b)) return false;
       if (filtros.tecnico && d.tecnicoNome !== filtros.tecnico) return false;
       if (filtros.cliente && d.clienteNome !== filtros.cliente) return false;
@@ -919,7 +920,7 @@ export const RelatoriosPage: React.FC = () => {
   useEffect(() => { carregarRelatorio(tipo); }, [tipo, periodo]);
 
   // Exportações CSV
-  const exportarProducao = () => exportCSV((dataProducao?.dados ?? []).map((d) => ({ OS: d.numeroOS ?? '', Empresa: d.clienteNome, Tecnico: d.tecnicoNome, Equipamento: d.tipoEquipamentoNome, Reparadas: d.quantidadeReparada, SemDefeito: d.quantidadeSemDefeito, Sucata: d.quantidadeSucata, TotalCaixa: d.totalCaixa, Pontos: d.pontosTotal.toFixed(1), Data: fmtData(d.dataRegistro) })), `producao-${new Date().toISOString().split('T')[0]}.csv`);
+  const exportarProducao = () => exportCSV((dataProducao?.dados ?? []).filter((d) => (d.quantidadeReparada + d.quantidadeSemDefeito + d.quantidadeSucata) > 0).map((d) => ({ OS: d.numeroOS ?? '', Empresa: d.clienteNome, Tecnico: d.tecnicoNome, Equipamento: d.tipoEquipamentoNome, Reparadas: d.quantidadeReparada, SemDefeito: d.quantidadeSemDefeito, Sucata: d.quantidadeSucata, TotalCaixa: d.totalCaixa, Pontos: d.pontosTotal.toFixed(1), Data: fmtData(d.dataRegistro) })), `producao-${new Date().toISOString().split('T')[0]}.csv`);
   const exportarQualidade = () => exportCSV((dataQualidade?.dados ?? []).map((d) => ({ OS: d.numeroOS ?? '', Empresa: d.clienteNome, Inspetor: d.inspetorNome, TecnicoReparo: d.tecnicoReparoNome, Equipamento: d.tipoEquipamentoNome, Destino: d.tecnicoDestinoRetrabalho ?? '', Testadas: d.quantidadeTestada, Aprovadas: d.quantidadeAprovada, Reprovadas: d.quantidadeReprovada, Motivo: d.motivoReprovacao ?? '', Data: fmtData(d.dataTeste) })), `qualidade-${new Date().toISOString().split('T')[0]}.csv`);
   const exportarRetrabalho = () => exportCSV((dataRetrabalho?.dados ?? []).map((d) => ({ OS: d.numeroOS ?? '', Empresa: d.clienteNome, Equipamento: d.tipoEquipamentoNome, Unidades: d.quantidadeRetrabalho, Motivo: d.motivoDescricao, Origem: d.tecnicoOrigem, Destino: d.tecnicoDestino, Status: d.status, Data: fmtDataCurta(d.dataCriacao) })), `retrabalho-${new Date().toISOString().split('T')[0]}.csv`);
   const exportarConsolidadoTecnicos = () => exportCSV((dataConsolidado?.tecnicos ?? []).map((t) => ({ Tecnico: t.nome, Lotes: t.totalLotes, Reparadas: t.totalReparadas, SemDefeito: t.totalSemDefeito, Sucata: t.totalSucata, Retrabalhos: t.retrabalhosRecebidos, Pontos: t.pontosTotal.toFixed(1) })), `consolidado-tecnicos-${new Date().toISOString().split('T')[0]}.csv`);
