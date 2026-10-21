@@ -568,7 +568,7 @@ const TabelaQualidade: React.FC<{ dados: ItemRelatorioQualidade[]; onExport: () 
         tecnicoOpts={tecnicoOpts} inspetorOpts={inspetorOpts} clienteOpts={clienteOpts}
         statusOpts={statusOpts.map((s) => s)}
         showTecnico showInspetor showStatus
-        placeholder="Buscar por OS, empresa, inspetor ou técnico..."
+        placeholder="Buscar por OS, empresa, inspetor, técnico ou equipamento..."
         totalFiltrado={filtrados.length} totalOriginal={dados.length}
       />
       <div className="rounded-xl border border-surface-border overflow-hidden">
@@ -585,6 +585,7 @@ const TabelaQualidade: React.FC<{ dados: ItemRelatorioQualidade[]; onExport: () 
                 <th className="px-3 py-2 text-left font-semibold">Empresa</th>
                 <th className="px-3 py-2 text-left font-semibold">Inspetor CQ</th>
                 <th className="px-3 py-2 text-left font-semibold">Técnico Reparo</th>
+                <th className="px-3 py-2 text-left font-semibold">Equipamento</th>
                 <th className="px-3 py-2 text-right font-semibold">Testadas</th>
                 <th className="px-3 py-2 text-right font-semibold">Aprovadas</th>
                 <th className="px-3 py-2 text-right font-semibold">Retrab.</th>
@@ -595,13 +596,14 @@ const TabelaQualidade: React.FC<{ dados: ItemRelatorioQualidade[]; onExport: () 
             </thead>
             <tbody>
               {pageItems.length === 0 ? (
-                <tr><td colSpan={10}><EmptyState message="Nenhum resultado para os filtros aplicados." /></td></tr>
+                <tr><td colSpan={11}><EmptyState message="Nenhum resultado para os filtros aplicados." /></td></tr>
               ) : pageItems.map((item, i) => (
                 <tr key={item.id} className={`border-b border-surface-border/50 hover:bg-surface-elevated/30 transition-colors ${i % 2 === 0 ? '' : 'bg-surface-card/20'}`}>
                   <td className="px-3 py-2.5">{item.numeroOS ? <span className="font-mono font-bold text-brand-600 dark:text-brand-300">#{item.numeroOS}</span> : <span className="text-gray-500">—</span>}</td>
                   <td className="px-3 py-2.5 text-gray-800 dark:text-gray-200 max-w-[120px] truncate">{item.clienteNome}</td>
                   <td className="px-3 py-2.5"><div className="flex items-center gap-1.5"><CheckCircle className="w-3 h-3 text-emerald-500" /><span className="text-gray-800 dark:text-gray-200">{item.inspetorNome}</span></div></td>
                   <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400">{item.tecnicoReparoNome}</td>
+                  <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400 max-w-[130px] truncate">{item.tipoEquipamentoNome}</td>
                   <td className="px-3 py-2.5 text-right font-semibold text-gray-900 dark:text-white">{item.quantidadeTestada}</td>
                   <td className="px-3 py-2.5 text-right"><Badge color="green">{item.quantidadeAprovada} ✓</Badge></td>
                   <td className="px-3 py-2.5 text-right">{item.quantidadeReprovada > 0 ? <Badge color="amber">{item.quantidadeReprovada} ↩</Badge> : <span className="text-gray-400 dark:text-gray-600">—</span>}</td>
@@ -918,7 +920,7 @@ export const RelatoriosPage: React.FC = () => {
 
   // Exportações CSV
   const exportarProducao = () => exportCSV((dataProducao?.dados ?? []).map((d) => ({ OS: d.numeroOS ?? '', Empresa: d.clienteNome, Tecnico: d.tecnicoNome, Equipamento: d.tipoEquipamentoNome, Reparadas: d.quantidadeReparada, SemDefeito: d.quantidadeSemDefeito, Sucata: d.quantidadeSucata, TotalCaixa: d.totalCaixa, Pontos: d.pontosTotal.toFixed(1), Data: fmtData(d.dataRegistro) })), `producao-${new Date().toISOString().split('T')[0]}.csv`);
-  const exportarQualidade = () => exportCSV((dataQualidade?.dados ?? []).map((d) => ({ OS: d.numeroOS ?? '', Empresa: d.clienteNome, Inspetor: d.inspetorNome, TecnicoReparo: d.tecnicoReparoNome, Destino: d.tecnicoDestinoRetrabalho ?? '', Testadas: d.quantidadeTestada, Aprovadas: d.quantidadeAprovada, Reprovadas: d.quantidadeReprovada, Motivo: d.motivoReprovacao ?? '', Data: fmtData(d.dataTeste) })), `qualidade-${new Date().toISOString().split('T')[0]}.csv`);
+  const exportarQualidade = () => exportCSV((dataQualidade?.dados ?? []).map((d) => ({ OS: d.numeroOS ?? '', Empresa: d.clienteNome, Inspetor: d.inspetorNome, TecnicoReparo: d.tecnicoReparoNome, Equipamento: d.tipoEquipamentoNome, Destino: d.tecnicoDestinoRetrabalho ?? '', Testadas: d.quantidadeTestada, Aprovadas: d.quantidadeAprovada, Reprovadas: d.quantidadeReprovada, Motivo: d.motivoReprovacao ?? '', Data: fmtData(d.dataTeste) })), `qualidade-${new Date().toISOString().split('T')[0]}.csv`);
   const exportarRetrabalho = () => exportCSV((dataRetrabalho?.dados ?? []).map((d) => ({ OS: d.numeroOS ?? '', Empresa: d.clienteNome, Equipamento: d.tipoEquipamentoNome, Unidades: d.quantidadeRetrabalho, Motivo: d.motivoDescricao, Origem: d.tecnicoOrigem, Destino: d.tecnicoDestino, Status: d.status, Data: fmtDataCurta(d.dataCriacao) })), `retrabalho-${new Date().toISOString().split('T')[0]}.csv`);
   const exportarConsolidadoTecnicos = () => exportCSV((dataConsolidado?.tecnicos ?? []).map((t) => ({ Tecnico: t.nome, Lotes: t.totalLotes, Reparadas: t.totalReparadas, SemDefeito: t.totalSemDefeito, Sucata: t.totalSucata, Retrabalhos: t.retrabalhosRecebidos, Pontos: t.pontosTotal.toFixed(1) })), `consolidado-tecnicos-${new Date().toISOString().split('T')[0]}.csv`);
   const exportarConsolidadoInspetores = () => exportCSV((dataConsolidado?.inspetores ?? []).map((i) => ({ Inspetor: i.nome, Laudos: i.totalLaudos, Testadas: i.totalTestadas, Aprovadas: i.totalAprovadas, Reprovadas: i.totalReprovadas, FPY: i.fpy.toFixed(1) + '%', Pontos: i.pontosTotal.toFixed(1) })), `consolidado-inspetores-${new Date().toISOString().split('T')[0]}.csv`);

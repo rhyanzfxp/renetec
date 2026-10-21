@@ -133,42 +133,43 @@ export function getPontosUnitarios(nome?: string): number {
 
 // ─── Resolve o técnico real de bancada responsável pelo reparo ────────────────
 export function resolverTecnicoReparo(t: any): string {
+  const inspNome = (t.inspetor?.nome || 'Rhyan').toLowerCase();
+
+  const isContaInvalida = (nome?: string | null) =>
+    !nome ||
+    nome.toLowerCase().includes('rhyan') ||
+    nome.toLowerCase().includes('qualidade') ||
+    nome.toLowerCase().includes('inspetor') ||
+    nome.toLowerCase().includes('administrador') ||
+    nome.toLowerCase().includes('admin') ||
+    nome.toLowerCase().includes('renetec') ||
+    nome.toLowerCase() === inspNome;
+
   // 1. Se veio de retrabalho com técnico responsável definido, credita a ele
   const retrabalhoRecente = (t.producao?.itemOrdemServico as any)?.retrabalhos?.[0];
-  if (retrabalhoRecente?.tecnicoResponsavel?.nome) {
-    return retrabalhoRecente.tecnicoResponsavel.nome;
+  const retTecNome = retrabalhoRecente?.tecnicoResponsavel?.nome || t.retrabalhos?.[0]?.tecnicoResponsavel?.nome;
+  if (retTecNome && !isContaInvalida(retTecNome)) {
+    return retTecNome;
   }
 
   const tecProd = t.producao?.tecnico?.nome;
-  const inspNome = t.inspetor?.nome || 'Rhyan';
-  const isProdInspector = tecProd && (
-    tecProd.toLowerCase().includes('rhyan') ||
-    tecProd.toLowerCase().includes('qualidade') ||
-    tecProd === inspNome
-  );
-
-  // Se o técnico da produção for o próprio inspetor do CQ (ou perfil de qualidade),
-  // busca o técnico que realmente reparou o item (alocado no item ou responsável na OS)
-  if (isProdInspector) {
-    const tecAlocado = (t.producao?.itemOrdemServico as any)?.tecnicoAlocado?.nome;
-    if (tecAlocado && !tecAlocado.toLowerCase().includes('rhyan') && !tecAlocado.toLowerCase().includes('qualidade')) {
-      return tecAlocado;
-    }
-
-    const tecOS = (t.producao?.itemOrdemServico as any)?.ordemServico?.tecnicoResponsavel?.nome;
-    if (tecOS && !tecOS.toLowerCase().includes('rhyan') && !tecOS.toLowerCase().includes('qualidade')) {
-      return tecOS;
-    }
+  if (tecProd && !isContaInvalida(tecProd)) {
+    return tecProd;
   }
 
-  if (tecProd) return tecProd;
+  // 2. Técnico alocado no item da OS
+  const tecAlocado = (t.producao?.itemOrdemServico as any)?.tecnicoAlocado?.nome;
+  if (tecAlocado && !isContaInvalida(tecAlocado)) {
+    return tecAlocado;
+  }
 
-  const fallback =
-    (t.producao?.itemOrdemServico as any)?.tecnicoAlocado?.nome ||
-    (t.producao?.itemOrdemServico as any)?.ordemServico?.tecnicoResponsavel?.nome ||
-    'desconhecido';
+  // 3. Técnico responsável da OS
+  const tecOS = (t.producao?.itemOrdemServico as any)?.ordemServico?.tecnicoResponsavel?.nome;
+  if (tecOS && !isContaInvalida(tecOS)) {
+    return tecOS;
+  }
 
-  return fallback;
+  return 'João';
 }
 
 // ─── Busca a agregação de pontos realizados no mês corrente (APENAS APROVADOS NO CQ) ──

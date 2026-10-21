@@ -82,6 +82,7 @@ export const relatorioRepository = {
               },
             },
             tipoEquipamento: true,
+            tecnicoAlocado: { select: { id: true, nome: true } },
           },
         },
       },
@@ -123,13 +124,27 @@ export const relatorioRepository = {
       // REGRA OFICIAL: "Sem defeito" NÃO CONTA PONTO! Apenas peças reparadas contam pontos.
       const pontosEstimados = categoria === 'SEM_DEFEITO' ? 0 : Number((reparadas * ptsUnit).toFixed(1));
 
+      const tecProdNome = p.tecnico?.nome;
+      const isAdminOuGenerico = !tecProdNome ||
+        tecProdNome.toLowerCase().includes('administrador') ||
+        tecProdNome.toLowerCase().includes('admin') ||
+        tecProdNome.toLowerCase().includes('qualidade') ||
+        tecProdNome.toLowerCase().includes('rhyan');
+
+      const tecFinalNome = isAdminOuGenerico
+        ? (item?.tecnicoAlocado?.nome || 'João')
+        : tecProdNome;
+      const tecFinalId = isAdminOuGenerico
+        ? (item?.tecnicoAlocado?.id || '18a20cb3-c16d-4901-95fa-5dfcc0ffbab6')
+        : (p.tecnico?.id || '18a20cb3-c16d-4901-95fa-5dfcc0ffbab6');
+
       return {
         id: p.id,
         numeroOS: os?.numeroOS || null,
         ordemServicoId: os?.id,
         clienteNome: os?.cliente?.nomeRazaoSocial || 'MARANET Telecomunicações',
-        tecnicoNome: p.tecnico?.nome || 'Operador',
-        tecnicoId: p.tecnico?.id,
+        tecnicoNome: tecFinalNome,
+        tecnicoId: tecFinalId,
         tipoEquipamentoNome: equip?.nome || 'Equipamento',
         tipoEquipamentoId: equip?.id,
         dataRegistro: p.dataFim || p.createdAt,
@@ -230,6 +245,7 @@ export const relatorioRepository = {
                 ordemServico: {
                   include: {
                     cliente: true,
+                    tecnicoResponsavel: { select: { id: true, nome: true } },
                   },
                 },
                 tipoEquipamento: true,
@@ -247,29 +263,49 @@ export const relatorioRepository = {
       const equip = item?.tipoEquipamento;
       const inspNome = t.inspetor?.nome || 'Inspetor CQ';
       const tecProd = t.producao?.tecnico?.nome;
-      const isQualidade = (nome?: string | null) =>
-        !!nome && (nome.toLowerCase().includes('rhyan') || nome.toLowerCase().includes('qualidade') || nome.toLowerCase().includes('inspetor') || nome === inspNome);
 
-      // Se o técnico da produção é o próprio inspetor/CQ, tenta resolver o real técnico de reparo
-      const isTecProdInsp = isQualidade(tecProd);
+      // Detecta contas administrativas ou de qualidade que NÃO são técnicos de reparo de bancada
+      const isContaInvalida = (nome?: string | null) =>
+        !nome ||
+        nome.toLowerCase().includes('rhyan') ||
+        nome.toLowerCase().includes('qualidade') ||
+        nome.toLowerCase().includes('inspetor') ||
+        nome.toLowerCase().includes('administrador') ||
+        nome.toLowerCase().includes('admin') ||
+        nome.toLowerCase().includes('renetec') ||
+        nome.toLowerCase() === inspNome.toLowerCase();
+
+      // Ordem de prioridade para o Técnico de Reparo:
+      // 1. Técnico responsável do retrabalho
+      // 2. Técnico da produção (se não for admin/qualidade)
+      // 3. Técnico alocado no item da OS
+      // 4. Técnico responsável da OS
+      // 5. Fallback seguro para João
+      const retTecNome = t.retrabalhos?.[0]?.tecnicoResponsavel?.nome;
+      const tecAlocNome = item?.tecnicoAlocado?.nome;
+      const tecOSNome = (os as any)?.tecnicoResponsavel?.nome;
 
       let tecReparo: string;
-      if (isTecProdInsp) {
-        // Ordem de prioridade: técnico alocado no item > responsável da OS > tecProd (fallback)
-        const tecAlocNome = item?.tecnicoAlocado?.nome;
-        const tecOSNome = (os as any)?.tecnicoResponsavel?.nome;
-        tecReparo =
-          (tecAlocNome && !isQualidade(tecAlocNome) ? tecAlocNome : null) ||
-          (tecOSNome && !isQualidade(tecOSNome) ? tecOSNome : null) ||
-          tecProd ||
-          'Técnico';
+      if (retTecNome && !isContaInvalida(retTecNome)) {
+        tecReparo = retTecNome;
+      } else if (tecProd && !isContaInvalida(tecProd)) {
+        tecReparo = tecProd;
+      } else if (tecAlocNome && !isContaInvalida(tecAlocNome)) {
+        tecReparo = tecAlocNome;
+      } else if (tecOSNome && !isContaInvalida(tecOSNome)) {
+        tecReparo = tecOSNome;
       } else {
-        // Técnico da produção é o reparo real
-        tecReparo = tecProd || item?.tecnicoAlocado?.nome || 'Técnico';
+        tecReparo = 'João';
       }
 
       const retrabalho = t.retrabalhos?.[0];
-      const tecDestino = retrabalho?.tecnicoResponsavel?.nome || tecReparo;
+      let tecDestino = retrabalho?.tecnicoResponsavel?.nome;
+      if (isContaInvalida(tecDestino)) {
+        tecDestino = tecReparo;
+      }
+      if (isContaInvalida(tecDestino)) {
+        tecDestino = 'João';
+      }
       const motivo = retrabalho?.motivoReprovacao?.descricao || (t.quantidadeReprovada > 0 ? 'Não-conformidade' : null);
 
       const ptsUnit = getPontosUnitarios(equip?.nome);
@@ -351,6 +387,7 @@ export const relatorioRepository = {
                   include: {
                     ordemServico: { include: { cliente: true } },
                     tipoEquipamento: true,
+                    tecnicoAlocado: { select: { id: true, nome: true } },
                   },
                 },
               },
@@ -365,6 +402,16 @@ export const relatorioRepository = {
       const os = item?.ordemServico;
       const equip = item?.tipoEquipamento;
 
+      const tecOrigem = r.teste?.producao?.tecnico?.nome;
+      const tecOrigemValido = tecOrigem && !tecOrigem.toLowerCase().includes('admin') && !tecOrigem.toLowerCase().includes('administrador')
+        ? tecOrigem
+        : (item?.tecnicoAlocado?.nome || 'João');
+
+      const tecDestino = r.tecnicoResponsavel?.nome;
+      const tecDestinoValido = tecDestino && !tecDestino.toLowerCase().includes('admin') && !tecDestino.toLowerCase().includes('administrador')
+        ? tecDestino
+        : tecOrigemValido;
+
       return {
         id: r.id,
         numeroOS: os?.numeroOS || null,
@@ -375,8 +422,8 @@ export const relatorioRepository = {
         motivoDescricao: r.motivoReprovacao?.descricao || 'Falha técnica',
         motivoCategoria: r.motivoReprovacao?.categoria || 'OUTRO',
         detalhesDefeito: r.detalhesDefeito || 'Reparo necessário',
-        tecnicoOrigem: r.teste?.producao?.tecnico?.nome || 'Técnico',
-        tecnicoDestino: r.tecnicoResponsavel?.nome || 'Técnico de Retrabalho',
+        tecnicoOrigem: tecOrigemValido,
+        tecnicoDestino: tecDestinoValido,
         inspetorNome: r.teste?.inspetor?.nome || 'Inspetor CQ',
         dataCriacao: r.createdAt,
         dataInicio: r.dataInicio,

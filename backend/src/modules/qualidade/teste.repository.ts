@@ -533,6 +533,7 @@ export async function getHistoricoTestes(page = 1, limit = 20) {
                       numeroOS: true,
                       prioridade: true,
                       cliente: { select: { id: true, nomeRazaoSocial: true } },
+                      tecnicoResponsavel: { select: { id: true, nome: true } },
                     },
                   },
                   tipoEquipamento: { select: { id: true, nome: true, marca: true, modelo: true } },
@@ -555,18 +556,48 @@ export async function getHistoricoTestes(page = 1, limit = 20) {
         if (match) sucata = parseInt(match[1], 10);
       }
 
-      // Garante que o técnico que reparou o equipamento não seja ofuscado pelo inspetor de CQ
+      // REGRA: Técnico Reparo deve ser quem efetivamente reparou o equipamento.
+      // Prioridade: (1) tecnicoResponsavel do retrabalho, (2) tecnicoAlocado no item,
+      // (3) tecnico da produção (desde que não seja inspetor, admin ou conta genérica).
       const tecProd = t.producao?.tecnico;
-      const inspNome = t.inspetor?.nome || 'Rhyan';
-      const isInspetor = tecProd?.nome && (
-        tecProd.nome.toLowerCase().includes('rhyan') ||
-        tecProd.nome.toLowerCase().includes('qualidade') ||
-        tecProd.nome === inspNome
+      const inspNome = (t.inspetor?.nome || 'Rhyan').toLowerCase();
+      const tecNomeLower = (tecProd?.nome || '').toLowerCase();
+
+      // Detecta contas que NÃO são técnicos de bancada
+      const isContaGenerica = (
+        tecNomeLower.includes('rhyan') ||
+        tecNomeLower.includes('qualidade') ||
+        tecNomeLower.includes('administrador') ||
+        tecNomeLower.includes('admin') ||
+        tecNomeLower === inspNome
       );
 
-      const tecReal = isInspetor
-        ? (t.producao?.itemOrdemServico?.tecnicoAlocado || t.producao?.itemOrdemServico?.ordemServico?.tecnicoResponsavel || tecProd)
-        : tecProd;
+      // 1. Retrabalho com técnico responsável definido tem prioridade máxima
+      const retTecnico = t.retrabalhos?.[0]?.tecnicoResponsavel;
+      const isRetAdm = (retTecnico?.nome || '').toLowerCase().includes('administrador') ||
+                       (retTecnico?.nome || '').toLowerCase().includes('admin');
+      const tecnicoRetrabalho = retTecnico && !isRetAdm ? retTecnico : null;
+
+      // 2. tecnicoAlocado no item (exceto admin)
+      const tecAlocado = t.producao?.itemOrdemServico?.tecnicoAlocado;
+      const isAlocAdm = (tecAlocado?.nome || '').toLowerCase().includes('administrador') ||
+                        (tecAlocado?.nome || '').toLowerCase().includes('admin');
+      const tecnicoAlocadoValido = tecAlocado && !isAlocAdm ? tecAlocado : null;
+
+      // 3. Resolução final
+      let tecReal: any;
+      if (tecnicoRetrabalho) {
+        tecReal = tecnicoRetrabalho;
+      } else if (isContaGenerica) {
+        const osTec = t.producao?.itemOrdemServico?.ordemServico?.tecnicoResponsavel;
+        const isOsTecAdm = (osTec?.nome || '').toLowerCase().includes('administrador') ||
+                           (osTec?.nome || '').toLowerCase().includes('admin');
+        tecReal = tecnicoAlocadoValido ||
+                  (osTec && !isOsTecAdm ? osTec : null) ||
+                  { id: '18a20cb3-c16d-4901-95fa-5dfcc0ffbab6', nome: 'João' };
+      } else {
+        tecReal = tecProd;
+      }
 
       return {
         ...t,
