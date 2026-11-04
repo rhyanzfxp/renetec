@@ -72,21 +72,6 @@ const FECHAMENTOS_INICIAIS: Record<string, FechamentoMensal> = {
     observacoes: 'Fechamento oficial de Setembro/2026 homologado pela gestão.',
     tecnicos: [
       {
-        tecnicoId: '11e5d47e-ceb5-4b75-ba60-632e9bcfcf8d',
-        tecnicoNome: 'Samuel',
-        funcao: 'Produção',
-        pontos: 263.5,
-        reparados: 406,
-        sucata: 56,
-        semDefeito: 2,
-        retrabalhos: 25,
-        testados: 0,
-        aprovados: 381,
-        reprovados: 0,
-        pesoBonus: 0.22,
-        metaIndividualCumprida: true,
-      },
-      {
         tecnicoId: '18a20cb3-c16d-4901-95fa-5dfcc0ffbab6',
         tecnicoNome: 'João',
         funcao: 'Produção',

@@ -16,7 +16,6 @@ export async function ensureDatabaseSeeded(): Promise<void> {
     const usuariosBase = [
       { nome: 'Administrador Renetec', email: 'admin@renetec.com.br', perfil: PerfilUsuario.ADMIN },
       { nome: 'João', email: 'joao@renetec.com.br', perfil: PerfilUsuario.TECNICO },
-      { nome: 'Samuel', email: 'samuel@renetec.com.br', perfil: PerfilUsuario.TECNICO },
       { nome: 'Joás', email: 'joas@renetec.com.br', perfil: PerfilUsuario.TECNICO },
       { nome: 'Rhyan', email: 'rhyan@renetec.com.br', perfil: PerfilUsuario.QUALIDADE },
       { nome: 'Luana', email: 'luana@renetec.com.br', perfil: PerfilUsuario.ADMIN },
@@ -36,6 +35,16 @@ export async function ensureDatabaseSeeded(): Promise<void> {
         },
       });
     }
+
+    // Garantir que ex-colaboradores não existam no sistema
+    await prisma.usuario.deleteMany({
+      where: {
+        OR: [
+          { email: 'samuel@renetec.com.br' },
+          { nome: { equals: 'Samuel', mode: 'insensitive' } },
+        ],
+      },
+    });
 
     // 2. CLIENTES OFICIAIS
     const clientesBase = [

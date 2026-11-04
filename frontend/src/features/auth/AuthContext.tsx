@@ -4,7 +4,7 @@ import { api } from '../../services/api';
 
 interface AuthContextData extends AuthState {
   login: (email: string, senha: string) => Promise<void>;
-  quickLogin: (userType: 'admin' | 'joao' | 'samuel' | 'qualidade') => Promise<void>;
+  quickLogin: (userType: 'admin' | 'joao' | 'qualidade') => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -74,11 +74,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const quickLogin = async (userType: 'admin' | 'joao' | 'samuel' | 'qualidade') => {
+  const quickLogin = async (userType: 'admin' | 'joao' | 'qualidade') => {
     const credentials = {
       admin: { email: 'admin@renetec.com.br', senha: 'renetec123' },
       joao: { email: 'joao@renetec.com.br', senha: 'renetec123' },
-      samuel: { email: 'samuel@renetec.com.br', senha: 'renetec123' },
       qualidade: { email: 'qualidade@renetec.com.br', senha: 'renetec123' },
     };
 

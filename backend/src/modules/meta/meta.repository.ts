@@ -92,16 +92,14 @@ export const GUIA_COMO_USAR: GuiaComoUsarItem[] = [
 ];
 
 export const COLABORADORES_BASE: ColaboradorMeta[] = [
-  { id: 'colab-samuel', nome: 'Samuel', funcao: 'Produção', pesoBonus: 0.22, pontosRealizados: 0, percentualTotal: 0, metaIndividualCumprida: true },
-  { id: 'colab-joao', nome: 'João', funcao: 'Produção', pesoBonus: 0.22, pontosRealizados: 0, percentualTotal: 0, metaIndividualCumprida: true },
-  { id: 'colab-joas', nome: 'Joás', funcao: 'Produção', pesoBonus: 0.22, pontosRealizados: 0, percentualTotal: 0, metaIndividualCumprida: true },
-  { id: 'colab-rhyan', nome: 'Rhyan', funcao: 'Qualidade/Testes', pesoBonus: 0.17, pontosRealizados: 0, percentualTotal: 0, metaIndividualCumprida: true },
-  { id: 'colab-luana', nome: 'Luana', funcao: 'Atendimento/Comercial', pesoBonus: 0.17, pontosRealizados: 0, percentualTotal: 0, metaIndividualCumprida: true },
+  { id: 'colab-joao', nome: 'João', funcao: 'Produção', pesoBonus: 0.30, pontosRealizados: 0, percentualTotal: 0, metaIndividualCumprida: true },
+  { id: 'colab-joas', nome: 'Joás', funcao: 'Produção', pesoBonus: 0.30, pontosRealizados: 0, percentualTotal: 0, metaIndividualCumprida: true },
+  { id: 'colab-rhyan', nome: 'Rhyan', funcao: 'Qualidade/Testes', pesoBonus: 0.20, pontosRealizados: 0, percentualTotal: 0, metaIndividualCumprida: true },
+  { id: 'colab-luana', nome: 'Luana', funcao: 'Atendimento/Comercial', pesoBonus: 0.20, pontosRealizados: 0, percentualTotal: 0, metaIndividualCumprida: true },
 ];
 
 let inMemoryFaturamentoRecebido: number = 0;
 let inMemoryMetaIndividualStatus: Record<string, boolean> = {
-  'colab-samuel': true,
   'colab-joao': true,
   'colab-joas': true,
   'colab-rhyan': true,
@@ -364,7 +362,6 @@ export async function resetarMetasProducao(mes?: number, ano?: number, resetarTu
 
   inMemoryFaturamentoRecebido = 0;
   inMemoryMetaIndividualStatus = {
-    'colab-samuel': true,
     'colab-joao': true,
     'colab-joas': true,
     'colab-rhyan': true,

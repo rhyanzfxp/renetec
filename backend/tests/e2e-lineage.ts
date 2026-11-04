@@ -269,14 +269,14 @@ export async function runFullE2ETestSuite(): Promise<void> {
     results.push({ step: 9, name: 'Metas Coletivas integradas com CQ', success: resMetas.ok });
     console.log(`   ✅ Metas Coletivas: ${totalAprovadas} peças válidas | Ritmo Atual: ${metasData.data?.ritmoDiarioAtual || 0} un/dia`);
 
-    // ─── 10. Auto-atendimento Técnico: Samuel Aponta Lote OS #1920 Diretamente ──
-    console.log('\n👨‍🔧 [10/11] Técnico Samuel apontando Lote da OS #1920 (12 ONTs + 2 CCRs) direto para Testes...');
-    const samuel = await login('samuel@renetec.com.br');
-    const resLoteSamuel = await fetch(`${BASE_URL}/producao/apontamento-lote`, {
+    // ─── 10. Auto-atendimento Técnico: João Aponta Lote OS #1920 Diretamente ──
+    console.log('\n👨‍🔧 [10/11] Técnico João apontando Lote da OS #1920 (12 ONTs + 2 CCRs) direto para Testes...');
+    const joao = await login('joao@renetec.com.br');
+    const resLoteJoao = await fetch(`${BASE_URL}/producao/apontamento-lote`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${samuel.token}`,
+        'Authorization': `Bearer ${joao.token}`,
       },
       body: JSON.stringify({
         numeroOS: 1920,
@@ -303,14 +303,14 @@ export async function runFullE2ETestSuite(): Promise<void> {
         ],
       }),
     });
-    const loteSamuelData = await resLoteSamuel.json();
-    const loteSamuelOk = resLoteSamuel.ok && loteSamuelData.data?.ordemServico?.numeroOS === 1920;
+    const loteJoaoData = await resLoteJoao.json();
+    const loteJoaoOk = resLoteJoao.ok && loteJoaoData.data?.ordemServico?.numeroOS === 1920;
     results.push({
       step: 10,
-      name: 'Auto-Atendimento Técnico: Samuel cria OS #1920 (12 ONTs + 2 CCRs) direto p/ CQ',
-      success: loteSamuelOk,
+      name: 'Auto-Atendimento Técnico: João cria OS #1920 (12 ONTs + 2 CCRs) direto p/ CQ',
+      success: loteJoaoOk,
     });
-    console.log(`   ✅ Lote criado por Samuel: OS #${loteSamuelData.data?.ordemServico?.numeroOS} com ${loteSamuelData.data?.itens?.length} tipos de equipamentos.`);
+    console.log(`   ✅ Lote criado por João: OS #${loteJoaoData.data?.ordemServico?.numeroOS} com ${loteJoaoData.data?.itens?.length} tipos de equipamentos.`);
 
     // ─── 11. Trilha de Auditoria e Validação de Eventos ──────────────────────
     console.log('\n📜 [11/11] Validando registros na Trilha de Auditoria...');

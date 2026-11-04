@@ -381,7 +381,7 @@ export const TvFabricaPage: React.FC = () => {
                       </>
                     ) : (
                       <>
-                        {/* Produção (João, Samuel, Joás): REPARADOS | SEM DEFEITO | SUCATA | RETRABALHO */}
+                        {/* Produção (João, Joás): REPARADOS | SEM DEFEITO | SUCATA | RETRABALHO */}
                         <div className="text-center p-2 rounded-xl bg-emerald-50 dark:bg-[#070c18] border border-emerald-200 dark:border-gray-800">
                           <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">REPARADOS</p>
                           <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono tabular-nums leading-tight mt-0.5">

@@ -22,18 +22,6 @@ async function main() {
     },
   });
 
-  const samuel = await prisma.usuario.upsert({
-    where: { email: 'samuel@renetec.com.br' },
-    update: {},
-    create: {
-      nome: 'Samuel',
-      email: 'samuel@renetec.com.br',
-      senhaHash: senhaPadraoHash,
-      perfil: PerfilUsuario.TECNICO,
-      ativo: true,
-    },
-  });
-
   const joao = await prisma.usuario.upsert({
     where: { email: 'joao@renetec.com.br' },
     update: {},
@@ -164,7 +152,7 @@ async function main() {
 
   console.log('✅ Seed finalizado com sucesso!');
   console.log(`- Administrador: ${admin.email} (senha: renetec123)`);
-  console.log(`- Técnicos: Samuel, João, Joás (senha: renetec123)`);
+  console.log(`- Técnicos: João, Joás (senha: renetec123)`);
   console.log(`- Qualidade/Testes: ${rhyan.email} (senha: renetec123)`);
   console.log(`- Atendimento/Comercial: ${luana.email} (senha: renetec123)`);
   console.log(`- Cliente Principal: ${maranet.nomeRazaoSocial}`);

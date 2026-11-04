@@ -176,7 +176,7 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
           <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-surface-border/50 text-gray-700 dark:text-gray-300">
             <div className="flex items-center gap-1.5">
               <User className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
-              <span>Técnico Responsável: <strong className="text-gray-900 dark:text-white">{item.tecnicoAlocado?.nome || 'Samuel'}</strong></span>
+              <span>Técnico Responsável: <strong className="text-gray-900 dark:text-white">{item.tecnicoAlocado?.nome || 'Técnico Responsável'}</strong></span>
             </div>
             <div className="text-right">
               <span>Lote Disponível: <strong className="text-amber-600 dark:text-amber-400 tabular-nums">{qtdLoteTotal} un</strong></span>
@@ -358,12 +358,12 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
                 <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400" /> Motivo de Não-Conformidade & Retrabalho
               </span>
               <span className="text-[11px] text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-500/20 px-2 py-0.5 rounded font-bold">
-                Devolução p/ {item.tecnicoAlocado?.nome || 'Samuel'}
+                Devolução p/ {item.tecnicoAlocado?.nome || 'Técnico Responsável'}
               </span>
             </div>
 
             <p className="text-[11px] text-amber-900 dark:text-amber-200 bg-amber-100/70 dark:bg-amber-950/40 p-2.5 rounded-lg border border-amber-300 dark:border-amber-500/30">
-              <strong>Atenção:</strong> As <strong>{reprovadas} unidade(s)</strong> reprovadas serão encaminhadas imediatamente para a fila de Retrabalho do técnico <strong>{item.tecnicoAlocado?.nome || 'Samuel'}</strong> para correção.
+              <strong>Atenção:</strong> As <strong>{reprovadas} unidade(s)</strong> reprovadas serão encaminhadas imediatamente para a fila de Retrabalho do técnico <strong>{item.tecnicoAlocado?.nome || 'Técnico Responsável'}</strong> para correção.
             </p>
 
             <div className="space-y-1.5">

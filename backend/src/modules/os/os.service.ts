@@ -195,7 +195,6 @@ export class OsService {
     }
 
     return [
-      { id: 'colab-samuel', nome: 'Samuel', email: 'samuel@renetec.com.br', funcao: 'Produção' },
       { id: 'colab-joao', nome: 'João', email: 'joao@renetec.com.br', funcao: 'Produção' },
       { id: 'colab-joas', nome: 'Joás', email: 'joas@renetec.com.br', funcao: 'Produção' },
       { id: 'colab-rhyan', nome: 'Rhyan', email: 'rhyan@renetec.com.br', funcao: 'Qualidade/Testes' },

@@ -255,7 +255,6 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
   const baseBancadas = [
     { id: 'usr-tecnico-01', tecId: 'colab-joao', nome: 'João', funcao: 'Produção' },
     { id: 'usr-tecnico-03', tecId: 'colab-joas', nome: 'Joás', funcao: 'Produção' },
-    { id: 'usr-tecnico-02', tecId: 'colab-samuel', nome: 'Samuel', funcao: 'Produção' },
     { id: 'usr-qualidade-01', tecId: 'colab-rhyan', nome: 'Rhyan', funcao: 'Qualidade/Testes' },
   ];
 
@@ -870,11 +869,10 @@ export async function getGerencialData(
     : (tvData.meta as any)?.equipe && (tvData.meta as any).equipe.length > 0
     ? (tvData.meta as any).equipe
     : [
-        { id: 'colab-samuel', nome: 'Samuel', funcao: 'Produção', pesoBonus: 0.22, pontosRealizados: 0 },
-        { id: 'colab-joao', nome: 'João', funcao: 'Produção', pesoBonus: 0.22, pontosRealizados: 0 },
-        { id: 'colab-joas', nome: 'Joás', funcao: 'Produção', pesoBonus: 0.22, pontosRealizados: 0 },
-        { id: 'colab-rhyan', nome: 'Rhyan', funcao: 'Qualidade/Testes', pesoBonus: 0.17, pontosRealizados: 0 },
-        { id: 'colab-luana', nome: 'Luana', funcao: 'Atendimento/Comercial', pesoBonus: 0.17, pontosRealizados: 0 },
+        { id: 'colab-joao', nome: 'João', funcao: 'Produção', pesoBonus: 0.30, pontosRealizados: 0 },
+        { id: 'colab-joas', nome: 'Joás', funcao: 'Produção', pesoBonus: 0.30, pontosRealizados: 0 },
+        { id: 'colab-rhyan', nome: 'Rhyan', funcao: 'Qualidade/Testes', pesoBonus: 0.20, pontosRealizados: 0 },
+        { id: 'colab-luana', nome: 'Luana', funcao: 'Atendimento/Comercial', pesoBonus: 0.20, pontosRealizados: 0 },
       ];
 
   const produtividadeTecnicos: ProdutividadeTecnico[] = fechamentoOficial
