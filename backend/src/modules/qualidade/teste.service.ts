@@ -1,5 +1,5 @@
 import * as repo from './teste.repository.js';
-import type { RealizarTesteInput } from './teste.schema.js';
+import type { RealizarTesteInput, EditarTesteInput } from './teste.schema.js';
 import { realtimeService } from '../realtime/realtime.service.js';
 import { log } from '../auditoria/auditoria.service.js';
 
@@ -70,4 +70,18 @@ export async function realizarTeste(inspetorId: string, dados: RealizarTesteInpu
 
 export async function getHistoricoTestes(page: number, limit: number) {
   return repo.getHistoricoTestes(page, limit);
+}
+
+export async function editarTeste(inspetorId: string, testeId: string, dados: EditarTesteInput) {
+  const resultado = await repo.editarTeste(testeId, dados);
+  realtimeService.broadcast('dashboard:atualizado', { testeId });
+  log({
+    acao: 'TESTE_EDITADO',
+    usuarioId: inspetorId,
+    entidade: 'Teste',
+    entidadeId: testeId,
+    descricao: `Laudo de CQ corrigido: técnico ou observação atualizados.`,
+    detalhes: dados,
+  }).catch(() => {});
+  return resultado;
 }

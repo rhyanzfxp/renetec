@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { KpiCard } from '../../components/ui/KpiCard';
 import { RealizarTesteDrawer } from './RealizarTesteDrawer';
 import { RegistrarTesteCQDrawer } from './RegistrarTesteCQDrawer';
+import { EditarLaudoModal } from './EditarLaudoModal';
 import {
   CheckCircle2,
   XCircle,
@@ -21,6 +22,7 @@ import {
   Search,
   X,
   Ban,
+  Pencil,
 } from 'lucide-react';
 
 export const QualidadePage: React.FC = () => {
@@ -36,6 +38,9 @@ export const QualidadePage: React.FC = () => {
 
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const isApprovingRef = useRef(false);
+
+  // Estado para o modal de edição de laudo
+  const [editandoTeste, setEditandoTeste] = useState<HistoricoTesteItem | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -438,6 +443,13 @@ export const QualidadePage: React.FC = () => {
                         <Ban className="w-3 h-3 text-red-500 dark:text-red-400" /> {(h as any).quantidadeSucata || (h.observacao?.match(/\[Sucata:\s*(\d+)/i)?.[1])} Sucata
                       </span>
                     )}
+                    <button
+                      onClick={() => setEditandoTeste(h)}
+                      title="Corrigir laudo"
+                      className="p-1.5 rounded-lg hover:bg-amber-500/10 text-gray-400 hover:text-amber-400 transition-colors flex-shrink-0"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
               );
@@ -459,6 +471,14 @@ export const QualidadePage: React.FC = () => {
         isOpen={isRegistrarCQOpen}
         onClose={() => setIsRegistrarCQOpen(false)}
         onSuccess={loadData}
+      />
+
+      {/* Modal de Correção de Laudo */}
+      <EditarLaudoModal
+        isOpen={!!editandoTeste}
+        onClose={() => setEditandoTeste(null)}
+        onSuccess={loadData}
+        teste={editandoTeste}
       />
     </div>
   );

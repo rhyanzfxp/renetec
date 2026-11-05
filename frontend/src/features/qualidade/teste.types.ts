@@ -53,6 +53,11 @@ export interface FilaTesteItem {
   };
 }
 
+export interface EditarTestePayload {
+  tecnicoResponsavelId?: string;
+  observacao?: string;
+}
+
 export interface RealizarTestePayload {
   producaoId?: string;
   itemOrdemServicoId?: string;

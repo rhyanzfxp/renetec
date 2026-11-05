@@ -66,3 +66,11 @@ export const RealizarTesteSchema = z
   });
 
 export type RealizarTesteInput = z.infer<typeof RealizarTesteSchema>;
+
+// ─── Schema para edição de laudo de CQ já registrado ──────────────────────────
+export const EditarTesteSchema = z.object({
+  tecnicoResponsavelId: z.string().optional(),
+  observacao: z.string().max(1000).optional(),
+});
+
+export type EditarTesteInput = z.infer<typeof EditarTesteSchema>;

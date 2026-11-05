@@ -4,6 +4,7 @@ import type {
   MotivoReprovacaoData,
   RealizarTestePayload,
   HistoricoTesteItem,
+  EditarTestePayload,
 } from './teste.types';
 
 export const qualidadeApiService = {
@@ -39,5 +40,14 @@ export const qualidadeApiService = {
       data: Array.isArray(response.data?.data) ? response.data.data : [],
       total: response.data?.meta?.total || 0,
     };
+  },
+
+  // Corrige técnico/observação de um laudo já registrado
+  async editarTeste(testeId: string, payload: EditarTestePayload) {
+    const response = await api.patch<{ success: boolean; data: HistoricoTesteItem; message: string }>(
+      `/qualidade/testes/${testeId}`,
+      payload
+    );
+    return response.data;
   },
 };

@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { authenticate, authorize } from '../../middlewares/auth.middleware.js';
-import { RealizarTesteSchema } from './teste.schema.js';
+import { RealizarTesteSchema, EditarTesteSchema } from './teste.schema.js';
 import * as service from './teste.service.js';
 
 interface UserJwtPayload {
@@ -91,6 +91,38 @@ export const qualidadeRoutes: FastifyPluginAsync = async (fastify) => {
           totalPages: resultado.totalPages || 0,
         },
       });
+    }
+  );
+
+  // ─── PATCH /qualidade/testes/:id ──────────────────────────────────────────
+  // Corrige técnico de reparo e/ou observação de um laudo já registrado
+  fastify.patch(
+    '/qualidade/testes/:id',
+    { preHandler: [authenticate, authorize(['QUALIDADE', 'ADMIN'])] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const parsed = EditarTesteSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.status(400).send({
+          success: false,
+          error: {
+            code: 'DADOS_INVALIDOS',
+            message: parsed.error.issues[0]?.message || 'Dados de edição inválidos.',
+            details: parsed.error.issues,
+          },
+        });
+      }
+      const user = request.user as UserJwtPayload;
+      try {
+        const teste = await service.editarTeste(user.sub, id, parsed.data);
+        return reply.send({ success: true, message: 'Laudo corrigido com sucesso.', data: teste });
+      } catch (err: unknown) {
+        const e = err as { statusCode?: number; message?: string };
+        if (e.statusCode) {
+          return reply.status(e.statusCode).send({ success: false, message: e.message });
+        }
+        throw err;
+      }
     }
   );
 };

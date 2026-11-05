@@ -1,6 +1,6 @@
 import { prisma, isDatabaseReady } from '../../database/prisma.js';
 import { ensureUsuarioDbId } from '../../database/db-utils.js';
-import type { RealizarTesteInput } from './teste.schema.js';
+import type { RealizarTesteInput, EditarTesteInput } from './teste.schema.js';
 import { StatusOS, CategoriaReprovacao } from '@prisma/client';
 
 export interface MotivoReprovacaoRecord {
@@ -501,6 +501,87 @@ export async function realizarTeste(
   }, { maxWait: 10000, timeout: 30000 });
 
   return resultado;
+}
+
+// ─── Editar laudo de CQ já registrado (correção de técnico / observação) ──────
+export async function editarTeste(testeId: string, dados: EditarTesteInput) {
+  if (!isDatabaseReady()) throw new Error('Banco de dados indisponível no momento.');
+
+  // Busca o teste com retrabalho e produção vinculados
+  const teste = await prisma.teste.findUnique({
+    where: { id: testeId },
+    include: {
+      retrabalhos: { take: 1 },
+      producao: { select: { id: true, tecnicoId: true, itemOrdemServicoId: true } },
+    },
+  });
+
+  if (!teste) throw { statusCode: 404, message: 'Laudo de inspeção não encontrado.' };
+
+  let tecnicoDbId: string | undefined;
+  if (dados.tecnicoResponsavelId) {
+    tecnicoDbId = await ensureUsuarioDbId(dados.tecnicoResponsavelId, 'TECNICO');
+  }
+
+  await prisma.$transaction(async (tx) => {
+    // 1. Atualiza observação do teste (se informada)
+    if (dados.observacao !== undefined) {
+      await tx.teste.update({ where: { id: testeId }, data: { observacao: dados.observacao } });
+    }
+
+    // 2. Atualiza o técnico na produção vinculada
+    if (tecnicoDbId && teste.producao) {
+      await tx.producao.update({
+        where: { id: teste.producao.id },
+        data: { tecnicoId: tecnicoDbId },
+      });
+      // Atualiza o tecnicoAlocado no item da OS
+      await tx.itemOrdemServico.update({
+        where: { id: teste.producao.itemOrdemServicoId },
+        data: { tecnicoAlocadoId: tecnicoDbId },
+      }).catch(() => {});
+    }
+
+    // 3. Atualiza o técnico no retrabalho (se houver)
+    if (tecnicoDbId && teste.retrabalhos.length > 0) {
+      await tx.retrabalho.update({
+        where: { id: teste.retrabalhos[0].id },
+        data: { tecnicoResponsavelId: tecnicoDbId },
+      });
+    }
+  });
+
+  // Retorna o teste atualizado com todos os relates necessários para o frontend
+  return prisma.teste.findUnique({
+    where: { id: testeId },
+    include: {
+      inspetor: { select: { id: true, nome: true } },
+      retrabalhos: {
+        include: {
+          tecnicoResponsavel: { select: { id: true, nome: true } },
+          motivoReprovacao: { select: { id: true, descricao: true, categoria: true } },
+        },
+      },
+      producao: {
+        include: {
+          tecnico: { select: { id: true, nome: true } },
+          itemOrdemServico: {
+            include: {
+              tecnicoAlocado: { select: { id: true, nome: true } },
+              ordemServico: {
+                select: {
+                  id: true,
+                  numeroOS: true,
+                  cliente: { select: { nomeRazaoSocial: true } },
+                },
+              },
+              tipoEquipamento: { select: { nome: true, marca: true } },
+            },
+          },
+        },
+      },
+    },
+  });
 }
 
 // ─── Histórico de Testes de CQ (paginado com dados completos de técnicos e retrabalho) ───
