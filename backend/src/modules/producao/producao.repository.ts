@@ -96,6 +96,10 @@ export async function getMinhaFila(tecnicoId: string) {
 
     const itens = await prisma.itemOrdemServico.findMany({
       where: {
+        ordemServico: {
+          status: { notIn: ['CONCLUIDO', 'CANCELADO'] },
+          ocultadoPorTecnicoId: null,
+        },
         OR: [
           // Itens alocados diretamente ao técnico
           { tecnicoAlocadoId: { in: aliasIds } },
@@ -163,6 +167,13 @@ export async function getMinhasCaixas(tecnicoId: string) {
           { tecnico: { nome: { contains: clean, mode: 'insensitive' } } },
           { itemOrdemServico: { tecnicoAlocadoId: { in: aliasIds } } },
         ],
+        itemOrdemServico: {
+          ordemServico: {
+            status: { notIn: ['CONCLUIDO', 'CANCELADO'] },
+            ocultadoPorTecnicoId: null,
+          },
+          statusItem: { notIn: ['CONCLUIDO', 'CANCELADO'] },
+        },
       },
       include: {
         itemOrdemServico: {
@@ -175,6 +186,7 @@ export async function getMinhasCaixas(tecnicoId: string) {
                 status: true,
                 dataEntrada: true,
                 observacoes: true,
+                ocultadoPorTecnicoId: true,
                 cliente: { select: { id: true, nomeRazaoSocial: true } },
               },
             },
@@ -205,7 +217,13 @@ export async function getMinhasCaixas(tecnicoId: string) {
     const itens: any[] = [];
 
     for (const prod of producoes) {
-      if (prod.itemOrdemServico && !seenItemIds.has(prod.itemOrdemServico.id)) {
+      if (
+        prod.itemOrdemServico &&
+        !seenItemIds.has(prod.itemOrdemServico.id) &&
+        prod.itemOrdemServico.ordemServico?.status !== 'CONCLUIDO' &&
+        prod.itemOrdemServico.ordemServico?.status !== 'CANCELADO' &&
+        !prod.itemOrdemServico.ordemServico?.ocultadoPorTecnicoId
+      ) {
         seenItemIds.add(prod.itemOrdemServico.id);
         const allProds = prod.itemOrdemServico.producoes || [];
         
@@ -869,6 +887,7 @@ export async function getMinhasOsEmAndamento(tecnicoId: string) {
     const ordens = await prisma.ordemServico.findMany({
       where: {
         status: { notIn: ['CONCLUIDO', 'CANCELADO', 'SEM_REPARO'] },
+        ocultadoPorTecnicoId: null,
         OR: [
           { tecnicoResponsavelId: { in: aliasIds } },
           { itens: { some: { tecnicoAlocadoId: { in: aliasIds } } } },
@@ -1229,6 +1248,7 @@ export async function concluirOrdemServico(osIdOrNumero: string | number, tecnic
   }
 
   const agora = new Date();
+  const tecnicoDbId = await ensureUsuarioDbId(tecnicoId, 'TECNICO').catch(() => tecnicoId);
   const obsAtualizada = observacao
     ? `${osDb.observacoes ? osDb.observacoes + ' | ' : ''}Concluída em ${agora.toLocaleDateString('pt-BR')}: ${observacao}`
     : osDb.observacoes;
@@ -1240,6 +1260,8 @@ export async function concluirOrdemServico(osIdOrNumero: string | number, tecnic
       data: {
         status: 'CONCLUIDO',
         dataConclusao: agora,
+        ocultadoPorTecnicoId: tecnicoDbId,
+        ocultadoEm: agora,
         observacoes: obsAtualizada,
       },
       include: {
@@ -1408,7 +1430,41 @@ export async function despacharOrdemServicoParaCQ(
   return updatedOs;
 }
 
-// ─── Exclui uma Ordem de Serviço incorreta/errada (com cascata limpa) ────────
+// ─── Oculta a OS da view do técnico (soft-delete) — dados preservados no banco ─
+export async function ocultarOrdemServico(
+  osIdOrNumero: string | number,
+  usuarioId: string
+) {
+  if (!isDatabaseReady()) throw new Error('Banco de dados indisponível.');
+
+  const str = String(osIdOrNumero);
+  const num = parseInt(str.replace(/\D/g, ''));
+  const isUuid = str.length > 20 && str.includes('-');
+
+  const osDb = await prisma.ordemServico.findFirst({
+    where: isUuid
+      ? { id: str }
+      : !isNaN(num) && num > 0
+      ? { OR: [{ id: str }, { numeroOS: num }] }
+      : { id: str },
+  });
+
+  if (!osDb) throw new Error('Ordem de Serviço não encontrada.');
+
+  const tecnicoDbId = await ensureUsuarioDbId(usuarioId, 'TECNICO').catch(() => usuarioId);
+
+  await prisma.ordemServico.update({
+    where: { id: osDb.id },
+    data: {
+      ocultadoPorTecnicoId: tecnicoDbId,
+      ocultadoEm: new Date(),
+    },
+  });
+
+  return { id: osDb.id, numeroOS: osDb.numeroOS };
+}
+
+// ─── Oculta / Finaliza uma OS da bancada do técnico (PRESERVA dados no banco para o admin) ────────
 export async function excluirOrdemServico(
   osIdOrNumero: string | number,
   usuarioId: string
@@ -1437,31 +1493,45 @@ export async function excluirOrdemServico(
 
   const numeroOS = osDb.numeroOS;
   const osId = osDb.id;
+  const agora = new Date();
+  const tecnicoDbId = await ensureUsuarioDbId(usuarioId, 'TECNICO').catch(() => usuarioId);
 
+  // REGRA DE NEGÓCIO: NÃO APAGAR REGISTROS DE PRODUÇÃO, TESTE, RETRABALHO OU SUCATA DO BANCO!
+  // O técnico remove a OS da bancada para não poluir sua tela, mas o ADMIN precisa ver tudo em relatórios.
   await prisma.$transaction(async (tx) => {
-    // 1. Exclusão determinística e segura em cascata
-    const itemIds = osDb.itens.map((it) => it.id);
-    if (itemIds.length > 0) {
-      await tx.retrabalho.deleteMany({
-        where: { itemOrdemServicoId: { in: itemIds } },
-      });
-      await tx.teste.deleteMany({
-        where: { producao: { itemOrdemServicoId: { in: itemIds } } },
-      });
-      await tx.producao.deleteMany({
-        where: { itemOrdemServicoId: { in: itemIds } },
-      });
-      await tx.itemOrdemServico.deleteMany({
-        where: { ordemServicoId: osId },
-      });
-    }
-
-    await tx.historicoStatus.deleteMany({
-      where: { ordemServicoId: osId },
+    // 1. Marca a OS como CONCLUIDO e preenche ocultadoPorTecnicoId
+    await tx.ordemServico.update({
+      where: { id: osId },
+      data: {
+        status: 'CONCLUIDO',
+        dataConclusao: osDb.dataConclusao || agora,
+        ocultadoPorTecnicoId: tecnicoDbId,
+        ocultadoEm: agora,
+        observacoes: osDb.observacoes
+          ? `${osDb.observacoes} | [Encerrada e removida da bancada em ${agora.toLocaleDateString('pt-BR')}]`
+          : `[Encerrada e removida da bancada em ${agora.toLocaleDateString('pt-BR')}]`,
+      },
     });
 
-    await tx.ordemServico.delete({
-      where: { id: osId },
+    // 2. Marca itens como CONCLUIDO caso ainda estivessem em aberto
+    await tx.itemOrdemServico.updateMany({
+      where: {
+        ordemServicoId: osId,
+        statusItem: { notIn: ['CONCLUIDO', 'CANCELADO', 'SEM_REPARO'] },
+      },
+      data: { statusItem: 'CONCLUIDO' },
+    });
+
+    // 3. Finaliza produções que ainda estivessem em andamento
+    await tx.producao.updateMany({
+      where: {
+        itemOrdemServico: { ordemServicoId: osId },
+        status: 'EM_ANDAMENTO',
+      },
+      data: {
+        status: 'FINALIZADO',
+        dataFim: agora,
+      },
     });
   }, { maxWait: 10000, timeout: 30000 });
 

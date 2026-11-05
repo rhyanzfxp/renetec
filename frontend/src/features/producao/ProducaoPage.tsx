@@ -296,6 +296,22 @@ export const ProducaoPage: React.FC = () => {
     }
   };
 
+  const handleFinalizarCaixa = async (item: FilaItemData) => {
+    const num = item.ordemServico?.numeroOS;
+    const osId = item.ordemServicoId || item.ordemServico?.id;
+    if (!num && !osId) return;
+
+    try {
+      setErrorMessage(null);
+      await producaoApiService.concluirOs(num || osId, 'Finalizada pela bancada');
+      setSuccessMessage(`OS #${num || '—'} finalizada com sucesso e retirada da sua bancada!`);
+      setTimeout(() => setSuccessMessage(null), 5000);
+      await loadData();
+    } catch (err: any) {
+      setErrorMessage(err.response?.data?.message || 'Erro ao finalizar OS.');
+    }
+  };
+
   const handleContinuarOS = (os: OsEmAndamentoData) => {
     setSelectedOsParaContinuar(os);
     setEditingItem(null);
@@ -735,31 +751,48 @@ export const ProducaoPage: React.FC = () => {
                 </div>
 
                 {/* Ações da OS */}
-                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-surface-border/50">
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => handleContinuarOS(os)}
-                    leftIcon={<Play className="w-3.5 h-3.5 fill-current" />}
-                    className="w-full font-bold text-xs"
-                    title="Continuar apontando a produção de hoje nesta OS"
-                  >
-                    Continuar OS
-                  </Button>
+                <div className="space-y-2 pt-2 border-t border-surface-border/50">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => handleContinuarOS(os)}
+                      leftIcon={<Play className="w-3.5 h-3.5 fill-current" />}
+                      className="w-full font-bold text-xs"
+                      title="Continuar apontando a produção de hoje nesta OS"
+                    >
+                      Continuar OS
+                    </Button>
+
+                    <Button
+                      variant="success"
+                      size="sm"
+                      onClick={() => {
+                        setOsParaDespacharCQ(os);
+                        setDespacharCqObservacao('');
+                        setDespacharCqModalOpen(true);
+                      }}
+                      leftIcon={<Send className="w-3.5 h-3.5" />}
+                      className="w-full font-bold text-xs shadow-glow-success"
+                      title="Enviar esta OS e equipamentos reparados para a fila de testes do CQ"
+                    >
+                      Despachar para o CQ
+                    </Button>
+                  </div>
 
                   <Button
-                    variant="success"
+                    variant="outline"
                     size="sm"
                     onClick={() => {
-                      setOsParaDespacharCQ(os);
-                      setDespacharCqObservacao('');
-                      setDespacharCqModalOpen(true);
+                      setOsParaConcluir(os);
+                      setConcluirOsObservacao('');
+                      setConcluirOsModalOpen(true);
                     }}
-                    leftIcon={<Send className="w-3.5 h-3.5" />}
-                    className="w-full font-bold text-xs shadow-glow-success"
-                    title="Enviar esta OS e equipamentos reparados para a fila de testes do CQ"
+                    leftIcon={<CheckCheck className="w-3.5 h-3.5 text-emerald-500" />}
+                    className="w-full text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 border-emerald-500/30"
+                    title="Finalizar/Concluir esta OS e remover da sua tela"
                   >
-                    Despachar para o CQ
+                    Finalizar / Concluir OS
                   </Button>
                 </div>
               </div>
@@ -980,24 +1013,34 @@ export const ProducaoPage: React.FC = () => {
                       <span className="text-xs font-bold text-gray-900 dark:text-white tabular-nums flex items-center gap-1.5">
                         <Package className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" /> OS #{os?.numeroOS || '—'}
                       </span>
-                      {isItemAtivo ? (
-                        <span className="px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/40 text-[10px] font-black uppercase flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-ping" />
-                          Ao Vivo
-                        </span>
-                      ) : isEmBancada ? (
-                        <span className="px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 text-[10px] font-bold uppercase">
-                          Na Bancada
-                        </span>
-                      ) : isNoCQ ? (
-                        <span className="px-2 py-0.5 rounded bg-sky-50 dark:bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30 text-[10px] font-bold uppercase">
-                          No Teste CQ
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-500/20 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-500/30 text-[10px] font-bold uppercase">
-                          Aguardando
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1.5">
+                        {isItemAtivo ? (
+                          <span className="px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/40 text-[10px] font-black uppercase flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-ping" />
+                            Ao Vivo
+                          </span>
+                        ) : isEmBancada ? (
+                          <span className="px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 text-[10px] font-bold uppercase">
+                            Na Bancada
+                          </span>
+                        ) : isNoCQ ? (
+                          <span className="px-2 py-0.5 rounded bg-sky-50 dark:bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30 text-[10px] font-bold uppercase">
+                            No Teste CQ
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-500/20 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-500/30 text-[10px] font-bold uppercase">
+                            Aguardando
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleFinalizarCaixa(item)}
+                          className="p-1 rounded text-gray-400 hover:text-emerald-500 hover:bg-emerald-500/10 transition-colors ml-0.5"
+                          title="Finalizar OS e retirar da bancada"
+                        >
+                          <CheckCheck className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
 
                     <div>
@@ -1098,6 +1141,17 @@ export const ProducaoPage: React.FC = () => {
                         </Button>
                       )}
                     </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleFinalizarCaixa(item)}
+                      leftIcon={<CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
+                      className="w-full text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 border-emerald-500/30"
+                      title="Finalizar esta OS e retirar da sua bancada"
+                    >
+                      Finalizar / Concluir OS
+                    </Button>
                   </div>
                 </div>
               );
@@ -1241,13 +1295,13 @@ export const ProducaoPage: React.FC = () => {
         </Modal>
       )}
 
-      {/* Modal: Excluir OS Errada */}
+      {/* Modal: Remover / Finalizar OS da Bancada */}
       {excluirOsModalOpen && osParaExcluir && (
         <Modal
           isOpen={excluirOsModalOpen}
           onClose={() => setExcluirOsModalOpen(false)}
-          title={`Excluir OS #${osParaExcluir.numeroOS}`}
-          subtitle="Remoção de Ordem de Serviço lançada por engano"
+          title={`Remover OS #${osParaExcluir.numeroOS} da Bancada`}
+          subtitle="Finalização e limpeza da tela de trabalho"
           size="md"
           footer={
             <>
@@ -1260,30 +1314,35 @@ export const ProducaoPage: React.FC = () => {
                 Cancelar
               </Button>
               <Button
-                variant="danger"
+                variant="primary"
                 size="sm"
                 onClick={handleExcluirOS}
                 loading={isExcluindoOs}
                 disabled={isExcluindoOs}
-                leftIcon={<Trash2 className="w-4 h-4" />}
-                className="font-bold"
+                leftIcon={<CheckCheck className="w-4 h-4" />}
+                className="font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
               >
-                Sim, Excluir OS
+                Sim, Finalizar e Remover da Bancada
               </Button>
             </>
           }
         >
           <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
-            <div className="p-3 rounded-lg bg-red-100 dark:bg-red-950/30 border border-red-300 dark:border-red-800/50 text-xs text-red-800 dark:text-red-200 space-y-2">
-              <p className="font-bold text-red-700 dark:text-red-300 flex items-center gap-1.5">
-                <AlertTriangle className="w-4 h-4 text-red-500 dark:text-red-400 flex-shrink-0" /> Atenção: Esta ação é definitiva!
+            <div className="p-3.5 rounded-lg bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/50 text-xs text-sky-900 dark:text-sky-200 space-y-2">
+              <p className="font-bold text-sky-800 dark:text-sky-300 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" /> Limpeza da Bancada de Trabalho
               </p>
               <p>
-                Tem certeza de que deseja excluir a <strong>OS #{osParaExcluir.numeroOS}</strong> ({osParaExcluir.clienteNome || osParaExcluir.cliente?.nomeRazaoSocial})?
+                Deseja finalizar e retirar a <strong>OS #{osParaExcluir.numeroOS}</strong> ({osParaExcluir.clienteNome || osParaExcluir.cliente?.nomeRazaoSocial}) da sua bancada?
               </p>
-              <p className="text-gray-600 dark:text-gray-400">
-                Esta ação removerá a OS e todos os apontamentos vinculados a ela do banco de dados. Utilize esta opção caso a OS tenha sido criada por engano ou duplicada.
-              </p>
+              <div className="p-2.5 rounded bg-surface-card border border-surface-border space-y-1 text-gray-700 dark:text-gray-300">
+                <p className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                  🛡️ Dados 100% preservados para relatórios e administração:
+                </p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                  Todas as peças reparadas, sem defeito, sucatas, retrabalhos, testes de CQ e pontos da meta permanecem salvos no banco de dados e computados nos relatórios da empresa. A OS apenas não aparecerá mais na bancada para não poluir sua tela.
+                </p>
+              </div>
             </div>
           </div>
         </Modal>
@@ -1308,12 +1367,13 @@ export const ProducaoPage: React.FC = () => {
                 Cancelar
               </Button>
               <Button
-                variant="danger"
+                variant="primary"
                 size="sm"
                 onClick={handleConcluirOS}
                 loading={isConcluindoOs}
                 disabled={isConcluindoOs}
                 leftIcon={<CheckCheck className="w-4 h-4" />}
+                className="font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
               >
                 Confirmar Conclusão da OS
               </Button>

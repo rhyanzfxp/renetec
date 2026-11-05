@@ -149,6 +149,9 @@ model OrdemServico {
   observacoes    String?        @db.Text
   dataConclusao  DateTime?      @map("data_conclusao")
   tecnicoResponsavelId String?  @map("tecnico_responsavel_id")
+  // Soft-delete: técnico oculta a OS da sua view sem apagar dados históricos
+  ocultadoPorTecnicoId String?  @map("ocultado_por_tecnico_id")
+  ocultadoEm    DateTime?       @map("ocultado_em")
   createdAt      DateTime       @default(now()) @map("created_at")
   updatedAt      DateTime       @updatedAt @map("updated_at")
 
@@ -162,6 +165,7 @@ model OrdemServico {
   @@index([clienteId])
   @@index([dataEntrada])
   @@index([tecnicoResponsavelId])
+  @@index([ocultadoPorTecnicoId])
   @@map("ordens_servico")
 }
 
