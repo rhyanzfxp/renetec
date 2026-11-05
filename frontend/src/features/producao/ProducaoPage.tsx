@@ -1,17 +1,15 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { producaoApiService } from './producao.service';
-import type { FilaItemData, ProducaoAtivaData, ProducaoHistoricoItem, ProducaoHojeResumo, OsEmAndamentoData } from './producao.types';
+import type { FilaItemData, ProducaoHistoricoItem, ProducaoHojeResumo, OsEmAndamentoData } from './producao.types';
 import { usePageData } from '../../hooks/usePageData';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
-import { FinalizarProducaoDrawer } from './FinalizarProducaoDrawer';
 import { CriarLoteTecnicoDrawer } from './CriarLoteTecnicoDrawer';
 import {
   CheckCircle2,
   Clock,
   RefreshCw,
-  Activity,
   History,
   PlusCircle,
   Layers,
@@ -20,7 +18,6 @@ import {
   Zap,
   Package,
   Play,
-  Pause,
   Wrench,
   ShieldCheck,
   XCircle,
@@ -37,7 +34,6 @@ import {
 
 export const ProducaoPage: React.FC = () => {
   const [caixas, setCaixas] = useState<FilaItemData[]>([]);
-  const [producaoAtiva, setProducaoAtiva] = useState<ProducaoAtivaData | null>(null);
   const [historico, setHistorico] = useState<ProducaoHistoricoItem[]>([]);
   const [producaoHoje, setProducaoHoje] = useState<ProducaoHojeResumo | null>(null);
   const [osEmAndamento, setOsEmAndamento] = useState<OsEmAndamentoData[]>([]);
@@ -45,14 +41,10 @@ export const ProducaoPage: React.FC = () => {
   const [termoBusca, setTermoBusca] = useState<string>('');
 
   const [isLoading, setIsLoading] = useState(true);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCriarLoteOpen, setIsCriarLoteOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any | null>(null);
-  const [tempoDecorrido, setTempoDecorrido] = useState<string>('00:00:00');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [isPausing, setIsPausing] = useState(false);
-  const [isStarting, setIsStarting] = useState<string | null>(null);
   const [isDispatching, setIsDispatching] = useState<string | null>(null);
 
   // Estados de abertura das gavetas (com persistência no localStorage)
@@ -115,15 +107,13 @@ export const ProducaoPage: React.FC = () => {
   const loadData = useCallback(async () => {
     try {
       setErrorMessage(null);
-      const [caixasData, ativaData, histData, hojeData, emAndamentoData] = await Promise.all([
+      const [caixasData, histData, hojeData, emAndamentoData] = await Promise.all([
         producaoApiService.getMinhasCaixas().catch(() => []),
-        producaoApiService.getProducaoAtiva().catch(() => null),
         producaoApiService.getHistorico(1, 10).catch(() => ({ data: [] })),
         producaoApiService.getProducaoHoje().catch(() => null),
         producaoApiService.getMinhasOsEmAndamento().catch(() => []),
       ]);
       setCaixas(Array.isArray(caixasData) ? caixasData : []);
-      setProducaoAtiva(ativaData || null);
       setHistorico(Array.isArray(histData?.data) ? histData.data : []);
       setProducaoHoje(hojeData || null);
       setOsEmAndamento(Array.isArray(emAndamentoData) ? emAndamentoData : []);
@@ -131,7 +121,6 @@ export const ProducaoPage: React.FC = () => {
       const e = err as { response?: { data?: { message?: string } }; message?: string };
       setErrorMessage(e.response?.data?.message || 'Erro ao carregar dados do chão de fábrica.');
       setCaixas([]);
-      setProducaoAtiva(null);
       setHistorico([]);
       setProducaoHoje(null);
       setOsEmAndamento([]);
@@ -158,65 +147,6 @@ export const ProducaoPage: React.FC = () => {
     ],
     debounceMs: 400,
   });
-
-  // Cronômetro em tempo real para produção ativa
-  useEffect(() => {
-    if (!producaoAtiva?.dataInicio) {
-      setTempoDecorrido('00:00:00');
-      return;
-    }
-
-    const interval = setInterval(() => {
-      const inicio = new Date(producaoAtiva.dataInicio).getTime();
-      const agora = new Date().getTime();
-      const diffMs = Math.max(0, agora - inicio);
-
-      const horas = Math.floor(diffMs / 3600000);
-      const minutos = Math.floor((diffMs % 3600000) / 60000);
-      const segundos = Math.floor((diffMs % 60000) / 1000);
-
-      const formatado = `${horas.toString().padStart(2, '0')}:${minutos
-        .toString()
-        .padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
-      setTempoDecorrido(formatado);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [producaoAtiva]);
-
-  // Iniciar produção ao vivo de uma caixa na bancada
-  const handleIniciarProducao = async (item: FilaItemData) => {
-    if (isStarting || isPausing) return;
-    try {
-      setIsStarting(item.id);
-      setErrorMessage(null);
-      await producaoApiService.iniciarProducao(item.id);
-      setSuccessMessage(`Produção da OS #${item.ordemServico?.numeroOS || '—'} iniciada ao vivo!`);
-      setTimeout(() => setSuccessMessage(null), 5000);
-      await loadData();
-    } catch (err: any) {
-      setErrorMessage(err.response?.data?.message || 'Erro ao iniciar produção.');
-    } finally {
-      setIsStarting(null);
-    }
-  };
-
-  // Pausar produção ativa na bancada para continuar depois
-  const handlePausarProducao = async () => {
-    if (!producaoAtiva?.id || isPausing) return;
-    try {
-      setIsPausing(true);
-      setErrorMessage(null);
-      await producaoApiService.pausarProducao(producaoAtiva.id);
-      setSuccessMessage('Produção pausada. A OS continua salva na sua bancada para você retomar a qualquer momento.');
-      setTimeout(() => setSuccessMessage(null), 5000);
-      await loadData();
-    } catch (err: any) {
-      setErrorMessage(err.response?.data?.message || 'Erro ao pausar produção.');
-    } finally {
-      setIsPausing(false);
-    }
-  };
 
   // Despachar caixa/lote direto para o CQ com 1 clique
   const handleDespacharCQ = async (item: FilaItemData) => {
@@ -414,7 +344,7 @@ export const ProducaoPage: React.FC = () => {
             Bancada de Produção & Reparo Técnico
           </h2>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            Apontamento de caixas, início de produção ao vivo e envio de lotes para o Controle de Qualidade.
+            Apontamento de caixas e envio de lotes para o Controle de Qualidade.
           </p>
         </div>
 
@@ -803,84 +733,6 @@ export const ProducaoPage: React.FC = () => {
         )}
       </div>
 
-      {/* ─── 1. CARD DE PRODUÇÃO EM ANDAMENTO (CRONÔMETRO AO VIVO) ─────────── */}
-      {producaoAtiva ? (
-        <div className="p-5 sm:p-6 rounded-xl bg-gradient-to-r from-amber-500/10 via-surface-card to-surface-card border-2 border-amber-500/40 shadow-panel relative overflow-hidden">
-          <div className="absolute top-0 right-0 transform translate-x-4 -translate-y-4 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
-
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2.5">
-                <span className="flex h-3 w-3 relative">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                </span>
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                  <Activity className="w-4 h-4" /> Produção Ao Vivo na Bancada e Painel Renetec (TV)
-                </span>
-                {producaoAtiva?.itemOrdemServico?.ordemServico?.prioridade && (
-                  <StatusBadge prioridade={producaoAtiva.itemOrdemServico.ordemServico.prioridade} size="sm" />
-                )}
-              </div>
-
-              <div>
-                <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <span>OS #{producaoAtiva?.itemOrdemServico?.ordemServico?.numeroOS || '—'}</span>
-                  <span className="text-gray-400 font-normal">|</span>
-                  <span className="text-gray-700 dark:text-gray-200">{producaoAtiva?.itemOrdemServico?.tipoEquipamento?.nome || 'Equipamento'}</span>
-                </h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Cliente: <strong className="text-gray-900 dark:text-white">{producaoAtiva?.itemOrdemServico?.ordemServico?.cliente?.nomeRazaoSocial || 'MARANET Telecomunicações'}</strong> • Lote: <strong className="text-amber-600 dark:text-amber-300 tabular-nums">{producaoAtiva?.itemOrdemServico?.quantidade || 1} un</strong>
-                </p>
-              </div>
-
-              {producaoAtiva?.itemOrdemServico?.defeitoRelatado && (
-                <div className="p-2.5 rounded-lg bg-surface-base/80 border border-surface-border text-xs text-gray-700 dark:text-gray-300 max-w-xl">
-                  <span className="text-gray-500 dark:text-gray-400 font-semibold">Defeito:</span> {producaoAtiva.itemOrdemServico.defeitoRelatado}
-                </div>
-              )}
-            </div>
-
-            {/* Cronômetro e Botões de Concluir / Pausar */}
-            <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end justify-between gap-4 border-t sm:border-t-0 border-surface-border pt-4 sm:pt-0">
-              <div className="text-left sm:text-right">
-                <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider block">
-                  Tempo em Execução
-                </span>
-                <div className="text-3xl sm:text-4xl font-extrabold text-amber-500 dark:text-amber-400 font-mono tabular-nums tracking-tight mt-0.5">
-                  {tempoDecorrido}
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
-                <Button
-                  variant="outline"
-                  size="md"
-                  onClick={handlePausarProducao}
-                  disabled={isPausing}
-                  loading={isPausing}
-                  leftIcon={<Pause className="w-4 h-4 text-amber-500 dark:text-amber-400" />}
-                  className="border-amber-500/40 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-950/40 font-semibold"
-                  title="Pausar produção para continuar depois ou no outro dia"
-                >
-                  Pausar Produção
-                </Button>
-
-                <Button
-                  variant="success"
-                  size="md"
-                  onClick={() => setIsDrawerOpen(true)}
-                  leftIcon={<CheckCircle2 className="w-5 h-5" />}
-                  className="shadow-glow-success font-bold"
-                >
-                  Concluir Produção
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
       {/* ─── GAVETA 2: MINHAS CAIXAS E ORDENS DE SERVIÇO NA BANCADA ─────────── */}
       <div className="rounded-xl bg-surface-card border border-surface-border overflow-hidden transition-all duration-200 shadow-sm">
         {/* Cabeçalho da Gaveta (Clicável para expandir/recolher) */}
@@ -918,7 +770,7 @@ export const ProducaoPage: React.FC = () => {
 
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">
                 {isMinhasCaixasOpen
-                  ? 'Suas caixas em andamento na bancada. Clique em "Iniciar Produção" ou "Reabrir OS".'
+                  ? 'Suas caixas em andamento na bancada. Clique em "Reabrir OS" ou "Despachar CQ".'
                   : `Gaveta recolhida • Clique para expandir os ${currentCaixas.length} lotes de bancada`}
               </p>
             </div>
@@ -993,15 +845,12 @@ export const ProducaoPage: React.FC = () => {
               const equip = item?.tipoEquipamento;
               const isNoCQ = item.statusItem === 'AGUARDANDO_TESTE';
               const isEmBancada = item.statusItem === 'EM_PRODUCAO';
-              const isItemAtivo = producaoAtiva?.itemOrdemServicoId === item.id;
 
               return (
                 <div
                   key={item.id}
                   className={`p-4 rounded-xl border transition-all duration-150 flex flex-col justify-between space-y-4 shadow-sm ${
-                    isItemAtivo
-                      ? 'bg-gradient-to-b from-amber-500/15 to-surface-card border-amber-500 shadow-[0_0_15px_rgba(251,191,36,0.25)]'
-                      : isEmBancada
+                    isEmBancada
                       ? 'bg-gradient-to-b from-sky-500/10 to-surface-card border-sky-500/40 hover:border-sky-400'
                       : isNoCQ
                       ? 'bg-gradient-to-b from-indigo-500/10 to-surface-card border-indigo-500/40 hover:border-indigo-400'
@@ -1014,12 +863,7 @@ export const ProducaoPage: React.FC = () => {
                         <Package className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" /> OS #{os?.numeroOS || '—'}
                       </span>
                       <div className="flex items-center gap-1.5">
-                        {isItemAtivo ? (
-                          <span className="px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/40 text-[10px] font-black uppercase flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-ping" />
-                            Ao Vivo
-                          </span>
-                        ) : isEmBancada ? (
+                        {isEmBancada ? (
                           <span className="px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 text-[10px] font-bold uppercase">
                             Na Bancada
                           </span>
@@ -1079,37 +923,6 @@ export const ProducaoPage: React.FC = () => {
                   </div>
 
                   <div className="space-y-2 pt-1 border-t border-surface-border/50">
-                    {/* Botão de Iniciar Produção Ao Vivo se estiver na bancada */}
-                    {!isNoCQ && (
-                      <Button
-                        variant={isItemAtivo ? 'outline' : 'success'}
-                        size="sm"
-                        onClick={() => {
-                          if (isItemAtivo) {
-                            handlePausarProducao();
-                          } else {
-                            handleIniciarProducao(item);
-                          }
-                        }}
-                        disabled={isStarting === item.id || isPausing}
-                        loading={isStarting === item.id}
-                        leftIcon={
-                          isItemAtivo ? (
-                            <Pause className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
-                          ) : (
-                            <Play className="w-3.5 h-3.5 fill-current" />
-                          )
-                        }
-                        className={`w-full font-bold text-xs ${
-                          isItemAtivo
-                            ? 'border-amber-500/50 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-950/40'
-                            : 'shadow-glow-success'
-                        }`}
-                      >
-                        {isItemAtivo ? 'Pausar Cronômetro' : 'Iniciar Produção Ao Vivo'}
-                      </Button>
-                    )}
-
                     <div className="grid grid-cols-2 gap-2">
                       <Button
                         variant="outline"
@@ -1423,19 +1236,6 @@ export const ProducaoPage: React.FC = () => {
         }}
         onSuccess={() => {
           setSuccessMessage('Apontamento de OS registrado com sucesso!');
-          setTimeout(() => setSuccessMessage(null), 5000);
-          loadData();
-        }}
-      />
-
-      {/* Drawer de Finalização de Produção Ativa */}
-      <FinalizarProducaoDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        producao={producaoAtiva}
-        tempoDecorrido={tempoDecorrido}
-        onSuccess={() => {
-          setSuccessMessage('Produção concluída e enviada ao CQ!');
           setTimeout(() => setSuccessMessage(null), 5000);
           loadData();
         }}

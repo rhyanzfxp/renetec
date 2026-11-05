@@ -23,8 +23,6 @@ import {
   XCircle,
   Save,
   ShieldCheck,
-  RotateCcw,
-  Play,
 } from 'lucide-react';
 
 interface EquipamentoLinha {
@@ -69,7 +67,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
   const [isSavingCliente, setIsSavingCliente] = useState(false);
   const [clienteSuccessMsg, setClienteSuccessMsg] = useState<string | null>(null);
 
-  const [modoOperacao, setModoOperacao] = useState<'INICIAR_PRODUCAO' | 'DESPACHAR_CQ' | 'SALVAR_BANCADA'>('SALVAR_BANCADA');
+  const [modoOperacao, setModoOperacao] = useState<'DESPACHAR_CQ' | 'SALVAR_BANCADA'>('DESPACHAR_CQ');
   const [isExcluindoOs, setIsExcluindoOs] = useState(false);
   const [confirmExcluirModalOpen, setConfirmExcluirModalOpen] = useState(false);
 
@@ -386,7 +384,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
     return acc + qtdPronta * pts;
   }, 0);
 
-  const handleSubmit = async (modo: 'INICIAR_PRODUCAO' | 'DESPACHAR_CQ' | 'SALVAR_BANCADA') => {
+  const handleSubmit = async (modo: 'DESPACHAR_CQ' | 'SALVAR_BANCADA') => {
     if (isSubmittingRef.current || isLoading) return;
 
     if (!numeroOS.trim()) {
@@ -399,7 +397,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
       return;
     }
 
-    const isAoVivo = modo === 'INICIAR_PRODUCAO';
+    const isAoVivo = false;
     const isDiretoCQ = modo === 'DESPACHAR_CQ';
 
     if (!isAoVivo && totalProcessados < 1) {
@@ -528,51 +526,42 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
         isOpen={isOpen}
         onClose={onClose}
         title={initialOs ? `Continuar OS #${initialOs.numeroOS}` : "Apontamento de Lote / Minha OS"}
-        subtitle={initialOs ? `Técnico: ${user?.nome || 'Operador'} — OS em Andamento. Registre a produção de hoje.` : `Técnico: ${user?.nome || 'Operador'} — Inicie a produção ou relate a quantidade reparada`}
+        subtitle={initialOs ? `Técnico: ${user?.nome || 'Operador'} — OS em Andamento. Registre a produção de hoje.` : `Técnico: ${user?.nome || 'Operador'} — Relate a quantidade reparada ou despache para o CQ`}
         width="max-w-2xl"
         footer={
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
             <div className="flex flex-wrap items-center gap-2 text-xs text-gray-300">
-              {modoOperacao === 'INICIAR_PRODUCAO' ? (
-                <span className="font-bold text-amber-400 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                  Cronômetro ao vivo no Painel Renetec (TV)
-                </span>
-              ) : (
+              <span className="font-bold text-emerald-400 tabular-nums flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> {totalReparados} reparadas hoje
+              </span>
+              {totalSemDefeito > 0 && (
                 <>
-                  <span className="font-bold text-emerald-400 tabular-nums flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> {totalReparados} reparadas hoje
-                  </span>
-                  {totalSemDefeito > 0 && (
-                    <>
-                      <span className="text-gray-500">•</span>
-                      <span className="text-sky-400 font-bold tabular-nums flex items-center gap-1">
-                        <ShieldCheck className="w-3.5 h-3.5 text-sky-400" /> {totalSemDefeito} sem defeito
-                      </span>
-                    </>
-                  )}
-                  {totalSucata > 0 && (
-                    <>
-                      <span className="text-gray-500">•</span>
-                      <span className="text-red-400 font-medium tabular-nums flex items-center gap-1">
-                        <XCircle className="w-3.5 h-3.5 text-red-400" /> {totalSucata} sucata
-                      </span>
-                    </>
-                  )}
-                  {totalAnteriores > 0 && (
-                    <>
-                      <span className="text-gray-400 dark:text-gray-500">•</span>
-                      <span className="text-gray-700 dark:text-gray-300 font-semibold tabular-nums">
-                        Total OS: <strong className="text-gray-900 dark:text-white">{totalGeralCaixa} un</strong>
-                      </span>
-                    </>
-                  )}
-                  <span className="text-gray-400 dark:text-gray-500">•</span>
-                  <span className="text-amber-600 dark:text-amber-400 font-bold tabular-nums" title="Pontos creditados automaticamente após o testador (CQ) aprovar">
-                    ~{pontuacaoEstimada.toFixed(1)} pts
+                  <span className="text-gray-500">•</span>
+                  <span className="text-sky-400 font-bold tabular-nums flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-sky-400" /> {totalSemDefeito} sem defeito
                   </span>
                 </>
               )}
+              {totalSucata > 0 && (
+                <>
+                  <span className="text-gray-500">•</span>
+                  <span className="text-red-400 font-medium tabular-nums flex items-center gap-1">
+                    <XCircle className="w-3.5 h-3.5 text-red-400" /> {totalSucata} sucata
+                  </span>
+                </>
+              )}
+              {totalAnteriores > 0 && (
+                <>
+                  <span className="text-gray-400 dark:text-gray-500">•</span>
+                  <span className="text-gray-700 dark:text-gray-300 font-semibold tabular-nums">
+                    Total OS: <strong className="text-gray-900 dark:text-white">{totalGeralCaixa} un</strong>
+                  </span>
+                </>
+              )}
+              <span className="text-gray-400 dark:text-gray-500">•</span>
+              <span className="text-amber-600 dark:text-amber-400 font-bold tabular-nums" title="Pontos creditados automaticamente após o testador (CQ) aprovar">
+                ~{pontuacaoEstimada.toFixed(1)} pts
+              </span>
             </div>
 
             <div className="flex flex-wrap items-center justify-end gap-2">
@@ -595,19 +584,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                 </Button>
               )}
 
-              {modoOperacao === 'INICIAR_PRODUCAO' ? (
-                <Button
-                  variant="success"
-                  size="sm"
-                  onClick={() => handleSubmit('INICIAR_PRODUCAO')}
-                  disabled={isLoading || isExcluindoOs}
-                  loading={isLoading}
-                  leftIcon={<Play className="w-3.5 h-3.5 fill-current" />}
-                  className="shadow-glow-success font-bold whitespace-nowrap"
-                >
-                  Iniciar Produção Ao Vivo
-                </Button>
-              ) : modoOperacao === 'SALVAR_BANCADA' ? (
+              {modoOperacao === 'SALVAR_BANCADA' ? (
                 <Button
                   variant="primary"
                   size="sm"
@@ -675,34 +652,8 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
           <label className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider block">
             Ação / Destino deste Apontamento:
           </label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            {/* 1. Iniciar Produção Ao Vivo */}
-            <button
-              type="button"
-              onClick={() => setModoOperacao('INICIAR_PRODUCAO')}
-              className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                modoOperacao === 'INICIAR_PRODUCAO'
-                  ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-500 shadow-sm ring-1 ring-amber-500/50'
-                  : 'bg-surface-elevated/60 border-surface-border hover:border-surface-border/80 opacity-75 hover:opacity-100'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-                    <Play className="w-3.5 h-3.5 fill-current" />
-                  </div>
-                  <span className="text-xs font-bold text-gray-900 dark:text-white">Iniciar Produção</span>
-                </div>
-                {modoOperacao === 'INICIAR_PRODUCAO' && (
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-ping" />
-                )}
-              </div>
-              <p className="text-[10px] text-gray-600 dark:text-gray-300 mt-2 leading-relaxed">
-                Inicia o <strong>cronômetro ao vivo</strong> agora na bancada e no Painel Renetec (TV).
-              </p>
-            </button>
-
-            {/* 2. Despachar p/ Teste CQ */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {/* 1. Despachar p/ Teste CQ */}
             <button
               type="button"
               onClick={() => setModoOperacao('DESPACHAR_CQ')}
@@ -728,7 +679,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
               </p>
             </button>
 
-            {/* 3. Salvar na Minha Bancada */}
+            {/* 2. Salvar na Minha Bancada */}
             <button
               type="button"
               onClick={() => setModoOperacao('SALVAR_BANCADA')}
@@ -1176,53 +1127,6 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                      Classificação Principal
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 bg-surface-elevated border border-surface-border p-1 rounded-lg">
-                      <button
-                        type="button"
-                        onClick={() => handleUpdateItem(idx, 'tipoCategoria', 'REPARADO')}
-                        className={`h-9 px-3 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          item.tipoCategoria === 'REPARADO'
-                            ? 'bg-emerald-600 text-white shadow-md ring-1 ring-emerald-400/50'
-                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-surface-card'
-                        }`}
-                        title="Equipamento que tinha defeito e foi reparado na bancada"
-                      >
-                        <Wrench className="w-3.5 h-3.5" />
-                        <span>Reparado</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleUpdateItem(idx, 'tipoCategoria', 'SEM_DEFEITO')}
-                        className={`h-9 px-3 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          item.tipoCategoria === 'SEM_DEFEITO'
-                            ? 'bg-sky-600 text-white shadow-md ring-1 ring-sky-400/50'
-                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-surface-card'
-                        }`}
-                        title="Equipamento testado em triagem sem defeitos encontrados"
-                      >
-                        <ShieldCheck className="w-3.5 h-3.5" />
-                        <span>Sem Defeito</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleUpdateItem(idx, 'tipoCategoria', 'RETRABALHO')}
-                        className={`h-9 px-3 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          item.tipoCategoria === 'RETRABALHO'
-                            ? 'bg-purple-600 text-white shadow-md ring-1 ring-purple-400/50'
-                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-surface-card'
-                        }`}
-                        title="Equipamento retrabalhado após reprovação do CQ"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                        <span>Retrabalho</span>
-                      </button>
-                    </div>
-                  </div>
-
                   <div className="space-y-1">
                     <label className="text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
                       Serviço / Reparo Realizado (Opcional)
@@ -1231,11 +1135,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                       type="text"
                       value={item.servicoRealizado}
                       onChange={(e) => handleUpdateItem(idx, 'servicoRealizado', e.target.value)}
-                      placeholder={
-                        item.tipoCategoria === 'SEM_DEFEITO'
-                          ? 'Equipamento testado e aprovado em triagem (sem defeito)'
-                          : 'Ex: Troca de capacitor, ressolda da fonte, regravação de firmware...'
-                      }
+                      placeholder="Ex: Troca de capacitor, ressolda da fonte, regravação de firmware..."
                       className="w-full h-9 px-3 bg-surface-card border border-surface-border rounded-lg text-xs text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:border-brand-500"
                     />
                   </div>
