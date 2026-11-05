@@ -23,6 +23,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({ activeSection, onSelectSec
     ],
     TECNICO: [
       { id: 'producao' as NavSection, label: 'Produção', icon: <Wrench className="w-5 h-5" /> },
+      { id: 'dashboard' as NavSection, label: 'Indicadores', icon: <BarChart2 className="w-5 h-5" /> },
       { id: 'retrabalho' as NavSection, label: 'Retrabalho', icon: <ClipboardList className="w-5 h-5" /> },
       { id: 'minhas_os' as NavSection, label: 'Minhas OS', icon: <ClipboardList className="w-5 h-5" /> },
       { id: 'metas' as NavSection, label: 'Meta', icon: <Target className="w-5 h-5" /> },

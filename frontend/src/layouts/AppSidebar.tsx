@@ -75,6 +75,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
     ],
     TECNICO: [
       { id: 'producao' as NavSection, label: 'Apontamento de Produção', icon: <Wrench className="w-4 h-4" /> },
+      { id: 'dashboard' as NavSection, label: 'Indicadores Gerenciais', icon: <BarChart2 className="w-4 h-4" /> },
       { id: 'minhas_os' as NavSection, label: 'Minhas OS Disponíveis', icon: <ClipboardList className="w-4 h-4" /> },
       { id: 'retrabalho' as NavSection, label: 'Meus Retrabalhos', icon: <History className="w-4 h-4" /> },
       { id: 'metas' as NavSection, label: 'Meta Coletiva', icon: <Target className="w-4 h-4" /> },
