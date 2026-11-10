@@ -856,7 +856,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-white">Item #{idx + 1}</span>
                         <span className="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 tabular-nums font-semibold">
-                          {ptsUnit} pts/un • Total: {subtotalPts.toFixed(1)} pts
+                          {ptsUnit} pts/un • +{subtotalPts.toFixed(1)} pts hoje
                         </span>
                       </div>
 
@@ -912,85 +912,108 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                       </div>
                     </div>
 
+                    {/* ACUMULADO ANTERIOR — visível apenas quando há histórico */}
                     {antTotal > 0 && (
-                      <div className="text-[11px] px-2.5 py-1 rounded bg-surface-base/80 border border-surface-border flex items-center justify-between text-gray-400">
-                        <span>Anterior salvo nesta OS:</span>
-                        <span className="font-semibold text-gray-200">
-                          <strong className="text-emerald-400">{antRep} rep</strong>
-                          {antSemDef > 0 && <span>, {antSemDef} sem def</span>}
-                          {antSuc > 0 && <span>, {antSuc} suc</span>}
-                        </span>
+                      <div className="rounded-lg border border-surface-border bg-surface-base/60 px-3 py-2 space-y-1.5">
+                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                          Acumulado salvo nesta OS (dias anteriores)
+                        </p>
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                          <div>
+                            <p className="text-[13px] font-black text-emerald-400 tabular-nums">{antRep}</p>
+                            <p className="text-[9px] text-gray-500">reparados</p>
+                          </div>
+                          <div>
+                            <p className="text-[13px] font-black text-sky-400 tabular-nums">{antSemDef}</p>
+                            <p className="text-[9px] text-gray-500">sem defeito</p>
+                          </div>
+                          <div>
+                            <p className="text-[13px] font-black text-red-400 tabular-nums">{antSuc}</p>
+                            <p className="text-[9px] text-gray-500">sucata</p>
+                          </div>
+                        </div>
                       </div>
                     )}
 
-                    {/* 3 CONTADORES LIMPOS: REPARADAS | SEM DEFEITO | SUCATA */}
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-emerald-400 block">
-                          Reparadas *
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={item.quantidadeReparada === 0 ? '' : item.quantidadeReparada}
-                          onChange={(e) => {
-                            const v = e.target.value.replace(/\D/g, '');
-                            handleUpdateReparada(idx, v === '' ? 0 : parseInt(v));
-                          }}
-                          placeholder={antRep > 0 ? '+0' : '0'}
-                          className="w-full h-9 px-2 bg-surface-base border border-emerald-500/50 rounded-lg text-xs text-center text-emerald-300 font-mono font-bold focus:outline-none focus:border-emerald-400"
-                        />
-                        {antRep > 0 && (
-                          <div className="flex items-center justify-between text-[10px] text-gray-400">
-                            <span>Tot: {antRep + repHoje}</span>
-                            <div className="flex items-center gap-0.5">
-                              {[1, 5].map((add) => (
-                                <button
-                                  key={add}
-                                  type="button"
-                                  onClick={() => handleUpdateReparada(idx, repHoje + add)}
-                                  className="px-1 rounded bg-emerald-500/10 text-emerald-400 font-mono text-[9px] hover:bg-emerald-500/20"
-                                >
-                                  +{add}
-                                </button>
-                              ))}
+                    {/* CONTADORES DE HOJE */}
+                    <div>
+                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
+                        {antTotal > 0 ? 'Adicionar hoje (incremento)' : 'Quantidade de hoje'}
+                      </p>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-emerald-400 block">
+                            Reparadas {antTotal === 0 && '*'}
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={item.quantidadeReparada === 0 ? '' : item.quantidadeReparada}
+                            onChange={(e) => {
+                              const v = e.target.value.replace(/\D/g, '');
+                              handleUpdateReparada(idx, v === '' ? 0 : parseInt(v));
+                            }}
+                            placeholder={antRep > 0 ? '+0 hoje' : '0'}
+                            className="w-full h-9 px-2 bg-surface-base border border-emerald-500/50 rounded-lg text-xs text-center text-emerald-300 font-mono font-bold focus:outline-none focus:border-emerald-400"
+                          />
+                          {antRep > 0 && (
+                            <div className="flex items-center justify-between text-[10px] text-gray-400">
+                              <span className="text-emerald-300/70">Total: {antRep + repHoje}</span>
+                              <div className="flex items-center gap-0.5">
+                                {[1, 5].map((add) => (
+                                  <button
+                                    key={add}
+                                    type="button"
+                                    onClick={() => handleUpdateReparada(idx, repHoje + add)}
+                                    className="px-1 rounded bg-emerald-500/10 text-emerald-400 font-mono text-[9px] hover:bg-emerald-500/20"
+                                  >
+                                    +{add}
+                                  </button>
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        )}
-                      </div>
+                          )}
+                        </div>
 
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-sky-400 block">
-                          Sem Defeito
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={item.quantidadeSemDefeito === 0 ? '' : item.quantidadeSemDefeito}
-                          onChange={(e) => {
-                            const v = e.target.value.replace(/\D/g, '');
-                            handleUpdateItem(idx, 'quantidadeSemDefeito', v === '' ? 0 : parseInt(v));
-                          }}
-                          placeholder="0"
-                          className="w-full h-9 px-2 bg-surface-base border border-sky-500/40 rounded-lg text-xs text-center text-sky-300 font-mono focus:outline-none focus:border-sky-400"
-                        />
-                      </div>
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-semibold text-sky-400 block">
+                            Sem Defeito
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={item.quantidadeSemDefeito === 0 ? '' : item.quantidadeSemDefeito}
+                            onChange={(e) => {
+                              const v = e.target.value.replace(/\D/g, '');
+                              handleUpdateItem(idx, 'quantidadeSemDefeito', v === '' ? 0 : parseInt(v));
+                            }}
+                            placeholder={antSemDef > 0 ? '+0 hoje' : '0'}
+                            className="w-full h-9 px-2 bg-surface-base border border-sky-500/40 rounded-lg text-xs text-center text-sky-300 font-mono focus:outline-none focus:border-sky-400"
+                          />
+                          {antSemDef > 0 && (
+                            <p className="text-[10px] text-sky-300/60 text-center">Total: {antSemDef + semDefHoje}</p>
+                          )}
+                        </div>
 
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-red-400 block">
-                          Sucata
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={item.quantidadeSucata === 0 ? '' : item.quantidadeSucata}
-                          onChange={(e) => {
-                            const v = e.target.value.replace(/\D/g, '');
-                            handleUpdateItem(idx, 'quantidadeSucata', v === '' ? 0 : parseInt(v));
-                          }}
-                          placeholder="0"
-                          className="w-full h-9 px-2 bg-surface-base border border-red-500/40 rounded-lg text-xs text-center text-red-300 font-mono focus:outline-none focus:border-red-400"
-                        />
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-semibold text-red-400 block">
+                            Sucata
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={item.quantidadeSucata === 0 ? '' : item.quantidadeSucata}
+                            onChange={(e) => {
+                              const v = e.target.value.replace(/\D/g, '');
+                              handleUpdateItem(idx, 'quantidadeSucata', v === '' ? 0 : parseInt(v));
+                            }}
+                            placeholder={antSuc > 0 ? '+0 hoje' : '0'}
+                            className="w-full h-9 px-2 bg-surface-base border border-red-500/40 rounded-lg text-xs text-center text-red-300 font-mono focus:outline-none focus:border-red-400"
+                          />
+                          {antSuc > 0 && (
+                            <p className="text-[10px] text-red-300/60 text-center">Total: {antSuc + sucHoje}</p>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -1010,13 +1033,27 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
 
             {/* BARRA DE RESUMO DO LOTE */}
             <div className="p-3 rounded-xl bg-surface-elevated/40 border border-surface-border flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                {/* Hoje (incremento) */}
                 <span className="text-gray-300">
-                  Hoje: <strong className="text-white tabular-nums">{totalProcessados} un</strong> ({totalReparados} rep{totalSemDefeito ? `, ${totalSemDefeito} sem def` : ''}{totalSucata ? `, ${totalSucata} suc` : ''})
+                  <span className="text-gray-500 text-[10px] mr-1">HOJE</span>
+                  <strong className="text-white tabular-nums">
+                    {totalAnteriores > 0 ? '+' : ''}{totalProcessados} un
+                  </strong>
+                  {totalProcessados > 0 && (
+                    <span className="text-gray-400 ml-1">
+                      ({totalReparados} rep{totalSemDefeito ? `, ${totalSemDefeito} sem def` : ''}{totalSucata ? `, ${totalSucata} suc` : ''})
+                    </span>
+                  )}
                 </span>
+
+                {/* Total acumulado na OS — só aparece quando há histórico */}
                 {totalAnteriores > 0 && (
-                  <span className="text-gray-300">
-                    Total OS: <strong className="text-amber-400 tabular-nums">{totalGeralCaixa} un</strong>
+                  <span className="text-gray-400 flex items-center gap-1.5">
+                    <span className="text-gray-600">|</span>
+                    <span className="text-[10px] text-gray-500 mr-0.5">TOTAL OS</span>
+                    <strong className="text-amber-400 tabular-nums">{totalGeralCaixa} un</strong>
+                    <span className="text-gray-600 text-[10px]">({totalAnteriores} ant + {totalHoje} hoje)</span>
                   </span>
                 )}
               </div>
