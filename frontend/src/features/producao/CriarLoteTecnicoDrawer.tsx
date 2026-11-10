@@ -14,14 +14,8 @@ import {
   Trash2,
   Send,
   AlertCircle,
-  Clock,
-  Calendar,
   Layers,
-  Sparkles,
   CheckCircle2,
-  Building2,
-  Package,
-  Wrench,
   XCircle,
   Save,
   ShieldCheck,
@@ -67,7 +61,6 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
   const [novoClienteDoc, setNovoClienteDoc] = useState('');
   const [novoClienteTel, setNovoClienteTel] = useState('');
   const [isSavingCliente, setIsSavingCliente] = useState(false);
-  const [clienteSuccessMsg, setClienteSuccessMsg] = useState<string | null>(null);
 
   const [modoOperacao, setModoOperacao] = useState<'DESPACHAR_CQ' | 'SALVAR_BANCADA'>('DESPACHAR_CQ');
   const [isExcluindoOs, setIsExcluindoOs] = useState(false);
@@ -130,8 +123,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
       setNovoClienteDoc('');
       setNovoClienteTel('');
       setIsAddingCliente(false);
-      setClienteSuccessMsg(`Empresa "${novo.nomeRazaoSocial}" cadastrada e selecionada!`);
-      setTimeout(() => setClienteSuccessMsg(null), 4000);
+      // Cliente cadastrado e selecionado automaticamente no select acima
     } catch (err: any) {
       showError(err.response?.data?.message || 'Erro ao cadastrar nova empresa.');
     } finally {
@@ -600,14 +592,14 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
               )}
               {totalAnteriores > 0 && (
                 <>
-                  <span className="text-gray-400 dark:text-gray-500">•</span>
-                  <span className="text-gray-700 dark:text-gray-300 font-semibold tabular-nums">
-                    Total OS: <strong className="text-gray-900 dark:text-white">{totalGeralCaixa} un</strong>
+                  <span className="text-gray-500">•</span>
+                  <span className="text-gray-300 font-semibold tabular-nums">
+                    Total OS: <strong className="text-white">{totalGeralCaixa} un</strong>
                   </span>
                 </>
               )}
-              <span className="text-gray-400 dark:text-gray-500">•</span>
-              <span className="text-amber-600 dark:text-amber-400 font-bold tabular-nums" title="Pontos creditados automaticamente após o testador (CQ) aprovar">
+              <span className="text-gray-500">•</span>
+              <span className="text-amber-400 font-bold tabular-nums">
                 ~{pontuacaoEstimada.toFixed(1)} pts
               </span>
             </div>
@@ -632,36 +624,42 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                 </Button>
               )}
 
-              {modoOperacao === 'SALVAR_BANCADA' ? (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => handleSubmit('SALVAR_BANCADA')}
-                  disabled={isLoading || isExcluindoOs}
-                  loading={isLoading}
-                  leftIcon={<Save className="w-3.5 h-3.5" />}
-                  className="shadow-glow-primary font-bold whitespace-nowrap"
-                >
-                  Salvar Produção de Hoje
-                </Button>
-              ) : (
-                <Button
-                  variant="success"
-                  size="sm"
-                  onClick={() => handleSubmit('DESPACHAR_CQ')}
-                  disabled={isLoading || isExcluindoOs}
-                  loading={isLoading}
-                  leftIcon={<Send className="w-3.5 h-3.5" />}
-                  className="shadow-glow-success font-bold whitespace-nowrap"
-                >
-                  Despachar para o CQ
-                </Button>
-              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setModoOperacao('SALVAR_BANCADA');
+                  handleSubmit('SALVAR_BANCADA');
+                }}
+                disabled={isLoading || isExcluindoOs}
+                loading={isLoading && modoOperacao === 'SALVAR_BANCADA'}
+                leftIcon={<Save className="w-3.5 h-3.5 text-sky-400" />}
+                className="font-bold whitespace-nowrap border-surface-border text-gray-200 hover:bg-surface-elevated"
+              >
+                Salvar na Bancada
+              </Button>
+
+              <Button
+                type="button"
+                variant="success"
+                size="sm"
+                onClick={() => {
+                  setModoOperacao('DESPACHAR_CQ');
+                  handleSubmit('DESPACHAR_CQ');
+                }}
+                disabled={isLoading || isExcluindoOs}
+                loading={isLoading && modoOperacao === 'DESPACHAR_CQ'}
+                leftIcon={<Send className="w-3.5 h-3.5" />}
+                className="shadow-glow-success font-bold whitespace-nowrap"
+              >
+                Despachar para o CQ
+              </Button>
             </div>
           </div>
         }
       >
-        <form onSubmit={(e) => { e.preventDefault(); handleSubmit(modoOperacao); }} className="space-y-5 text-sm">
+        <form onSubmit={(e) => { e.preventDefault(); handleSubmit(modoOperacao); }} className="space-y-4 text-sm">
           {error && (
             <div className="p-3.5 rounded-lg bg-red-100 dark:bg-red-950/40 border border-red-300 dark:border-red-800/40 flex items-start gap-2.5 text-xs text-red-700 dark:text-red-300">
               <AlertCircle className="w-4 h-4 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
@@ -670,562 +668,380 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
           )}
 
           {initialOs && (
-            <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">
-                    OS #{initialOs.numeroOS} — Em Andamento
-                  </span>
-                  <span className="text-gray-400 dark:text-gray-500">•</span>
-                  <span className="text-xs text-gray-800 dark:text-gray-200 font-semibold">{initialOs.clienteNome}</span>
-                </div>
-                <p className="text-xs text-gray-600 dark:text-gray-300">
-                  Total acumulado anterior: <strong className="text-emerald-600 dark:text-emerald-400">{initialOs.totalGeralReparado} reparadas</strong>
-                  {initialOs.totalGeralSemDefeito > 0 && <>, <strong className="text-sky-600 dark:text-sky-300">{initialOs.totalGeralSemDefeito} sem def</strong></>}
-                  {initialOs.totalGeralSucata > 0 && <>, <strong className="text-red-600 dark:text-red-400">{initialOs.totalGeralSucata} sucata</strong></>}
-                  {' '}({initialOs.totalGeralEquipamentos} un no total da OS).
-                </p>
+            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-500/40 flex items-center justify-between text-xs">
+              <div>
+                <span className="font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">
+                  OS #{initialOs.numeroOS} (Em Andamento)
+                </span>
+                <span className="text-gray-400 ml-2 font-medium">{initialOs.clienteNome}</span>
               </div>
+              <span className="text-gray-300">
+                Acumulado: <strong className="text-emerald-400">{initialOs.totalGeralReparado} rep</strong> ({initialOs.totalGeralEquipamentos} un total)
+              </span>
             </div>
           )}
 
           {osDetectadaMsg && !initialOs && (
-            <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-500/40 flex items-center gap-2 text-xs text-emerald-800 dark:text-emerald-300 font-medium">
+            <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-500/40 flex items-center gap-2 text-xs text-emerald-800 dark:text-emerald-300 font-medium">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
               <span>{osDetectadaMsg}</span>
             </div>
           )}
 
-        <div className="space-y-2">
-          <label className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider block">
-            Ação / Destino deste Apontamento:
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {/* 1. Despachar p/ Teste CQ */}
-            <button
-              type="button"
-              onClick={() => setModoOperacao('DESPACHAR_CQ')}
-              className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                modoOperacao === 'DESPACHAR_CQ'
-                  ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 shadow-sm ring-1 ring-emerald-500/50'
-                  : 'bg-surface-elevated/60 border-surface-border hover:border-surface-border/80 opacity-75 hover:opacity-100'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                    <Send className="w-3.5 h-3.5" />
-                  </div>
-                  <span className="text-xs font-bold text-gray-900 dark:text-white">Despachar p/ CQ</span>
-                </div>
-                {modoOperacao === 'DESPACHAR_CQ' && (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
-                )}
-              </div>
-              <p className="text-[10px] text-gray-600 dark:text-gray-300 mt-2 leading-relaxed">
-                Lote concluído pronto para o <strong>testador (CQ)</strong> inspecionar.
-              </p>
-            </button>
-
-            {/* 2. Salvar na Minha Bancada */}
-            <button
-              type="button"
-              onClick={() => setModoOperacao('SALVAR_BANCADA')}
-              className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                modoOperacao === 'SALVAR_BANCADA'
-                  ? 'bg-sky-50 dark:bg-sky-950/40 border-sky-500 shadow-sm ring-1 ring-sky-500/50'
-                  : 'bg-surface-elevated/60 border-surface-border hover:border-surface-border/80 opacity-75 hover:opacity-100'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-sky-500/20 text-sky-600 dark:text-sky-400 flex items-center justify-center">
-                    <Save className="w-3.5 h-3.5" />
-                  </div>
-                  <span className="text-xs font-bold text-gray-900 dark:text-white">Salvar na Bancada</span>
-                </div>
-                {modoOperacao === 'SALVAR_BANCADA' && (
-                  <CheckCircle2 className="w-4 h-4 text-sky-500 dark:text-sky-400" />
-                )}
-              </div>
-              <p className="text-[10px] text-gray-600 dark:text-gray-300 mt-2 leading-relaxed">
-                Fica salvo como pendente na <strong>sua bancada</strong> para continuar depois.
-              </p>
-            </button>
-          </div>
-        </div>
-
-        <div className="p-4 rounded-xl bg-surface-elevated/70 border border-surface-border space-y-3.5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-300 flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-brand-500 dark:text-brand-400" /> Identificação da OS e Caixa
-            </span>
-            <span className="text-[11px] text-gray-500 dark:text-gray-400">
-              Técnico: <strong className="text-gray-900 dark:text-white">{user?.nome || 'Operador'}</strong>
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                Número da OS <span className="text-brand-500 dark:text-brand-400">*</span>
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-2.5 text-gray-400 font-bold text-sm">#</span>
-                <input
-                  type="text"
-                  value={numeroOS}
-                  onChange={(e) => setNumeroOS(e.target.value.replace(/[^0-9]/g, ''))}
-                  placeholder="Ex.: 1234"
-                  className="w-full h-10 pl-7 pr-3 bg-surface-base border border-surface-border rounded-lg text-sm text-white font-mono font-bold focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" /> Data do Registro
-              </label>
-              <input
-                type="date"
-                value={dataRegistro}
-                onChange={(e) => setDataRegistro(e.target.value)}
-                className="w-full h-10 px-3 bg-surface-card border border-surface-border rounded-lg text-sm text-gray-900 dark:text-white focus:outline-none focus:border-brand-500"
-                required
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" /> Horário
-              </label>
-              <input
-                type="time"
-                value={horaRegistro}
-                onChange={(e) => setHoraRegistro(e.target.value)}
-                className="w-full h-10 px-3 bg-surface-card border border-surface-border rounded-lg text-sm text-gray-900 dark:text-white focus:outline-none focus:border-brand-500"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                  Cliente / Empresa <span className="text-gray-500 text-[11px] font-normal">(Opcional)</span>
+          {/* 1. IDENTIFICAÇÃO DA OS E CLIENTE (LIMPO E COMPACTO) */}
+          <div className="p-3.5 rounded-xl bg-surface-elevated/40 border border-surface-border space-y-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-200">
+                  Número da OS <span className="text-brand-400">*</span>
                 </label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsAddingCliente(!isAddingCliente);
-                    setError(null);
-                  }}
-                  className="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:text-brand-500 flex items-center gap-1 hover:underline cursor-pointer transition-colors"
-                >
-                  <PlusCircle className="w-3.5 h-3.5" />
-                  {isAddingCliente ? 'Fechar' : '+ Nova Empresa'}
-                </button>
+                <div className="relative">
+                  <span className="absolute left-3 top-2 text-gray-400 font-bold text-sm">#</span>
+                  <input
+                    type="text"
+                    value={numeroOS}
+                    onChange={(e) => setNumeroOS(e.target.value.replace(/[^0-9]/g, ''))}
+                    placeholder="Ex.: 1855"
+                    className="w-full h-9 pl-7 pr-3 bg-surface-base border border-surface-border rounded-lg text-sm text-white font-mono font-bold focus:outline-none focus:border-brand-500"
+                    required
+                    autoFocus={!initialOs}
+                  />
+                </div>
               </div>
 
-              {isAddingCliente ? (
-                <div className="p-3 bg-brand-50/50 dark:bg-brand-950/20 border border-brand-300 dark:border-brand-500/50 rounded-xl space-y-2.5 shadow-glow-primary/20">
-                  <div className="flex items-center justify-between border-b border-surface-border/50 pb-1.5">
-                    <span className="text-xs font-bold text-brand-700 dark:text-brand-300 flex items-center gap-1">
-                      <Building2 className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" /> Nova Empresa
-                    </span>
-                  </div>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-gray-300">
+                    Cliente / Empresa
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAddingCliente(!isAddingCliente);
+                      setError(null);
+                    }}
+                    className="text-[11px] font-semibold text-brand-400 hover:text-brand-300 flex items-center gap-1 cursor-pointer transition-colors"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5" />
+                    {isAddingCliente ? 'Fechar' : 'Nova Empresa'}
+                  </button>
+                </div>
 
-                  <div className="space-y-1.5">
+                {isAddingCliente ? (
+                  <div className="p-2 bg-surface-card border border-brand-500/40 rounded-lg space-y-1.5">
                     <input
                       type="text"
                       value={novoClienteNome}
                       onChange={(e) => setNovoClienteNome(e.target.value)}
-                      placeholder="Nome / Razão Social da Empresa *"
-                      className="w-full h-8 px-2.5 bg-surface-card border border-surface-border rounded-lg text-xs text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:border-brand-500"
+                      placeholder="Nome / Razão Social *"
+                      className="w-full h-8 px-2.5 bg-surface-base border border-surface-border rounded text-xs text-white placeholder-gray-500 focus:outline-none focus:border-brand-500"
                     />
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        type="text"
-                        value={novoClienteDoc}
-                        onChange={(e) => setNovoClienteDoc(e.target.value)}
-                        placeholder="CNPJ (opcional)"
-                        className="w-full h-8 px-2.5 bg-surface-card border border-surface-border rounded-lg text-xs text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:border-brand-500"
-                      />
-                      <input
-                        type="text"
-                        value={novoClienteTel}
-                        onChange={(e) => setNovoClienteTel(e.target.value)}
-                        placeholder="Telefone (opcional)"
-                        className="w-full h-8 px-2.5 bg-surface-card border border-surface-border rounded-lg text-xs text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:border-brand-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-end gap-2 pt-0.5">
-                    <button
-                      type="button"
-                      onClick={() => setIsAddingCliente(false)}
-                      className="px-2.5 py-1 text-[11px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors cursor-pointer"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSalvarNovoCliente}
-                      disabled={isSavingCliente || !novoClienteNome.trim()}
-                      className="px-2.5 py-1 bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-[11px] font-bold text-white rounded-lg transition-all flex items-center gap-1 cursor-pointer"
-                    >
-                      {isSavingCliente ? (
-                        <div className="w-2.5 h-2.5 border border-white border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                      )}
-                      Salvar
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <select
-                  value={clienteId}
-                  onChange={(e) => {
-                    if (e.target.value === '__NOVA_EMPRESA__') {
-                      setIsAddingCliente(true);
-                    } else {
-                      setClienteId(e.target.value);
-                    }
-                  }}
-                  className="w-full h-10 px-3 bg-surface-card border border-surface-border rounded-lg text-xs text-gray-900 dark:text-white focus:outline-none focus:border-brand-500"
-                >
-                  {clientes.map((c) => (
-                    <option key={c.id} value={c.id} className="bg-surface-card text-gray-900 dark:text-white py-1">
-                      {c.nomeRazaoSocial}
-                    </option>
-                  ))}
-                  <option value="__NOVA_EMPRESA__" className="bg-brand-100 dark:bg-brand-950 text-brand-800 dark:text-brand-300 font-bold py-1">
-                    + Cadastrar Nova Empresa...
-                  </option>
-                </select>
-              )}
-
-              {clienteSuccessMsg && (
-                <p className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium mt-1">
-                  <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400 flex-shrink-0" /> {clienteSuccessMsg}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">Prioridade de Atendimento</label>
-              <select
-                value={prioridade}
-                onChange={(e) => setPrioridade(e.target.value as any)}
-                className="w-full h-10 px-3 bg-surface-card border border-surface-border rounded-lg text-xs text-gray-900 dark:text-white focus:outline-none focus:border-brand-500"
-              >
-                <option value="BAIXA" className="bg-surface-card text-gray-900 dark:text-white py-1">Baixa</option>
-                <option value="MEDIA" className="bg-surface-card text-gray-900 dark:text-white py-1">Média (Padrão)</option>
-                <option value="ALTA" className="bg-surface-card text-gray-900 dark:text-white py-1">Alta Prioridade</option>
-                <option value="URGENTE" className="bg-surface-card text-gray-900 dark:text-white py-1">Urgente (Linha Parada)</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-gray-300 flex items-center gap-1.5">
-                <Layers className="w-4 h-4 text-emerald-400" /> Equipamentos da Caixa / Lote ({itens.length})
-              </h4>
-              <p className="text-[11px] text-gray-400">
-                Informe as quantidades que você fez <strong>hoje</strong> (reparadas, sem defeito e sucata). O total da caixa acumula automaticamente.
-              </p>
-            </div>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleAddItem}
-              leftIcon={<PlusCircle className="w-3.5 h-3.5 text-emerald-400" />}
-            >
-              Adicionar Equipamento
-            </Button>
-          </div>
-
-          <div className="space-y-3.5">
-            {itens.map((item, idx) => {
-              const selectedEq = tiposEquipamento.find((e) => e.id === item.tipoEquipamentoId);
-              const ptsUnit = selectedEq?.pontos || 1.0;
-              const repHoje = Number(item.quantidadeReparada) || 0;
-              const semDefHoje = Number(item.quantidadeSemDefeito) || 0;
-              const sucHoje = Number(item.quantidadeSucata) || 0;
-              const antRep = Number(item.anterioresReparadas) || 0;
-              const antSemDef = Number(item.anterioresSemDefeito) || 0;
-              const antSuc = Number(item.anterioresSucata) || 0;
-              const antTotal = antRep + antSemDef + antSuc;
-              const hojeSoma = repHoje + semDefHoje + sucHoje;
-              const subtotalPts = (repHoje + semDefHoje) * ptsUnit;
-
-              return (
-                <div
-                  key={idx}
-                  className="p-4 rounded-xl bg-surface-base border border-surface-border space-y-3 relative group shadow-sm"
-                >
-                  <div className="flex items-center justify-between pb-2 border-b border-surface-border/60">
-                    <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-brand-500/20 text-brand-300 text-xs font-bold flex items-center justify-center">
-                        {idx + 1}
-                      </span>
-                      <span className="text-xs font-bold text-white">Item #{idx + 1}</span>
-                      <span className="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 tabular-nums font-semibold">
-                        {ptsUnit} pt/un • Estimado: {subtotalPts.toFixed(1)} pts
-                      </span>
-                    </div>
-
-                    {itens.length > 1 && (
+                    <div className="flex items-center justify-end gap-2">
                       <button
                         type="button"
-                        onClick={() => handleRemoveItem(idx)}
-                        className="text-gray-500 hover:text-red-400 transition-colors p-1 cursor-pointer"
-                        title="Remover este equipamento"
+                        onClick={() => setIsAddingCliente(false)}
+                        className="px-2 py-0.5 text-xs text-gray-400 hover:text-white"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        Cancelar
                       </button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                        Modelo de Equipamento <span className="text-brand-500 dark:text-brand-400">*</span>
-                      </label>
-                      <select
-                        value={item.tipoEquipamentoId}
-                        onChange={(e) => handleUpdateItem(idx, 'tipoEquipamentoId', e.target.value)}
-                        className="w-full h-10 px-3 bg-surface-card border border-surface-border rounded-lg text-xs text-gray-900 dark:text-white focus:outline-none focus:border-brand-500"
+                      <button
+                        type="button"
+                        onClick={handleSalvarNovoCliente}
+                        disabled={isSavingCliente || !novoClienteNome.trim()}
+                        className="px-2.5 py-1 bg-brand-600 hover:bg-brand-500 text-xs font-bold text-white rounded transition-colors"
                       >
-                        {tiposEquipamento.map((t) => {
-                          const pts = t.pontos ?? 1;
-                          return (
-                            <option key={t.id} value={t.id} className="bg-surface-card text-gray-900 dark:text-white py-1.5">
-                              {t.nome} ({pts} pt{pts > 1 ? 's' : ''})
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <label className="text-[11px] font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide flex items-center gap-1">
-                          <Package className="w-3.5 h-3.5 text-brand-500 dark:text-brand-400" /> Total na Caixa / OS
-                        </label>
-                        {antTotal > 0 && (
-                          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
-                            Anterior: {antTotal} un
-                          </span>
-                        )}
-                      </div>
-                      <input
-                        type="number"
-                        min="1"
-                        value={item.quantidadeTotalCaixa !== undefined ? (item.quantidadeTotalCaixa === 0 ? '' : item.quantidadeTotalCaixa) : (antTotal > 0 ? (antTotal + hojeSoma) : (hojeSoma > 0 ? hojeSoma : ''))}
-                        onChange={(e) => {
-                          const raw = e.target.value.replace(/\D/g, '');
-                          handleUpdateTotalCaixa(idx, raw === '' ? 0 : parseInt(raw));
-                        }}
-                        placeholder={String(antTotal > 0 ? (antTotal + hojeSoma) : (hojeSoma > 0 ? hojeSoma : 1))}
-                        className="w-full h-10 px-3 bg-surface-card border border-surface-border rounded-lg text-xs text-gray-900 dark:text-white font-mono font-bold focus:outline-none focus:border-brand-500"
-                        title="Quantidade física total de aparelhos desta caixa / OS."
-                      />
+                        Salvar
+                      </button>
                     </div>
                   </div>
-
-                  {/* Resumo do que já foi feito em dias anteriores (limpo e sem poluição) */}
-                  {antTotal > 0 && (
-                    <div className="flex items-center justify-between text-xs px-3 py-1.5 rounded-lg bg-surface-elevated/70 border border-surface-border text-gray-600 dark:text-gray-300">
-                      <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
-                        Salvo em dias anteriores nesta OS:
-                      </span>
-                      <span className="text-xs font-semibold tabular-nums flex items-center gap-1.5">
-                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">{antRep} rep</span>
-                        {antSemDef > 0 && <span className="text-sky-600 dark:text-sky-400 font-bold">• {antSemDef} sem def</span>}
-                        {antSuc > 0 && <span className="text-red-600 dark:text-red-400 font-bold">• {antSuc} suc</span>}
-                        <span className="text-gray-500 dark:text-gray-400 font-normal">({antTotal} un total)</span>
-                      </span>
-                    </div>
-                  )}
-
-                  {/* 3 CAMPOS PRINCIPAIS DE APONTAMENTO: REPARADAS | SEM DEFEITO | SUCATA */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-surface-elevated/60 dark:bg-[#0e121a] p-3 rounded-xl border border-surface-border/70">
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <label className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                          <Wrench className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                          {antRep > 0 ? '+ Fazer Hoje' : 'Reparadas'}
-                        </label>
-                        {antRep > 0 && (
-                          <span className="text-[10px] text-gray-500 dark:text-gray-400">
-                            Ontem: <strong className="text-gray-900 dark:text-white">{antRep}</strong>
-                          </span>
-                        )}
-                      </div>
-                      <input
-                        type="number"
-                        min="0"
-                        value={item.quantidadeReparada === 0 ? '' : item.quantidadeReparada}
-                        onChange={(e) => {
-                          const v = e.target.value.replace(/\D/g, '');
-                          handleUpdateReparada(idx, v === '' ? 0 : parseInt(v));
-                        }}
-                        placeholder={antRep > 0 ? '+0' : '0'}
-                        className="w-full h-9 px-2.5 bg-surface-card border border-emerald-500/50 rounded-lg text-xs text-center text-emerald-700 dark:text-emerald-300 font-mono font-black focus:outline-none focus:border-emerald-400 ring-1 ring-emerald-500/30"
-                        title="Quantidade exata que você reparou com sucesso hoje"
-                      />
-                      {antRep > 0 ? (
-                        <div className="flex items-center justify-between text-[10px] pt-0.5">
-                          <span className="text-emerald-600 dark:text-emerald-400 font-medium tabular-nums">
-                            Total: <strong>{antRep + repHoje} un</strong>
-                          </span>
-                          <div className="flex items-center gap-1">
-                            {[1, 2, 5].map((add) => (
-                              <button
-                                key={add}
-                                type="button"
-                                onClick={() => handleUpdateReparada(idx, repHoje + add)}
-                                className="px-1.5 py-0.5 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-mono font-bold text-[10px] border border-emerald-500/30 transition-colors cursor-pointer"
-                                title={`Adicionar +${add} reparada(s)`}
-                              >
-                                +{add}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-[10px] text-emerald-700 dark:text-emerald-400/80 block text-center font-medium">Prontas p/ teste</span>
-                      )}
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <label className="text-[11px] font-bold text-sky-700 dark:text-sky-400 flex items-center gap-1">
-                          <ShieldCheck className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
-                          {antSemDef > 0 ? '+ Fazer Hoje' : 'Sem Defeito'}
-                        </label>
-                        {antSemDef > 0 && (
-                          <span className="text-[10px] text-gray-500 dark:text-gray-400">
-                            Ontem: <strong className="text-gray-900 dark:text-white">{antSemDef}</strong>
-                          </span>
-                        )}
-                      </div>
-                      <input
-                        type="number"
-                        min="0"
-                        value={item.quantidadeSemDefeito === 0 ? '' : item.quantidadeSemDefeito}
-                        onChange={(e) => {
-                          const v = e.target.value.replace(/\D/g, '');
-                          handleUpdateItem(idx, 'quantidadeSemDefeito', v === '' ? 0 : parseInt(v));
-                        }}
-                        placeholder={antSemDef > 0 ? '+0' : '0 (opcional)'}
-                        className="w-full h-9 px-2.5 bg-surface-card border border-sky-500/40 rounded-lg text-xs text-center text-sky-700 dark:text-sky-300 font-mono font-bold focus:outline-none focus:border-sky-400"
-                        title="Equipamentos testados na triagem que estavam funcionando perfeitamente sem defeito (opcional)"
-                      />
-                      {antSemDef > 0 ? (
-                        <span className="text-[10px] text-sky-600 dark:text-sky-400 block text-center font-medium tabular-nums">
-                          Total: <strong>{antSemDef + semDefHoje} un</strong>
-                        </span>
-                      ) : (
-                        <span className="text-[10px] text-sky-700 dark:text-sky-400/80 block text-center font-medium">OK em triagem</span>
-                      )}
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <label className="text-[11px] font-semibold text-gray-700 dark:text-gray-400 flex items-center gap-1">
-                          <XCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
-                          {antSuc > 0 ? '+ Fazer Hoje' : 'Sucata'}
-                        </label>
-                        {antSuc > 0 && (
-                          <span className="text-[10px] text-gray-500 dark:text-gray-400">
-                            Ontem: <strong className="text-gray-900 dark:text-white">{antSuc}</strong>
-                          </span>
-                        )}
-                      </div>
-                      <input
-                        type="number"
-                        min="0"
-                        value={item.quantidadeSucata === 0 ? '' : item.quantidadeSucata}
-                        onChange={(e) => {
-                          const v = e.target.value.replace(/\D/g, '');
-                          handleUpdateItem(idx, 'quantidadeSucata', v === '' ? 0 : parseInt(v));
-                        }}
-                        placeholder={antSuc > 0 ? '+0' : '0 (opcional)'}
-                        className="w-full h-9 px-2.5 bg-surface-card border border-surface-border rounded-lg text-xs text-center text-red-600 dark:text-red-300 font-mono font-bold focus:outline-none focus:border-red-500"
-                        title="Unidades que morreram ou não deram conserto (opcional)"
-                      />
-                      {antSuc > 0 ? (
-                        <span className="text-[10px] text-red-600 dark:text-red-400 block text-center font-medium tabular-nums">
-                          Total: <strong>{antSuc + sucHoje} un</strong>
-                        </span>
-                      ) : (
-                        <span className="text-[10px] text-gray-500 dark:text-gray-400 block text-center">Sem conserto</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
-                      Serviço / Reparo Realizado (Opcional)
-                    </label>
-                    <input
-                      type="text"
-                      value={item.servicoRealizado}
-                      onChange={(e) => handleUpdateItem(idx, 'servicoRealizado', e.target.value)}
-                      placeholder="Ex: Troca de capacitor, ressolda da fonte, regravação de firmware..."
-                      className="w-full h-9 px-3 bg-surface-card border border-surface-border rounded-lg text-xs text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:border-brand-500"
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-gradient-to-r from-surface-elevated via-surface-elevated to-surface-card border border-surface-border flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400" />
-                <span className="text-gray-700 dark:text-gray-300">Hoje: <strong className="text-gray-900 dark:text-white tabular-nums">{totalProcessados} un</strong> ({totalReparados} rep{totalSemDefeito ? `, ${totalSemDefeito} sem def` : ''}{totalSucata ? `, ${totalSucata} suc` : ''})</span>
+                ) : (
+                  <select
+                    value={clienteId}
+                    onChange={(e) => {
+                      if (e.target.value === '__NOVA_EMPRESA__') {
+                        setIsAddingCliente(true);
+                      } else {
+                        setClienteId(e.target.value);
+                      }
+                    }}
+                    className="w-full h-9 px-3 bg-surface-base border border-surface-border rounded-lg text-xs text-white focus:outline-none focus:border-brand-500"
+                  >
+                    {clientes.map((c) => (
+                      <option key={c.id} value={c.id} className="bg-surface-card text-white py-1">
+                        {c.nomeRazaoSocial}
+                      </option>
+                    ))}
+                    <option value="__NOVA_EMPRESA__" className="bg-surface-elevated text-brand-300 font-bold py-1">
+                      + Cadastrar Nova Empresa...
+                    </option>
+                  </select>
+                )}
               </div>
-              {totalAnteriores > 0 && (
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-amber-500 dark:bg-amber-400" />
-                  <span className="text-gray-700 dark:text-gray-300">Total Acumulado na Caixa: <strong className="text-amber-700 dark:text-amber-300 tabular-nums">{totalGeralCaixa} un</strong></span>
-                </div>
-              )}
             </div>
 
-            <div className="text-right whitespace-nowrap">
-              <span className="text-amber-600 dark:text-amber-400 text-xs font-black tabular-nums">~{pontuacaoEstimada.toFixed(1)} pts</span>
-              <span className="text-gray-500 dark:text-gray-400 text-[10px] block">(contabilizados após o teste do CQ)</span>
+            <div className="grid grid-cols-3 gap-2 pt-0.5 text-xs">
+              <div>
+                <label className="text-[11px] text-gray-400 block mb-0.5">Data</label>
+                <input
+                  type="date"
+                  value={dataRegistro}
+                  onChange={(e) => setDataRegistro(e.target.value)}
+                  className="w-full h-7 px-2 bg-surface-base border border-surface-border rounded text-xs text-gray-200 focus:outline-none focus:border-brand-500"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] text-gray-400 block mb-0.5">Horário</label>
+                <input
+                  type="time"
+                  value={horaRegistro}
+                  onChange={(e) => setHoraRegistro(e.target.value)}
+                  className="w-full h-7 px-2 bg-surface-base border border-surface-border rounded text-xs text-gray-200 focus:outline-none focus:border-brand-500"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] text-gray-400 block mb-0.5">Prioridade</label>
+                <select
+                  value={prioridade}
+                  onChange={(e) => setPrioridade(e.target.value as any)}
+                  className="w-full h-7 px-2 bg-surface-base border border-surface-border rounded text-xs text-gray-200 focus:outline-none focus:border-brand-500"
+                >
+                  <option value="BAIXA" className="bg-surface-card text-white">Baixa</option>
+                  <option value="MEDIA" className="bg-surface-card text-white">Média</option>
+                  <option value="ALTA" className="bg-surface-card text-white">Alta</option>
+                  <option value="URGENTE" className="bg-surface-card text-white">Urgente</option>
+                </select>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
-            Observações Técnicas para o Testador / CQ (Opcional)
-          </label>
-          <textarea
-            rows={2}
-            value={observacoes}
-            onChange={(e) => setObservacoes(e.target.value)}
-            placeholder="Ex: Caixa com 11 peças feitas hoje (6 rep, 2 sem def, 3 sucata). Amanhã continuarei este lote."
-            className="w-full bg-surface-base border border-surface-border rounded-lg p-2.5 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-brand-500 resize-none"
-          />
-        </div>
-      </form>
+          {/* 2. EQUIPAMENTOS DA CAIXA / LOTE (COM SUPORTE A MÚLTIPLOS ITENS) */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-gray-300 flex items-center gap-1.5">
+                <Layers className="w-4 h-4 text-emerald-400" /> Equipamentos ({itens.length})
+              </h4>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAddItem}
+                leftIcon={<PlusCircle className="w-3.5 h-3.5 text-emerald-400" />}
+                className="text-xs font-semibold"
+              >
+                Adicionar Equipamento
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              {itens.map((item, idx) => {
+                const selectedEq = tiposEquipamento.find((e) => e.id === item.tipoEquipamentoId);
+                const ptsUnit = selectedEq?.pontos || 1.0;
+                const repHoje = Number(item.quantidadeReparada) || 0;
+                const semDefHoje = Number(item.quantidadeSemDefeito) || 0;
+                const sucHoje = Number(item.quantidadeSucata) || 0;
+                const antRep = Number(item.anterioresReparadas) || 0;
+                const antSemDef = Number(item.anterioresSemDefeito) || 0;
+                const antSuc = Number(item.anterioresSucata) || 0;
+                const antTotal = antRep + antSemDef + antSuc;
+                const hojeSoma = repHoje + semDefHoje + sucHoje;
+                const subtotalPts = (repHoje + semDefHoje) * ptsUnit;
+
+                return (
+                  <div
+                    key={idx}
+                    className="p-3.5 rounded-xl bg-surface-elevated/30 border border-surface-border space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-white">Item #{idx + 1}</span>
+                        <span className="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 tabular-nums font-semibold">
+                          {ptsUnit} pts/un • Total: {subtotalPts.toFixed(1)} pts
+                        </span>
+                      </div>
+
+                      {itens.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveItem(idx)}
+                          className="text-gray-400 hover:text-red-400 transition-colors p-1"
+                          title="Remover este equipamento"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      <div className="sm:col-span-2 space-y-1">
+                        <label className="text-[11px] font-semibold text-gray-300">
+                          Modelo do Equipamento *
+                        </label>
+                        <select
+                          value={item.tipoEquipamentoId}
+                          onChange={(e) => handleUpdateItem(idx, 'tipoEquipamentoId', e.target.value)}
+                          className="w-full h-9 px-2.5 bg-surface-base border border-surface-border rounded-lg text-xs text-white focus:outline-none focus:border-brand-500"
+                        >
+                          {tiposEquipamento.map((t) => {
+                            const pts = t.pontos ?? 1;
+                            return (
+                              <option key={t.id} value={t.id} className="bg-surface-card text-white py-1">
+                                {t.nome} ({pts} pt{pts > 1 ? 's' : ''})
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-semibold text-gray-300 flex items-center justify-between">
+                          <span>Total Caixa</span>
+                          {antTotal > 0 && <span className="text-[10px] text-amber-400 font-normal">Ant: {antTotal}</span>}
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={item.quantidadeTotalCaixa !== undefined ? (item.quantidadeTotalCaixa === 0 ? '' : item.quantidadeTotalCaixa) : (antTotal > 0 ? (antTotal + hojeSoma) : (hojeSoma > 0 ? hojeSoma : ''))}
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/\D/g, '');
+                            handleUpdateTotalCaixa(idx, raw === '' ? 0 : parseInt(raw));
+                          }}
+                          placeholder={String(antTotal > 0 ? (antTotal + hojeSoma) : (hojeSoma > 0 ? hojeSoma : 1))}
+                          className="w-full h-9 px-2.5 bg-surface-base border border-surface-border rounded-lg text-xs text-white font-mono font-bold focus:outline-none focus:border-brand-500"
+                        />
+                      </div>
+                    </div>
+
+                    {antTotal > 0 && (
+                      <div className="text-[11px] px-2.5 py-1 rounded bg-surface-base/80 border border-surface-border flex items-center justify-between text-gray-400">
+                        <span>Anterior salvo nesta OS:</span>
+                        <span className="font-semibold text-gray-200">
+                          <strong className="text-emerald-400">{antRep} rep</strong>
+                          {antSemDef > 0 && <span>, {antSemDef} sem def</span>}
+                          {antSuc > 0 && <span>, {antSuc} suc</span>}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* 3 CONTADORES LIMPOS: REPARADAS | SEM DEFEITO | SUCATA */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-emerald-400 block">
+                          Reparadas *
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={item.quantidadeReparada === 0 ? '' : item.quantidadeReparada}
+                          onChange={(e) => {
+                            const v = e.target.value.replace(/\D/g, '');
+                            handleUpdateReparada(idx, v === '' ? 0 : parseInt(v));
+                          }}
+                          placeholder={antRep > 0 ? '+0' : '0'}
+                          className="w-full h-9 px-2 bg-surface-base border border-emerald-500/50 rounded-lg text-xs text-center text-emerald-300 font-mono font-bold focus:outline-none focus:border-emerald-400"
+                        />
+                        {antRep > 0 && (
+                          <div className="flex items-center justify-between text-[10px] text-gray-400">
+                            <span>Tot: {antRep + repHoje}</span>
+                            <div className="flex items-center gap-0.5">
+                              {[1, 5].map((add) => (
+                                <button
+                                  key={add}
+                                  type="button"
+                                  onClick={() => handleUpdateReparada(idx, repHoje + add)}
+                                  className="px-1 rounded bg-emerald-500/10 text-emerald-400 font-mono text-[9px] hover:bg-emerald-500/20"
+                                >
+                                  +{add}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-semibold text-sky-400 block">
+                          Sem Defeito
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={item.quantidadeSemDefeito === 0 ? '' : item.quantidadeSemDefeito}
+                          onChange={(e) => {
+                            const v = e.target.value.replace(/\D/g, '');
+                            handleUpdateItem(idx, 'quantidadeSemDefeito', v === '' ? 0 : parseInt(v));
+                          }}
+                          placeholder="0"
+                          className="w-full h-9 px-2 bg-surface-base border border-sky-500/40 rounded-lg text-xs text-center text-sky-300 font-mono focus:outline-none focus:border-sky-400"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-semibold text-red-400 block">
+                          Sucata
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={item.quantidadeSucata === 0 ? '' : item.quantidadeSucata}
+                          onChange={(e) => {
+                            const v = e.target.value.replace(/\D/g, '');
+                            handleUpdateItem(idx, 'quantidadeSucata', v === '' ? 0 : parseInt(v));
+                          }}
+                          placeholder="0"
+                          className="w-full h-9 px-2 bg-surface-base border border-red-500/40 rounded-lg text-xs text-center text-red-300 font-mono focus:outline-none focus:border-red-400"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <input
+                        type="text"
+                        value={item.servicoRealizado}
+                        onChange={(e) => handleUpdateItem(idx, 'servicoRealizado', e.target.value)}
+                        placeholder="Serviço / Reparo realizado (opcional)"
+                        className="w-full h-8 px-2.5 bg-surface-base border border-surface-border rounded-lg text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-brand-500"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* BARRA DE RESUMO DO LOTE */}
+            <div className="p-3 rounded-xl bg-surface-elevated/40 border border-surface-border flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-gray-300">
+                  Hoje: <strong className="text-white tabular-nums">{totalProcessados} un</strong> ({totalReparados} rep{totalSemDefeito ? `, ${totalSemDefeito} sem def` : ''}{totalSucata ? `, ${totalSucata} suc` : ''})
+                </span>
+                {totalAnteriores > 0 && (
+                  <span className="text-gray-300">
+                    Total OS: <strong className="text-amber-400 tabular-nums">{totalGeralCaixa} un</strong>
+                  </span>
+                )}
+              </div>
+
+              <div className="text-right whitespace-nowrap">
+                <span className="text-amber-400 font-bold tabular-nums">~{pontuacaoEstimada.toFixed(1)} pts</span>
+                <span className="text-gray-500 text-[10px] block">(após teste do CQ)</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Observações Gerais para o CQ */}
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-gray-300 block">
+              Observações para o Testador / CQ (opcional)
+            </label>
+            <textarea
+              rows={2}
+              value={observacoes}
+              onChange={(e) => setObservacoes(e.target.value)}
+              placeholder="Alguma instrução para o CQ inspecionar..."
+              className="w-full bg-surface-base border border-surface-border rounded-lg p-2.5 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-brand-500 resize-none"
+            />
+          </div>
+        </form>
     </Drawer>
 
     {confirmExcluirModalOpen && (
