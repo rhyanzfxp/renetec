@@ -5,6 +5,7 @@ import { usePageData } from '../../hooks/usePageData';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
+import { AlertModal } from '../../components/ui/AlertModal';
 import { CriarLoteTecnicoDrawer } from './CriarLoteTecnicoDrawer';
 import {
   CheckCircle2,
@@ -30,6 +31,7 @@ import {
   Search,
   X,
   Ban,
+  RotateCcw,
 } from 'lucide-react';
 
 export const ProducaoPage: React.FC = () => {
@@ -44,8 +46,22 @@ export const ProducaoPage: React.FC = () => {
   const [isCriarLoteOpen, setIsCriarLoteOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [alertModalMsg, setAlertModalMsg] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isDispatching, setIsDispatching] = useState<string | null>(null);
+
+  // Estados do Modal de Reabertura de OS Concluída
+  const [isReabrirModalOpen, setIsReabrirModalOpen] = useState(false);
+  const [osNumeroParaReabrir, setOsNumeroParaReabrir] = useState<string>('');
+  const [osObsParaReabrir, setOsObsParaReabrir] = useState<string>('');
+  const [isReabrindo, setIsReabrindo] = useState(false);
+
+  const showErrorModal = (msg: string | null) => {
+    setErrorMessage(msg);
+    if (msg) {
+      setAlertModalMsg(msg);
+    }
+  };
 
   // Estados de abertura das gavetas (com persistência no localStorage)
   const [isOsAndamentoOpen, setIsOsAndamentoOpen] = useState<boolean>(() => {
@@ -160,7 +176,7 @@ export const ProducaoPage: React.FC = () => {
       setTimeout(() => setSuccessMessage(null), 5000);
       await loadData();
     } catch (err: any) {
-      setErrorMessage(err.response?.data?.message || 'Erro ao despachar lote para o CQ.');
+      showErrorModal(err.response?.data?.message || 'Erro ao despachar lote para o CQ.');
     } finally {
       setIsDispatching(null);
     }
@@ -183,7 +199,7 @@ export const ProducaoPage: React.FC = () => {
       setDespacharCqObservacao('');
       await loadData();
     } catch (err: any) {
-      setErrorMessage(err.response?.data?.message || 'Erro ao enviar OS para o CQ.');
+      showErrorModal(err.response?.data?.message || 'Erro ao enviar OS para o CQ.');
     } finally {
       setIsDespachandoCQ(false);
     }
@@ -201,7 +217,7 @@ export const ProducaoPage: React.FC = () => {
       setOsParaExcluir(null);
       await loadData();
     } catch (err: any) {
-      setErrorMessage(err.response?.data?.message || 'Erro ao excluir ordem de serviço.');
+      showErrorModal(err.response?.data?.message || 'Erro ao excluir ordem de serviço.');
     } finally {
       setIsExcluindoOs(false);
     }
@@ -220,7 +236,7 @@ export const ProducaoPage: React.FC = () => {
       setConcluirOsObservacao('');
       await loadData();
     } catch (err: any) {
-      setErrorMessage(err.response?.data?.message || 'Erro ao concluir ordem de serviço.');
+      showErrorModal(err.response?.data?.message || 'Erro ao concluir ordem de serviço.');
     } finally {
       setIsConcluindoOs(false);
     }
@@ -238,7 +254,37 @@ export const ProducaoPage: React.FC = () => {
       setTimeout(() => setSuccessMessage(null), 5000);
       await loadData();
     } catch (err: any) {
-      setErrorMessage(err.response?.data?.message || 'Erro ao finalizar OS.');
+      showErrorModal(err.response?.data?.message || 'Erro ao finalizar OS.');
+    }
+  };
+
+  // Reabrir uma OS que já foi concluída
+  const handleReabrirOSConcluida = async () => {
+    const numLimpo = osNumeroParaReabrir.trim().replace(/\D/g, '');
+    if (!numLimpo) {
+      showErrorModal('Informe o número da Ordem de Serviço que deseja reabrir.');
+      return;
+    }
+    const num = parseInt(numLimpo, 10);
+    if (isNaN(num)) {
+      showErrorModal('Número de OS inválido.');
+      return;
+    }
+
+    try {
+      setIsReabrindo(true);
+      await producaoApiService.reabrirOS(num, osObsParaReabrir.trim() || undefined);
+      setIsReabrirModalOpen(false);
+      setOsNumeroParaReabrir('');
+      setOsObsParaReabrir('');
+      setSuccessMessage(`OS #${num} reaberta com sucesso! Ela está de volta na sua bancada.`);
+      setTimeout(() => setSuccessMessage(null), 5000);
+      setTermoBusca(String(num));
+      await loadData();
+    } catch (err: any) {
+      showErrorModal(err.response?.data?.message || `Não foi possível reabrir a OS #${num}. Verifique o número informado.`);
+    } finally {
+      setIsReabrindo(false);
     }
   };
 
@@ -348,19 +394,32 @@ export const ProducaoPage: React.FC = () => {
           </p>
         </div>
 
-        <Button
-          variant="primary"
-          size="md"
-          onClick={() => {
-            setEditingItem(null);
-            setSelectedOsParaContinuar(null);
-            setIsCriarLoteOpen(true);
-          }}
-          leftIcon={<PlusCircle className="w-4 h-4" />}
-          className="shadow-glow-primary flex-shrink-0"
-        >
-          Novo Apontamento / Minha OS
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="md"
+            onClick={() => setIsReabrirModalOpen(true)}
+            leftIcon={<RotateCcw className="w-4 h-4 text-amber-500 dark:text-amber-400" />}
+            className="flex-shrink-0 border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+            title="Reabrir uma OS já concluída para dar entrada em retorno de remessa"
+          >
+            Reabrir OS Concluída
+          </Button>
+
+          <Button
+            variant="primary"
+            size="md"
+            onClick={() => {
+              setEditingItem(null);
+              setSelectedOsParaContinuar(null);
+              setIsCriarLoteOpen(true);
+            }}
+            leftIcon={<PlusCircle className="w-4 h-4" />}
+            className="shadow-glow-primary flex-shrink-0"
+          >
+            Novo Apontamento / Minha OS
+          </Button>
+        </div>
       </div>
 
       {/* ─── BARRA SUPERIOR: MINHA PRODUÇÃO DE HOJE ─────────────────── */}
@@ -828,15 +887,30 @@ export const ProducaoPage: React.FC = () => {
                 </p>
               </div>
             ) : caixasFiltradas.length === 0 ? (
-              <div className="p-8 rounded-xl bg-surface-base/60 border border-surface-border text-center space-y-2">
+              <div className="p-8 rounded-xl bg-surface-base/60 border border-surface-border text-center space-y-3">
                 <Search className="w-8 h-8 text-gray-400 mx-auto" />
-                <h4 className="text-sm font-bold text-gray-900 dark:text-white">Nenhuma caixa encontrada para "{termoBusca}"</h4>
+                <h4 className="text-sm font-bold text-gray-900 dark:text-white">Nenhuma caixa aberta na bancada para "{termoBusca}"</h4>
                 <p className="text-xs text-gray-400 max-w-sm mx-auto">
-                  Nenhuma caixa com esse número de OS, cliente ou modelo encontrada na bancada.
+                  A OS pode já ter sido concluída anteriormente ou ainda não foi apontada.
                 </p>
-                <Button variant="outline" size="sm" onClick={() => setTermoBusca('')} className="mt-1">
-                  Limpar Filtro
-                </Button>
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                  {termoBusca.replace(/\D/g, '') && (
+                    <Button
+                      variant="warning"
+                      size="sm"
+                      onClick={() => {
+                        setOsNumeroParaReabrir(termoBusca.replace(/\D/g, ''));
+                        setIsReabrirModalOpen(true);
+                      }}
+                      leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
+                    >
+                      Reabrir OS #{termoBusca.replace(/\D/g, '')}
+                    </Button>
+                  )}
+                  <Button variant="outline" size="sm" onClick={() => setTermoBusca('')}>
+                    Limpar Filtro
+                  </Button>
+                </div>
               </div>
             ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1239,6 +1313,90 @@ export const ProducaoPage: React.FC = () => {
           setTimeout(() => setSuccessMessage(null), 5000);
           loadData();
         }}
+      />
+
+      {/* Modal de Reabertura de OS Concluída */}
+      {isReabrirModalOpen && (
+        <Modal
+          isOpen={isReabrirModalOpen}
+          onClose={() => {
+            if (!isReabrindo) {
+              setIsReabrirModalOpen(false);
+              setOsNumeroParaReabrir('');
+              setOsObsParaReabrir('');
+            }
+          }}
+          title="Reabrir Ordem de Serviço Concluída"
+          subtitle="Reative uma OS que já foi finalizada para cadastrar novas remessas de retorno ou continuar o reparo."
+          size="md"
+          footer={
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsReabrirModalOpen(false)}
+                disabled={isReabrindo}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="warning"
+                size="sm"
+                onClick={handleReabrirOSConcluida}
+                loading={isReabrindo}
+                disabled={isReabrindo}
+                leftIcon={<RotateCcw className="w-4 h-4" />}
+                className="font-bold shadow-md"
+              >
+                Reabrir OS Agora
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-4 py-1">
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 flex items-start gap-2.5">
+              <RotateCcw className="w-4 h-4 shrink-0 text-amber-400 mt-0.5" />
+              <p>
+                Ao reabrir a OS, ela sairá do status <strong>Concluída</strong> e voltará para a sua <strong>Bancada de Produção</strong>, permitindo apontar novos equipamentos e enviar lotes para o CQ.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-300 mb-1">
+                Número da OS <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Ex: 1855"
+                value={osNumeroParaReabrir}
+                onChange={(e) => setOsNumeroParaReabrir(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-surface-border text-white text-sm font-mono focus:outline-none focus:border-amber-500 transition-colors"
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-300 mb-1">
+                Motivo / Observação (opcional)
+              </label>
+              <textarea
+                rows={2}
+                placeholder="Ex: Retorno de nova remessa de equipamentos do cliente"
+                value={osObsParaReabrir}
+                onChange={(e) => setOsObsParaReabrir(e.target.value)}
+                className="w-full px-3.5 py-2 rounded-xl bg-surface-elevated border border-surface-border text-white text-xs focus:outline-none focus:border-amber-500 transition-colors resize-none"
+              />
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Pop-up de Alerta Centralizado em Tela Cheia para Erros */}
+      <AlertModal
+        isOpen={!!alertModalMsg}
+        onClose={() => setAlertModalMsg(null)}
+        title="Atenção: Não foi possível realizar a operação"
+        message={alertModalMsg}
       />
     </div>
   );

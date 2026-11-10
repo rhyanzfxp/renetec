@@ -260,6 +260,37 @@ export const producaoRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
+  // ─── POST /producao/os/:id/reabrir ──────────────────────────────────────────
+  // Reabre uma OS que já foi concluída/encerrada para receber nova remessa ou continuar
+  fastify.post(
+    '/producao/os/:id/reabrir',
+    { preHandler: [authenticate, authorize(['TECNICO', 'ADMIN', 'QUALIDADE'])] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const body = request.body as { observacao?: string } | undefined;
+      const user = request.user as UserJwtPayload;
+
+      try {
+        const osReaberta = await service.reabrirOrdemServico(
+          id,
+          user.sub,
+          user.nome || 'Técnico',
+          body?.observacao
+        );
+        return reply.send({
+          success: true,
+          message: `OS #${osReaberta.numeroOS} reaberta com sucesso!`,
+          data: osReaberta,
+        });
+      } catch (err: any) {
+        return reply.status(400).send({
+          success: false,
+          message: err.message || 'Erro ao reabrir OS.',
+        });
+      }
+    }
+  );
+
   // ─── POST /producao/os/:id/despachar-cq ───────────────────────────────────
   // Despacha a OS e todos os itens para a fila de testes do CQ
   fastify.post(

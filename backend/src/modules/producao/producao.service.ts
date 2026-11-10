@@ -265,6 +265,34 @@ export async function concluirOrdemServico(
   return osConcluida;
 }
 
+// ─── Reabrir Ordem de Serviço Concluída / Encerrada ─────────────────────────
+export async function reabrirOrdemServico(
+  osIdOrNumero: string | number,
+  tecnicoId: string,
+  tecnicoNome: string,
+  observacao?: string
+) {
+  const osReaberta = await repo.reabrirOrdemServico(osIdOrNumero, tecnicoId, observacao);
+
+  realtimeService.broadcast('os:criada', {
+    os: osReaberta,
+    tecnicoNome,
+  });
+  realtimeService.broadcast('producao:atualizada', { osId: osReaberta.id });
+  realtimeService.broadcast('dashboard:atualizado', { osId: osReaberta.id });
+
+  log({
+    acao: 'OS_REABERTA',
+    usuarioId: tecnicoId,
+    entidade: 'OrdemServico',
+    entidadeId: osReaberta.id,
+    descricao: `Técnico ${tecnicoNome} reabriu a OS #${osReaberta.numeroOS} (retorno de remessa / continuidade).`,
+    detalhes: { numeroOS: osReaberta.numeroOS, observacao },
+  }).catch(() => {});
+
+  return osReaberta;
+}
+
 // ─── Despachar Ordem de Serviço para o CQ (Controle de Qualidade) ─────────────
 export async function despacharOrdemServicoParaCQ(
   osIdOrNumero: string | number,

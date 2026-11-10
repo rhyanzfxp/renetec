@@ -261,9 +261,7 @@ export class OsRepository {
     // número ao mesmo tempo. Equipamentos novos entram como itens da mesma OS.
     const numeroOS = Number(data.numeroOS);
     const osExistente = await prisma.ordemServico.findUnique({ where: { numeroOS } });
-    if (osExistente && ['CONCLUIDO', 'CANCELADO'].includes(osExistente.status)) {
-      throw new Error(`A OS #${numeroOS} já foi ${osExistente.status === 'CONCLUIDO' ? 'concluída' : 'cancelada'} e não aceita novos lançamentos.`);
-    }
+    const estavaConcluidaOuCancelada = osExistente && ['CONCLUIDO', 'CANCELADO'].includes(osExistente.status);
 
     const osBase = await prisma.ordemServico.upsert({
       where: { numeroOS },
@@ -276,10 +274,29 @@ export class OsRepository {
         valorOrcamento: data.valorOrcamento || null,
         observacoes: data.observacoes || null,
       },
-      // Não sobrescrevemos cliente, status ou data de uma OS existente. Estes
-      // são dados mestre; somente seus equipamentos devem ser complementados.
-      update: data.observacoes ? { observacoes: data.observacoes } : {},
+      update: {
+        ...(data.observacoes ? { observacoes: data.observacoes } : {}),
+        ...(estavaConcluidaOuCancelada
+          ? {
+              status: initialStatus,
+              dataConclusao: null,
+              ocultadoPorTecnicoId: null,
+              ocultadoEm: null,
+            }
+          : {}),
+      },
     });
+
+    if (estavaConcluidaOuCancelada) {
+      await prisma.historicoStatus.create({
+        data: {
+          ordemServicoId: osBase.id,
+          statusAnterior: osExistente.status,
+          statusNovo: initialStatus,
+          observacao: `OS #${numeroOS} reaberta por novo lançamento/remessa de retorno`,
+        },
+      }).catch(() => {});
+    }
 
     await prisma.$transaction(async (tx) => {
       for (const it of data.itens) {
@@ -294,6 +311,7 @@ export class OsRepository {
             data: {
               quantidade: { increment: it.quantidade },
               defeitoRelatado: it.defeitoRelatado || itemExistente.defeitoRelatado,
+              statusItem: itemExistente.statusItem === 'CONCLUIDO' ? initialStatus : itemExistente.statusItem,
               tecnicoAlocadoId: itemExistente.tecnicoAlocadoId || (it.tecnicoAlocadoId ? tecnicosDbMap[it.tecnicoAlocadoId] : null),
             },
           });
@@ -373,6 +391,13 @@ export class OsRepository {
         where: { id: osExistente.id },
         data: {
           status: newStatus,
+          ...(newStatus !== 'CONCLUIDO'
+            ? {
+                dataConclusao: null,
+                ocultadoPorTecnicoId: null,
+                ocultadoEm: null,
+              }
+            : {}),
           itens: {
             updateMany: {
               where: {},

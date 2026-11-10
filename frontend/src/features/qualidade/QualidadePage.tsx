@@ -5,6 +5,7 @@ import { useRealtime } from '../realtime/RealtimeContext';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Button } from '../../components/ui/Button';
 import { KpiCard } from '../../components/ui/KpiCard';
+import { AlertModal } from '../../components/ui/AlertModal';
 import { RealizarTesteDrawer } from './RealizarTesteDrawer';
 import { RegistrarTesteCQDrawer } from './RegistrarTesteCQDrawer';
 import { EditarLaudoModal } from './EditarLaudoModal';
@@ -34,7 +35,15 @@ export const QualidadePage: React.FC = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isRegistrarCQOpen, setIsRegistrarCQOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [alertError, setAlertError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const showErrorModal = (msg: string | null) => {
+    setErrorMessage(msg);
+    if (msg) {
+      setAlertError(msg);
+    }
+  };
 
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const isApprovingRef = useRef(false);
@@ -103,7 +112,7 @@ export const QualidadePage: React.FC = () => {
       await loadData();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } }; message?: string };
-      setErrorMessage(e.response?.data?.message || 'Erro ao aprovar lote.');
+      showErrorModal(e.response?.data?.message || 'Erro ao aprovar lote.');
       await loadData(); // Restaura caso falhe
     } finally {
       isApprovingRef.current = false;
@@ -479,6 +488,14 @@ export const QualidadePage: React.FC = () => {
         onClose={() => setEditandoTeste(null)}
         onSuccess={loadData}
         teste={editandoTeste}
+      />
+
+      {/* Pop-up de Alerta Centralizado para Erros */}
+      <AlertModal
+        isOpen={!!alertError}
+        onClose={() => setAlertError(null)}
+        title="Atenção: Controle de Qualidade"
+        message={alertError}
       />
     </div>
   );

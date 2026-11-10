@@ -108,6 +108,15 @@ export const producaoApiService = {
     return response.data;
   },
 
+  // Reabre uma Ordem de Serviço concluída/encerrada (para retorno de remessa ou continuidade)
+  async reabrirOS(osIdOrNumero: string | number, observacao?: string) {
+    const response = await api.post<{ success: boolean; data: any; message: string }>(
+      `/producao/os/${osIdOrNumero}/reabrir`,
+      { observacao }
+    );
+    return response.data;
+  },
+
   // Despacha a OS inteira e seus itens para a fila de testes do CQ
   async despacharOsParaCQ(osIdOrNumero: string | number, observacao?: string) {
     const response = await api.post<{ success: boolean; data: any; message: string }>(

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Drawer } from '../../components/ui/Drawer';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { AlertModal } from '../../components/ui/AlertModal';
 import { osApiService } from './os.service';
 import type { ClienteOption, TipoEquipamentoOption, TecnicoOption, CreateOsPayload } from './os.types';
 import { PlusCircle, AlertCircle, Building2, CheckCircle2 } from 'lucide-react';
@@ -40,11 +41,19 @@ export const CreateOsDrawer: React.FC<CreateOsDrawerProps> = ({ isOpen, onClose,
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [popupError, setPopupError] = useState<string | null>(null);
+
+  const showError = (msg: string | null) => {
+    setError(msg);
+    if (msg) {
+      setPopupError(msg);
+    }
+  };
 
   const handleSalvarNovoCliente = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!novoClienteNome.trim()) {
-      setError('Informe o nome da nova empresa.');
+      showError('Informe o nome da nova empresa.');
       return;
     }
     try {
@@ -67,7 +76,7 @@ export const CreateOsDrawer: React.FC<CreateOsDrawerProps> = ({ isOpen, onClose,
       setClienteSuccessMsg(`Empresa "${novo.nomeRazaoSocial}" cadastrada com sucesso!`);
       setTimeout(() => setClienteSuccessMsg(null), 4000);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao cadastrar empresa.');
+      showError(err.response?.data?.message || 'Erro ao cadastrar empresa.');
     } finally {
       setIsSavingCliente(false);
     }
@@ -76,6 +85,7 @@ export const CreateOsDrawer: React.FC<CreateOsDrawerProps> = ({ isOpen, onClose,
 
   useEffect(() => {
     if (isOpen) {
+      setError(null);
       // Carrega dados para os selects
       Promise.all([
         osApiService.getClientes(),
@@ -95,7 +105,7 @@ export const CreateOsDrawer: React.FC<CreateOsDrawerProps> = ({ isOpen, onClose,
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!numeroOS.trim() || !clienteId || !tipoEquipamentoId || !defeitoRelatado) {
-      setError('Informe o número da OS e preencha os demais campos obrigatórios.');
+      showError('Informe o número da OS e preencha os demais campos obrigatórios.');
       return;
     }
 
@@ -129,7 +139,7 @@ export const CreateOsDrawer: React.FC<CreateOsDrawerProps> = ({ isOpen, onClose,
       setObservacoes('');
       setValorOrcamento('');
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'Erro ao criar Ordem de Serviço.');
+      showError(err.response?.data?.error?.message || err.response?.data?.message || 'Erro ao criar Ordem de Serviço.');
     } finally {
       setIsLoading(false);
     }
@@ -395,6 +405,14 @@ export const CreateOsDrawer: React.FC<CreateOsDrawerProps> = ({ isOpen, onClose,
           />
         </div>
       </form>
+
+      {/* Pop-up de Alerta Centralizado para Erros de Criação de OS */}
+      <AlertModal
+        isOpen={!!popupError}
+        onClose={() => setPopupError(null)}
+        title="Atenção: Não foi possível registrar a OS"
+        message={popupError}
+      />
     </Drawer>
   );
 };

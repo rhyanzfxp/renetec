@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Drawer } from '../../components/ui/Drawer';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
+import { AlertModal } from '../../components/ui/AlertModal';
+import { api } from '../../services/api';
 import { osApiService } from '../os/os.service';
 import { producaoApiService } from './producao.service';
 import type { TipoEquipamentoOption, ClienteOption } from '../os/os.types';
@@ -93,13 +95,22 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [popupError, setPopupError] = useState<string | null>(null);
+
+  const showError = (msg: string | null) => {
+    setError(msg);
+    if (msg) {
+      setPopupError(msg);
+    }
+  };
+
   const isSubmittingRef = React.useRef(false);
   const [osDetectadaMsg, setOsDetectadaMsg] = useState<string | null>(null);
 
   const handleSalvarNovoCliente = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!novoClienteNome.trim()) {
-      setError('Informe o nome ou razão social da nova empresa.');
+      showError('Informe o nome ou razão social da nova empresa.');
       return;
     }
     try {
@@ -122,7 +133,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
       setClienteSuccessMsg(`Empresa "${novo.nomeRazaoSocial}" cadastrada e selecionada!`);
       setTimeout(() => setClienteSuccessMsg(null), 4000);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao cadastrar nova empresa.');
+      showError(err.response?.data?.message || 'Erro ao cadastrar nova empresa.');
     } finally {
       setIsSavingCliente(false);
     }
@@ -243,9 +254,9 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
     }
   }, [isOpen, initialItem, initialOs]);
 
-  // Auto-busca se o técnico digitar uma OS que já existe em andamento na bancada
+  // Auto-busca se o técnico digitar uma OS que já existe (em andamento ou concluída para retorno de remessa)
   useEffect(() => {
-    if (!isOpen || initialOs || initialItem || !osEmAndamento || osEmAndamento.length === 0) return;
+    if (!isOpen || initialOs || initialItem) return;
     const numLimpo = numeroOS.trim().replace(/\D/g, '');
     if (!numLimpo) {
       setOsDetectadaMsg(null);
@@ -254,7 +265,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
     const num = parseInt(numLimpo, 10);
     if (isNaN(num)) return;
 
-    const osEncontrada = osEmAndamento.find((o) => o.numeroOS === num);
+    const osEncontrada = osEmAndamento?.find((o) => o.numeroOS === num);
     if (osEncontrada) {
       if (osEncontrada.cliente?.id) setClienteId(osEncontrada.cliente.id);
       if (osEncontrada.prioridade) setPrioridade(osEncontrada.prioridade as any);
@@ -285,7 +296,44 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
         setOsDetectadaMsg(`OS #${num} localizada (${cli}). Dados de dias anteriores carregados.`);
       }
     } else {
-      setOsDetectadaMsg(null);
+      // Se não está na lista de em andamento na bancada, verifica se já foi concluída no sistema
+      const timer = setTimeout(async () => {
+        try {
+          const res = await api.get<{ success: boolean; data: any }>(`/os/${num}`);
+          const osGeral = res.data?.data;
+          if (osGeral) {
+            if (osGeral.cliente?.id) setClienteId(osGeral.cliente.id);
+            if (osGeral.prioridade) setPrioridade(osGeral.prioridade as any);
+            const cli = osGeral.cliente?.nomeRazaoSocial || 'Cliente';
+            const foiConcluida = ['CONCLUIDO', 'CANCELADO'].includes(osGeral.status);
+            setOsDetectadaMsg(
+              foiConcluida
+                ? `OS #${num} localizada (${cli}) — Status: Concluída. Ela será reaberta automaticamente para receber este novo lote de retorno.`
+                : `OS #${num} localizada (${cli}).`
+            );
+            if (osGeral.itens && osGeral.itens.length > 0 && itens.every(it => !it.quantidadeReparada && !it.quantidadeSemDefeito && !it.quantidadeSucata)) {
+              setItens(
+                osGeral.itens.map((it: any) => ({
+                  tipoEquipamentoId: it.tipoEquipamentoId || it.tipoEquipamento?.id,
+                  quantidadeReparada: 0,
+                  quantidadeSemDefeito: 0,
+                  quantidadeSucata: 0,
+                  anterioresNaCaixa: it.quantidade || 0,
+                  quantidadeTotalCaixa: it.quantidade || 0,
+                  tipoCategoria: 'REPARADO',
+                  servicoRealizado: 'Reparo de bancada efetuado',
+                }))
+              );
+            }
+          } else {
+            setOsDetectadaMsg(null);
+          }
+        } catch {
+          setOsDetectadaMsg(null);
+        }
+      }, 350);
+
+      return () => clearTimeout(timer);
     }
   }, [numeroOS, isOpen, initialOs, initialItem, osEmAndamento]);
 
@@ -388,12 +436,12 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
     if (isSubmittingRef.current || isLoading) return;
 
     if (!numeroOS.trim()) {
-      setError('Informe o número da OS. O lançamento será consolidado nessa mesma OS.');
+      showError('Informe o número da OS. O lançamento será consolidado nessa mesma OS.');
       return;
     }
 
     if (itens.length === 0) {
-      setError('Adicione ao menos 1 equipamento no apontamento.');
+      showError('Adicione ao menos 1 equipamento no apontamento.');
       return;
     }
 
@@ -413,7 +461,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
           onClose();
           return;
         } catch (err: any) {
-          setError(err.response?.data?.message || 'Erro ao enviar OS para o CQ.');
+          showError(err.response?.data?.message || 'Erro ao enviar OS para o CQ.');
           return;
         } finally {
           isSubmittingRef.current = false;
@@ -421,7 +469,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
         }
       }
 
-      setError('Informe ao menos 1 unidade reparada, sem defeito ou sucata no apontamento de hoje.');
+      showError('Informe ao menos 1 unidade reparada, sem defeito ou sucata no apontamento de hoje.');
       return;
     }
 
@@ -496,7 +544,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
       onSuccess();
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Falha ao registrar lote de produção.');
+      showError(err.response?.data?.message || 'Falha ao registrar lote de produção.');
     } finally {
       isSubmittingRef.current = false;
       setIsLoading(false);
@@ -514,7 +562,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
       onSuccess();
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao excluir ordem de serviço.');
+      showError(err.response?.data?.message || 'Erro ao excluir ordem de serviço.');
     } finally {
       setIsExcluindoOs(false);
     }
@@ -1226,6 +1274,14 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
         </div>
       </Modal>
     )}
+
+    {/* Pop-up de Alerta Centralizado em Tela Cheia para Erros */}
+    <AlertModal
+      isOpen={!!popupError}
+      onClose={() => setPopupError(null)}
+      title="Atenção: Não foi possível registrar"
+      message={popupError}
+    />
   </>
   );
 };

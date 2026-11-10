@@ -3,6 +3,7 @@ import { Drawer } from '../../components/ui/Drawer';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { StatusBadge } from '../../components/ui/StatusBadge';
+import { AlertModal } from '../../components/ui/AlertModal';
 import { qualidadeApiService } from './teste.service';
 import type { FilaTesteItem } from './teste.types';
 
@@ -39,7 +40,15 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
   const [observacao, setObservacao] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [popupError, setPopupError] = useState<string | null>(null);
   const isSubmittingRef = useRef(false);
+
+  const showErrorModal = (msg: string | null) => {
+    setErrorMessage(msg);
+    if (msg) {
+      setPopupError(msg);
+    }
+  };
 
   // Sincroniza quantidades com o lote do item selecionado
   useEffect(() => {
@@ -68,14 +77,14 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
     if (isSubmittingRef.current || isSubmitting) return;
 
     if (!isSomaValida) {
-      setErrorMessage(
+      showErrorModal(
         `A soma de Aprovadas (${aprovadas})${semDefeito > 0 ? ` + Sem Defeito (${semDefeito})` : ''} + Retrabalho (${reprovadas}) + Sucata (${sucata}) totaliza ${totalCalculado} un, mas a quantidade a testar é ${qtdTestada} un (máx ${qtdLoteTotal} un).`
       );
       return;
     }
 
     if (reprovadas > 0 && !detalhesDefeito.trim() && !observacao.trim()) {
-      setErrorMessage('Informe a descrição do defeito/não-conformidade para o técnico corrigir no retrabalho.');
+      showErrorModal('Informe a descrição do defeito/não-conformidade para o técnico corrigir no retrabalho.');
       return;
     }
 
@@ -107,7 +116,7 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
       onClose();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } }; message?: string };
-      setErrorMessage(e.response?.data?.message || 'Falha ao registrar laudo de inspeção do CQ.');
+      showErrorModal(e.response?.data?.message || 'Falha ao registrar laudo de inspeção do CQ.');
     } finally {
       isSubmittingRef.current = false;
       setIsSubmitting(false);
@@ -396,6 +405,14 @@ export const RealizarTesteDrawer: React.FC<RealizarTesteDrawerProps> = ({
           />
         </div>
       </form>
+
+      {/* Pop-up de Alerta Centralizado para Erros */}
+      <AlertModal
+        isOpen={!!popupError}
+        onClose={() => setPopupError(null)}
+        title="Atenção: Não foi possível registrar laudo"
+        message={popupError}
+      />
     </Drawer>
   );
 };

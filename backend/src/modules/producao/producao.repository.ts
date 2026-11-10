@@ -690,9 +690,7 @@ export async function criarApontamentoLote(
   // continuam apontando para o mesmo cabeçalho de OS.
   const numeroOS = Number(dados.numeroOS);
   const osAnterior = await prisma.ordemServico.findUnique({ where: { numeroOS } });
-  if (osAnterior && ['CONCLUIDO', 'CANCELADO'].includes(osAnterior.status)) {
-    throw new Error(`A OS #${numeroOS} já foi ${osAnterior.status === 'CONCLUIDO' ? 'concluída' : 'cancelada'} e não pode receber nova produção.`);
-  }
+  const estavaConcluidaOuCancelada = osAnterior && ['CONCLUIDO', 'CANCELADO'].includes(osAnterior.status);
 
   const osDb = await prisma.ordemServico.upsert({
     where: { numeroOS },
@@ -709,8 +707,27 @@ export async function criarApontamentoLote(
     update: {
       status: initialStatus,
       tecnicoResponsavelId: osAnterior?.tecnicoResponsavelId || tecnicoDbId,
+      ...(estavaConcluidaOuCancelada
+        ? {
+            dataConclusao: null,
+            ocultadoPorTecnicoId: null,
+            ocultadoEm: null,
+          }
+        : {}),
+      ...(dados.observacoes ? { observacoes: dados.observacoes } : {}),
     },
   });
+
+  if (estavaConcluidaOuCancelada) {
+    await prisma.historicoStatus.create({
+      data: {
+        ordemServicoId: osDb.id,
+        statusAnterior: osAnterior.status,
+        statusNovo: initialStatus,
+        observacao: `OS #${numeroOS} reaberta pelo técnico ${tecnicoNome} (retorno de remessa / continuidade de produção)`,
+      },
+    }).catch(() => {});
+  }
 
   // 5. Criar ou atualizar os itens e produções no banco (SEM DUPLICAÇÃO DE ITENS)
   const createdItens: any[] = [];
@@ -1287,6 +1304,81 @@ export async function concluirOrdemServico(osIdOrNumero: string | number, tecnic
       data: {
         status: 'FINALIZADO',
         dataFim: agora,
+      },
+    });
+
+    return osAtualizada;
+  }, { maxWait: 10000, timeout: 30000 });
+
+  return updatedOs;
+}
+
+// ─── Reabre uma Ordem de Serviço Concluída / Encerrada ───────────────────────
+export async function reabrirOrdemServico(osIdOrNumero: string | number, tecnicoId: string, observacao?: string) {
+  if (!isDatabaseReady()) throw new Error('Banco de dados indisponível.');
+
+  const str = String(osIdOrNumero);
+  const num = parseInt(str.replace(/\D/g, ''));
+  const isUuid = str.length > 20 && str.includes('-');
+
+  const osDb = await prisma.ordemServico.findFirst({
+    where: isUuid
+      ? { id: str }
+      : !isNaN(num) && num > 0
+      ? { OR: [{ id: str }, { numeroOS: num }] }
+      : { id: str },
+    include: {
+      itens: {
+        include: { tipoEquipamento: true },
+      },
+      cliente: true,
+    },
+  });
+
+  if (!osDb) {
+    throw new Error('Ordem de Serviço não encontrada.');
+  }
+
+  const agora = new Date();
+  const obsAtualizada = observacao
+    ? `${osDb.observacoes ? osDb.observacoes + ' | ' : ''}Reaberta em ${agora.toLocaleDateString('pt-BR')}: ${observacao}`
+    : osDb.observacoes;
+
+  const updatedOs = await prisma.$transaction(async (tx) => {
+    // 1. Atualiza OS para EM_PRODUCAO, limpa dataConclusao e campos de ocultamento
+    const osAtualizada = await tx.ordemServico.update({
+      where: { id: osDb.id },
+      data: {
+        status: 'EM_PRODUCAO',
+        dataConclusao: null,
+        ocultadoPorTecnicoId: null,
+        ocultadoEm: null,
+        observacoes: obsAtualizada,
+      },
+      include: {
+        cliente: true,
+        itens: {
+          include: { tipoEquipamento: true },
+        },
+      },
+    });
+
+    // 2. Atualiza os itens da OS que estavam como CONCLUIDO para EM_PRODUCAO
+    await tx.itemOrdemServico.updateMany({
+      where: {
+        ordemServicoId: osDb.id,
+        statusItem: { in: ['CONCLUIDO', 'CANCELADO'] },
+      },
+      data: { statusItem: 'EM_PRODUCAO' },
+    });
+
+    // 3. Registra no histórico de status
+    await tx.historicoStatus.create({
+      data: {
+        ordemServicoId: osDb.id,
+        statusAnterior: osDb.status,
+        statusNovo: 'EM_PRODUCAO',
+        observacao: observacao || 'OS reaberta para retorno de remessa / continuidade de produção',
       },
     });
 
