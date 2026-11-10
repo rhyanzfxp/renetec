@@ -102,7 +102,8 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
 
   const handleSalvarNovoCliente = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!novoClienteNome.trim()) {
+    const nomeLimpo = novoClienteNome.trim();
+    if (!nomeLimpo) {
       showError('Informe o nome ou razão social da nova empresa.');
       return;
     }
@@ -110,22 +111,31 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
       setIsSavingCliente(true);
       setError(null);
       const novo = await osApiService.createCliente({
-        nomeRazaoSocial: novoClienteNome.trim(),
+        nomeRazaoSocial: nomeLimpo,
         documento: novoClienteDoc.trim() || undefined,
         contatoTelefone: novoClienteTel.trim() || undefined,
       });
 
+      // Recarrega a lista e garante que o novo cliente está nela
       const updatedList = await osApiService.getClientes();
       setClientes(updatedList);
+
+      // Verifica se o ID retornado existe na lista, senão adiciona manualmente
+      const existeNaLista = updatedList.some((c) => c.id === novo.id);
+      if (!existeNaLista) {
+        setClientes((prev) => {
+          if (prev.some((c) => c.id === novo.id)) return prev;
+          return [...prev, novo];
+        });
+      }
       setClienteId(novo.id);
 
       setNovoClienteNome('');
       setNovoClienteDoc('');
       setNovoClienteTel('');
       setIsAddingCliente(false);
-      // Cliente cadastrado e selecionado automaticamente no select acima
     } catch (err: any) {
-      showError(err.response?.data?.message || 'Erro ao cadastrar nova empresa.');
+      showError(err.response?.data?.message || err.message || 'Erro ao cadastrar nova empresa. Verifique os dados e tente novamente.');
     } finally {
       setIsSavingCliente(false);
     }
@@ -221,8 +231,11 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
             setObservacoes('');
             setPrioridade('MEDIA');
             setModoOperacao('SALVAR_BANCADA');
+            // Sempre define o primeiro cliente da lista como selecionado
             if (clientesList.length > 0) {
               setClienteId(clientesList[0].id);
+            } else {
+              setClienteId('');
             }
             if (equipamentos.length > 0) {
               setItens([
@@ -470,6 +483,11 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
       setIsLoading(true);
       setError(null);
 
+      // Garante que há um cliente selecionado válido
+      const clienteIdFinal = clienteId && clienteId !== '' && clienteId !== '__NOVA_EMPRESA__'
+        ? clienteId
+        : (clientes[0]?.id || 'cli-01');
+
       let timestampISO: string;
       if (dataRegistro && horaRegistro) {
         const [ano, mes, dia] = dataRegistro.split('-').map(Number);
@@ -484,7 +502,7 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
 
       const payload = {
         numeroOS: numParsed && !isNaN(numParsed) ? numParsed : undefined,
-        clienteId: clienteId || (clientes[0]?.id || 'cli-01'),
+        clienteId: clienteIdFinal,
         dataEntrada: timestampISO,
         dataProducao: timestampISO,
         idempotencyKey: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `lote-${Date.now()}-${Math.random()}`,
@@ -728,19 +746,42 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                 </div>
 
                 {isAddingCliente ? (
-                  <div className="p-2 bg-surface-card border border-brand-500/40 rounded-lg space-y-1.5">
+                  <div className="p-3 bg-surface-card border border-brand-500/40 rounded-lg space-y-2">
+                    <p className="text-[11px] font-semibold text-brand-300 uppercase tracking-wider">Nova Empresa / Cliente</p>
                     <input
                       type="text"
                       value={novoClienteNome}
                       onChange={(e) => setNovoClienteNome(e.target.value)}
                       placeholder="Nome / Razão Social *"
+                      autoFocus
                       className="w-full h-8 px-2.5 bg-surface-base border border-surface-border rounded text-xs text-white placeholder-gray-500 focus:outline-none focus:border-brand-500"
                     />
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        value={novoClienteDoc}
+                        onChange={(e) => setNovoClienteDoc(e.target.value)}
+                        placeholder="CNPJ / CPF (opcional)"
+                        className="w-full h-8 px-2.5 bg-surface-base border border-surface-border rounded text-xs text-white placeholder-gray-500 focus:outline-none focus:border-brand-500"
+                      />
+                      <input
+                        type="text"
+                        value={novoClienteTel}
+                        onChange={(e) => setNovoClienteTel(e.target.value)}
+                        placeholder="Telefone (opcional)"
+                        className="w-full h-8 px-2.5 bg-surface-base border border-surface-border rounded text-xs text-white placeholder-gray-500 focus:outline-none focus:border-brand-500"
+                      />
+                    </div>
                     <div className="flex items-center justify-end gap-2">
                       <button
                         type="button"
-                        onClick={() => setIsAddingCliente(false)}
-                        className="px-2 py-0.5 text-xs text-gray-400 hover:text-white"
+                        onClick={() => {
+                          setIsAddingCliente(false);
+                          setNovoClienteNome('');
+                          setNovoClienteDoc('');
+                          setNovoClienteTel('');
+                        }}
+                        className="px-2 py-1 text-xs text-gray-400 hover:text-white transition-colors"
                       >
                         Cancelar
                       </button>
@@ -748,33 +789,39 @@ export const CriarLoteTecnicoDrawer: React.FC<CriarLoteTecnicoDrawerProps> = ({
                         type="button"
                         onClick={handleSalvarNovoCliente}
                         disabled={isSavingCliente || !novoClienteNome.trim()}
-                        className="px-2.5 py-1 bg-brand-600 hover:bg-brand-500 text-xs font-bold text-white rounded transition-colors"
+                        className="px-3 py-1 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-bold text-white rounded transition-colors"
                       >
-                        Salvar
+                        {isSavingCliente ? 'Salvando...' : 'Cadastrar'}
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <select
-                    value={clienteId}
-                    onChange={(e) => {
-                      if (e.target.value === '__NOVA_EMPRESA__') {
-                        setIsAddingCliente(true);
-                      } else {
-                        setClienteId(e.target.value);
-                      }
-                    }}
-                    className="w-full h-9 px-3 bg-surface-base border border-surface-border rounded-lg text-xs text-white focus:outline-none focus:border-brand-500"
-                  >
-                    {clientes.map((c) => (
-                      <option key={c.id} value={c.id} className="bg-surface-card text-white py-1">
-                        {c.nomeRazaoSocial}
+                  <div className="relative">
+                    <select
+                      value={clienteId}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '__NOVA_EMPRESA__') {
+                          setIsAddingCliente(true);
+                        } else {
+                          setClienteId(val);
+                        }
+                      }}
+                      className="w-full h-9 px-3 bg-surface-base border border-surface-border rounded-lg text-xs text-white focus:outline-none focus:border-brand-500 appearance-none pr-8"
+                    >
+                      {clientes.length === 0 && (
+                        <option value="" disabled>Carregando clientes...</option>
+                      )}
+                      {clientes.map((c) => (
+                        <option key={c.id} value={c.id} className="bg-surface-card text-white py-1">
+                          {c.nomeRazaoSocial}
+                        </option>
+                      ))}
+                      <option value="__NOVA_EMPRESA__" className="bg-surface-elevated text-brand-300 font-bold py-1">
+                        + Cadastrar Nova Empresa...
                       </option>
-                    ))}
-                    <option value="__NOVA_EMPRESA__" className="bg-surface-elevated text-brand-300 font-bold py-1">
-                      + Cadastrar Nova Empresa...
-                    </option>
-                  </select>
+                    </select>
+                  </div>
                 )}
               </div>
             </div>

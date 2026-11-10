@@ -42,7 +42,10 @@ export class OsService {
   // Cadastra um novo cliente / empresa no sistema
   async createCliente(data: CreateClienteInput, usuarioId?: string) {
     const nomeLimpo = data.nomeRazaoSocial.trim();
-    const docLimpo = data.documento?.trim() || null;
+    // Documento vazio vira null para não conflitar com a constraint unique
+    const docLimpo = (data.documento?.trim() || null) as string | null;
+    // Normaliza doc: remove pontos/traços para comparação, mas salva formatado
+    const docNormalizado = docLimpo ? docLimpo.replace(/[.\-\/]/g, '').trim() : null;
     const telLimpo = data.contatoTelefone?.trim() || null;
     const emailLimpo = data.email?.trim() || null;
     const enderecoLimpo = data.endereco?.trim() || null;
@@ -51,7 +54,7 @@ export class OsService {
 
     if (isDatabaseReady()) {
       try {
-        // Verifica se já existe por nome ou documento
+        // Verifica se já existe por nome exato ou documento (evita duplicatas)
         const existing = await prisma.cliente.findFirst({
           where: {
             OR: [
@@ -62,10 +65,11 @@ export class OsService {
         });
 
         if (existing) {
+          // Se já existe, retorna o existente sem erro (upsert behavior)
           clienteRetorno = {
             id: existing.id,
             nomeRazaoSocial: existing.nomeRazaoSocial,
-            documento: existing.documento || '',
+            documento: existing.documento || null,
             contatoTelefone: existing.contatoTelefone,
             email: existing.email,
           };
@@ -73,7 +77,7 @@ export class OsService {
           const novo = await prisma.cliente.create({
             data: {
               nomeRazaoSocial: nomeLimpo,
-              documento: docLimpo,
+              documento: docLimpo || null,
               contatoTelefone: telLimpo,
               email: emailLimpo,
               endereco: enderecoLimpo,
@@ -84,21 +88,40 @@ export class OsService {
           clienteRetorno = {
             id: novo.id,
             nomeRazaoSocial: novo.nomeRazaoSocial,
-            documento: novo.documento || '',
+            documento: novo.documento || null,
             contatoTelefone: novo.contatoTelefone,
             email: novo.email,
           };
         }
-      } catch (err) {
-        console.error('[OsService.createCliente] Erro ao salvar no banco, usando fallback em memória:', err);
-        // Fallback em memória
+      } catch (err: any) {
+        console.error('[OsService.createCliente] Erro ao salvar no banco:', err);
+
+        // Verifica se é conflito de unique constraint (documento duplicado)
+        if (err?.code === 'P2002') {
+          // Tenta buscar o existente pelo documento para retornar
+          if (docLimpo) {
+            const byDoc = await prisma.cliente.findFirst({ where: { documento: docLimpo } }).catch(() => null);
+            if (byDoc) {
+              return {
+                id: byDoc.id,
+                nomeRazaoSocial: byDoc.nomeRazaoSocial,
+                documento: byDoc.documento || null,
+                contatoTelefone: byDoc.contatoTelefone,
+                email: byDoc.email,
+              };
+            }
+          }
+          throw new Error('Já existe um cliente cadastrado com este CNPJ/CPF. Use outro documento ou deixe em branco.');
+        }
+
+        // Fallback em memória para outros erros
         const fallbackId = `cli-${Date.now()}`;
         const novoFallback = {
           id: fallbackId,
           nomeRazaoSocial: nomeLimpo,
-          documento: docLimpo || '',
-          contatoTelefone: telLimpo || '',
-          email: emailLimpo || '',
+          documento: docLimpo || null,
+          contatoTelefone: telLimpo || null,
+          email: emailLimpo || null,
         };
         fallbackClientes.push(novoFallback);
         clienteRetorno = novoFallback;
@@ -108,9 +131,9 @@ export class OsService {
       const novoFallback = {
         id: fallbackId,
         nomeRazaoSocial: nomeLimpo,
-        documento: docLimpo || '',
-        contatoTelefone: telLimpo || '',
-        email: emailLimpo || '',
+        documento: docLimpo || null,
+        contatoTelefone: telLimpo || null,
+        email: emailLimpo || null,
       };
       fallbackClientes.push(novoFallback);
       clienteRetorno = novoFallback;

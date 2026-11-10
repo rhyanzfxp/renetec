@@ -27,14 +27,24 @@ export async function osRoutes(app: FastifyInstance) {
       });
     }
 
-    const user = request.user as { sub: string } | undefined;
-    const novoCliente = await osService.createCliente(parseResult.data, user?.sub);
+    try {
+      const user = request.user as { sub: string } | undefined;
+      const novoCliente = await osService.createCliente(parseResult.data, user?.sub);
 
-    return reply.status(201).send({
-      success: true,
-      data: novoCliente,
-      message: `Empresa/Cliente "${novoCliente.nomeRazaoSocial}" cadastrado com sucesso!`,
-    });
+      return reply.status(201).send({
+        success: true,
+        data: novoCliente,
+        message: `Empresa/Cliente "${novoCliente.nomeRazaoSocial}" cadastrado com sucesso!`,
+      });
+    } catch (err: any) {
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: 'CLIENTE_ERRO',
+          message: err.message || 'Erro ao cadastrar cliente.',
+        },
+      });
+    }
   });
 
 
