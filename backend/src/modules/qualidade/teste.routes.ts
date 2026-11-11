@@ -64,12 +64,13 @@ export const qualidadeRoutes: FastifyPluginAsync = async (fastify) => {
               : `Lote concluído! ${body.quantidadeAprovada} peças reparadas aprovadas contabilizadas para a meta.`,
           data: teste,
         });
-      } catch (err: unknown) {
-        const e = err as { statusCode?: number; message?: string };
-        if (e.statusCode) {
-          return reply.status(e.statusCode).send({ success: false, message: e.message });
-        }
-        throw err;
+      } catch (err: any) {
+        request.log.error(err);
+        const statusCode = err.statusCode || (err.status ? Number(err.status) : 400);
+        return reply.status(statusCode).send({
+          success: false,
+          message: err.message || 'Erro ao processar laudo de inspeção do CQ.',
+        });
       }
     }
   );
@@ -116,12 +117,13 @@ export const qualidadeRoutes: FastifyPluginAsync = async (fastify) => {
       try {
         const teste = await service.editarTeste(user.sub, id, parsed.data);
         return reply.send({ success: true, message: 'Laudo corrigido com sucesso.', data: teste });
-      } catch (err: unknown) {
-        const e = err as { statusCode?: number; message?: string };
-        if (e.statusCode) {
-          return reply.status(e.statusCode).send({ success: false, message: e.message });
-        }
-        throw err;
+      } catch (err: any) {
+        request.log.error(err);
+        const statusCode = err.statusCode || (err.status ? Number(err.status) : 400);
+        return reply.status(statusCode).send({
+          success: false,
+          message: err.message || 'Erro ao processar laudo de inspeção do CQ.',
+        });
       }
     }
   );

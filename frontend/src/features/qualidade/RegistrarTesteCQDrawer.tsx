@@ -482,7 +482,13 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
               <strong className="tabular-nums text-red-700 dark:text-red-400">{quantidadeSucata}</strong> (Sucata) ={' '}
               <strong className="tabular-nums">{totalCalculado}</strong> / {quantidadeTestada} un testadas
             </span>
-            <span>{isSomaValida ? '✅ Equação OK' : '⚠️ Divergência na soma'}</span>
+            <span className="font-bold">
+              {isSomaValida ? (
+                <span className="text-emerald-700 dark:text-emerald-400">Equação OK</span>
+              ) : (
+                <span className="text-red-700 dark:text-red-400">Divergência na soma</span>
+              )}
+            </span>
           </div>
         </div>
 

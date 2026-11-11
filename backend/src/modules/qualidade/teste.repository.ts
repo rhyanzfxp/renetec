@@ -171,12 +171,12 @@ export async function realizarTeste(
     throw new Error('Banco de dados indisponível no momento.');
   }
 
-  const inspetorDbId = await ensureUsuarioDbId(inspetorId, 'QUALIDADE');
+  let inspetorDbId = await ensureUsuarioDbId(inspetorId, 'QUALIDADE');
   let tecnicoRespDbId = dados.tecnicoResponsavelId
     ? await ensureUsuarioDbId(dados.tecnicoResponsavelId, 'TECNICO')
     : null;
 
-  const tecnicoDestinoDbId = dados.tecnicoDestinoId
+  let tecnicoDestinoDbId = dados.tecnicoDestinoId
     ? await ensureUsuarioDbId(dados.tecnicoDestinoId, 'TECNICO')
     : tecnicoRespDbId;
 
@@ -189,6 +189,23 @@ export async function realizarTeste(
     if (itemDb?.tecnicoAlocadoId) {
       tecnicoRespDbId = itemDb.tecnicoAlocadoId;
     }
+  }
+
+  // Validação de segurança de chaves estrangeiras com a tabela de usuários
+  const inspetorExiste = await prisma.usuario.findUnique({ where: { id: inspetorDbId } }).catch(() => null);
+  if (!inspetorExiste) {
+    const defaultInspetor = await prisma.usuario.findFirst({ where: { perfil: 'QUALIDADE' } });
+    if (defaultInspetor) inspetorDbId = defaultInspetor.id;
+  }
+
+  if (tecnicoRespDbId) {
+    const tecExiste = await prisma.usuario.findUnique({ where: { id: tecnicoRespDbId } }).catch(() => null);
+    if (!tecExiste) tecnicoRespDbId = null;
+  }
+
+  if (tecnicoDestinoDbId) {
+    const destExiste = await prisma.usuario.findUnique({ where: { id: tecnicoDestinoDbId } }).catch(() => null);
+    if (!destExiste) tecnicoDestinoDbId = tecnicoRespDbId;
   }
 
   const resultado = await prisma.$transaction(async (tx) => {
@@ -224,13 +241,11 @@ export async function realizarTeste(
         });
       }
 
-      // 3. Ordem de Serviço. O teste direto não pode gerar uma OS paralela
-      // quando outro usuário registra o mesmo número no mesmo instante.
+      // 3. Ordem de Serviço. Se a OS já existia e estava encerrada/concluída,
+      // reabre automaticamente para permitir o novo teste / retorno de remessa.
       const numeroOS = Number(dados.numeroOS);
       const osAnterior = await tx.ordemServico.findUnique({ where: { numeroOS } });
-      if (osAnterior && ['CONCLUIDO', 'CANCELADO'].includes(osAnterior.status)) {
-        throw new Error(`A OS #${numeroOS} já está encerrada e não aceita novo teste direto.`);
-      }
+      const estavaConcluidaOuCancelada = osAnterior && ['CONCLUIDO', 'CANCELADO'].includes(osAnterior.status);
 
       const osDb = await tx.ordemServico.upsert({
         where: { numeroOS },
@@ -242,10 +257,29 @@ export async function realizarTeste(
           tecnicoResponsavelId: tecnicoRespDbId || inspetorDbId,
           observacoes: 'Apontamento direto registrado pelo Controle de Qualidade',
         },
-        update: osAnterior?.tecnicoResponsavelId || !tecnicoRespDbId
-          ? {}
-          : { tecnicoResponsavelId: tecnicoRespDbId },
+        update: {
+          status: novoStatusItem,
+          tecnicoResponsavelId: osAnterior?.tecnicoResponsavelId || tecnicoRespDbId || inspetorDbId,
+          ...(estavaConcluidaOuCancelada
+            ? {
+                dataConclusao: null,
+                ocultadoPorTecnicoId: null,
+                ocultadoEm: null,
+              }
+            : {}),
+        },
       });
+
+      if (estavaConcluidaOuCancelada) {
+        await tx.historicoStatus.create({
+          data: {
+            ordemServicoId: osDb.id,
+            statusAnterior: osAnterior.status,
+            statusNovo: novoStatusItem,
+            observacao: `OS #${numeroOS} reaberta pelo inspetor de CQ no registro de testes (retorno de remessa / continuidade).`,
+          },
+        }).catch(() => {});
+      }
 
       // 4. Reutilizar o item deste tipo de equipamento quando ele já pertence
       // à OS. Assim, uma OS #1234 pode conter ONU e ONT, sem receber várias
@@ -428,21 +462,32 @@ export async function realizarTeste(
     // 2. Se houver unidades reprovadas, gerar automaticamente o Retrabalho atribuído ao técnico de destino
     // NOTA: Sucata NÃO gera retrabalho, pois peças mortas/irrecuperáveis não voltam para a bancada
     if (temReprovacao) {
-      let motivoId = dados.motivoReprovacaoId;
-      if (motivoId) {
-        const m = await tx.motivoReprovacao.findUnique({ where: { id: motivoId } });
-        if (!m) {
+      let motivoDbId: string | null = null;
+      if (dados.motivoReprovacaoId) {
+        const m = await tx.motivoReprovacao.findFirst({
+          where: {
+            OR: [
+              { id: dados.motivoReprovacaoId },
+              { codigo: { equals: dados.motivoReprovacaoId, mode: 'insensitive' } },
+            ],
+          },
+        });
+        if (m) {
+          motivoDbId = m.id;
+        } else {
           const firstM = await tx.motivoReprovacao.findFirst();
-          motivoId = firstM?.id || undefined;
+          motivoDbId = firstM?.id || null;
         }
       }
+
+      const tecRetrabalhoFinal = tecnicoDestinoDbId || tecnicoRespDbId || null;
 
       await tx.retrabalho.create({
         data: {
           testeId: teste.id,
           itemOrdemServicoId,
-          motivoReprovacaoId: motivoId || undefined,
-          tecnicoResponsavelId: tecnicoDestinoDbId || tecnicoRespDbId,
+          motivoReprovacaoId: motivoDbId || undefined,
+          tecnicoResponsavelId: tecRetrabalhoFinal || undefined,
           quantidadeRetrabalho: dados.quantidadeReprovada,
           detalhesDefeito: dados.detalhesDefeito || dados.observacao || 'Não conformidade detectada no CQ',
           status: 'PENDENTE',
@@ -465,6 +510,7 @@ export async function realizarTeste(
         ordemServico: {
           select: {
             id: true,
+            status: true,
             itens: { select: { id: true, statusItem: true } },
           },
         },
@@ -493,7 +539,10 @@ export async function realizarTeste(
 
       await tx.ordemServico.update({
         where: { id: itemDb.ordemServicoId },
-        data: { status: statusOsFinal },
+        data: {
+          status: statusOsFinal,
+          ...(statusOsFinal !== 'CONCLUIDO' ? { dataConclusao: null } : {}),
+        },
       });
     }
 
