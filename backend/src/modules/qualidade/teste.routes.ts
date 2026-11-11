@@ -41,11 +41,13 @@ export const qualidadeRoutes: FastifyPluginAsync = async (fastify) => {
     async (request, reply) => {
       const parsed = RealizarTesteSchema.safeParse(request.body);
       if (!parsed.success) {
+        const errorMsg = parsed.error.issues[0]?.message || 'Dados de inspeção inválidos.';
         return reply.status(400).send({
           success: false,
+          message: errorMsg,
           error: {
             code: 'DADOS_INVALIDOS',
-            message: parsed.error.issues[0]?.message || 'Dados de inspeção inválidos.',
+            message: errorMsg,
             details: parsed.error.issues,
           },
         });

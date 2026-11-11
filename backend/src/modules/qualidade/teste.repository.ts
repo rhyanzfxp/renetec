@@ -1,5 +1,5 @@
 import { prisma, isDatabaseReady } from '../../database/prisma.js';
-import { ensureUsuarioDbId } from '../../database/db-utils.js';
+import { ensureUsuarioDbId, isValidUuid } from '../../database/db-utils.js';
 import type { RealizarTesteInput, EditarTesteInput } from './teste.schema.js';
 import { StatusOS, CategoriaReprovacao } from '@prisma/client';
 
@@ -182,28 +182,46 @@ export async function realizarTeste(
 
   // Se não veio técnico e veio item da OS, busca o técnico alocado no item
   if (!tecnicoRespDbId && dados.itemOrdemServicoId && dados.itemOrdemServicoId !== 'item-direto') {
-    const itemDb = await prisma.itemOrdemServico.findUnique({
-      where: { id: dados.itemOrdemServicoId },
-      select: { tecnicoAlocadoId: true },
-    });
-    if (itemDb?.tecnicoAlocadoId) {
-      tecnicoRespDbId = itemDb.tecnicoAlocadoId;
+    const isItemUuid = isValidUuid(dados.itemOrdemServicoId);
+    if (isItemUuid) {
+      const itemDb = await prisma.itemOrdemServico.findUnique({
+        where: { id: dados.itemOrdemServicoId },
+        select: { tecnicoAlocadoId: true },
+      }).catch(() => null);
+      if (itemDb?.tecnicoAlocadoId) {
+        tecnicoRespDbId = itemDb.tecnicoAlocadoId;
+      }
     }
   }
 
-  // Validação de segurança de chaves estrangeiras com a tabela de usuários
-  const inspetorExiste = await prisma.usuario.findUnique({ where: { id: inspetorDbId } }).catch(() => null);
-  if (!inspetorExiste) {
-    const defaultInspetor = await prisma.usuario.findFirst({ where: { perfil: 'QUALIDADE' } });
-    if (defaultInspetor) inspetorDbId = defaultInspetor.id;
+  // Validação segura de chaves estrangeiras com a tabela de usuários (apenas UUIDs válidos para o Postgres)
+  if (!isValidUuid(inspetorDbId)) {
+    const defaultInspetor = await prisma.usuario.findFirst({ where: { perfil: 'QUALIDADE' } }).catch(() => null);
+    inspetorDbId = defaultInspetor?.id || '00000000-0000-0000-0000-000000000001';
+  } else {
+    const inspetorExiste = await prisma.usuario.findUnique({ where: { id: inspetorDbId } }).catch(() => null);
+    if (!inspetorExiste) {
+      const defaultInspetor = await prisma.usuario.findFirst({ where: { perfil: 'QUALIDADE' } }).catch(() => null);
+      if (defaultInspetor) inspetorDbId = defaultInspetor.id;
+    }
   }
 
-  if (tecnicoRespDbId) {
+  if (tecnicoRespDbId && !isValidUuid(tecnicoRespDbId)) {
+    const tecDb = await prisma.usuario.findFirst({
+      where: { nome: { contains: tecnicoRespDbId.replace(/usr-|colab-/g, ''), mode: 'insensitive' } },
+    }).catch(() => null);
+    tecnicoRespDbId = tecDb?.id || null;
+  } else if (tecnicoRespDbId && isValidUuid(tecnicoRespDbId)) {
     const tecExiste = await prisma.usuario.findUnique({ where: { id: tecnicoRespDbId } }).catch(() => null);
     if (!tecExiste) tecnicoRespDbId = null;
   }
 
-  if (tecnicoDestinoDbId) {
+  if (tecnicoDestinoDbId && !isValidUuid(tecnicoDestinoDbId)) {
+    const destDb = await prisma.usuario.findFirst({
+      where: { nome: { contains: tecnicoDestinoDbId.replace(/usr-|colab-/g, ''), mode: 'insensitive' } },
+    }).catch(() => null);
+    tecnicoDestinoDbId = destDb?.id || tecnicoRespDbId;
+  } else if (tecnicoDestinoDbId && isValidUuid(tecnicoDestinoDbId)) {
     const destExiste = await prisma.usuario.findUnique({ where: { id: tecnicoDestinoDbId } }).catch(() => null);
     if (!destExiste) tecnicoDestinoDbId = tecnicoRespDbId;
   }
@@ -225,15 +243,29 @@ export async function realizarTeste(
         });
       }
 
-      // 2. Garantir tipo de equipamento
-      let tipoDb = dados.tipoEquipamentoId
-        ? await tx.tipoEquipamento.findUnique({ where: { id: dados.tipoEquipamentoId } })
-        : await tx.tipoEquipamento.findFirst();
+      // 2. Garantir tipo de equipamento com segurança de UUID
+      let tipoDb = null;
+      if (dados.tipoEquipamentoId && isValidUuid(dados.tipoEquipamentoId)) {
+        tipoDb = await tx.tipoEquipamento.findUnique({ where: { id: dados.tipoEquipamentoId } }).catch(() => null);
+      }
+      if (!tipoDb && dados.tipoEquipamentoId) {
+        tipoDb = await tx.tipoEquipamento.findFirst({
+          where: {
+            OR: [
+              { nome: { contains: dados.tipoEquipamentoId.replace(/pt-|eq-/g, ''), mode: 'insensitive' } },
+              { modelo: { contains: dados.tipoEquipamentoId, mode: 'insensitive' } },
+            ],
+          },
+        }).catch(() => null);
+      }
+      if (!tipoDb) {
+        tipoDb = await tx.tipoEquipamento.findFirst();
+      }
 
       if (!tipoDb) {
         tipoDb = await tx.tipoEquipamento.create({
           data: {
-            nome: 'Equipamento Geral',
+            nome: 'ONU / ONT Geral',
             marca: 'Padrão',
             modelo: 'Geral',
             tempoEstimadoMinutos: 45,
@@ -464,30 +496,36 @@ export async function realizarTeste(
     if (temReprovacao) {
       let motivoDbId: string | null = null;
       if (dados.motivoReprovacaoId) {
+        const isMotivoUuid = isValidUuid(dados.motivoReprovacaoId);
         const m = await tx.motivoReprovacao.findFirst({
           where: {
             OR: [
-              { id: dados.motivoReprovacaoId },
+              ...(isMotivoUuid ? [{ id: dados.motivoReprovacaoId }] : []),
               { codigo: { equals: dados.motivoReprovacaoId, mode: 'insensitive' } },
             ],
           },
-        });
+        }).catch(() => null);
+
         if (m) {
           motivoDbId = m.id;
         } else {
-          const firstM = await tx.motivoReprovacao.findFirst();
+          const firstM = await tx.motivoReprovacao.findFirst().catch(() => null);
           motivoDbId = firstM?.id || null;
         }
       }
 
-      const tecRetrabalhoFinal = tecnicoDestinoDbId || tecnicoRespDbId || null;
+      const tecRetrabalhoFinal = (tecnicoDestinoDbId && isValidUuid(tecnicoDestinoDbId))
+        ? tecnicoDestinoDbId
+        : (tecnicoRespDbId && isValidUuid(tecnicoRespDbId))
+        ? tecnicoRespDbId
+        : undefined;
 
       await tx.retrabalho.create({
         data: {
           testeId: teste.id,
           itemOrdemServicoId,
-          motivoReprovacaoId: motivoDbId || undefined,
-          tecnicoResponsavelId: tecRetrabalhoFinal || undefined,
+          motivoReprovacaoId: (motivoDbId && isValidUuid(motivoDbId)) ? motivoDbId : undefined,
+          tecnicoResponsavelId: tecRetrabalhoFinal,
           quantidadeRetrabalho: dados.quantidadeReprovada,
           detalhesDefeito: dados.detalhesDefeito || dados.observacao || 'Não conformidade detectada no CQ',
           status: 'PENDENTE',

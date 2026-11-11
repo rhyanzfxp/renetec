@@ -181,7 +181,12 @@ export const RegistrarTesteCQDrawer: React.FC<RegistrarTesteCQDrawerProps> = ({
       onSuccess();
       onClose();
     } catch (err: any) {
-      setErrorMessage(err.response?.data?.message || 'Erro ao registrar apontamento de testes do CQ.');
+      const errorMsg =
+        err.response?.data?.message ||
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Erro ao registrar apontamento de testes do CQ.';
+      setErrorMessage(errorMsg);
     } finally {
       isSubmittingRef.current = false;
       setIsLoading(false);
