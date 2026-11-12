@@ -143,25 +143,26 @@ export function resolverTecnicoReparo(t: any): string {
     nome.toLowerCase().includes('renetec') ||
     nome.toLowerCase() === inspNome;
 
-  // 1. Se veio de retrabalho com técnico responsável definido, credita a ele
-  const retrabalhoRecente = (t.producao?.itemOrdemServico as any)?.retrabalhos?.[0];
-  const retTecNome = retrabalhoRecente?.tecnicoResponsavel?.nome || t.retrabalhos?.[0]?.tecnicoResponsavel?.nome;
-  if (retTecNome && !isContaInvalida(retTecNome)) {
-    return retTecNome;
-  }
-
+  // 1. Técnico da produção do lote inspecionado (quem realmente reparou este lote)
   const tecProd = t.producao?.tecnico?.nome;
   if (tecProd && !isContaInvalida(tecProd)) {
     return tecProd;
   }
 
-  // 2. Técnico alocado no item da OS
+  // 2. Se veio de retrabalho com técnico responsável definido, credita a ele
+  const retrabalhoRecente = t.retrabalhos?.[0] || (t.producao?.itemOrdemServico as any)?.retrabalhos?.[0];
+  const retTecNome = retrabalhoRecente?.tecnicoResponsavel?.nome;
+  if (retTecNome && !isContaInvalida(retTecNome)) {
+    return retTecNome;
+  }
+
+  // 3. Técnico alocado no item da OS
   const tecAlocado = (t.producao?.itemOrdemServico as any)?.tecnicoAlocado?.nome;
   if (tecAlocado && !isContaInvalida(tecAlocado)) {
     return tecAlocado;
   }
 
-  // 3. Técnico responsável da OS
+  // 4. Técnico responsável da OS
   const tecOS = (t.producao?.itemOrdemServico as any)?.ordemServico?.tecnicoResponsavel?.nome;
   if (tecOS && !isContaInvalida(tecOS)) {
     return tecOS;

@@ -203,6 +203,51 @@ function isTecnicoMatch(tId1?: string | null, tNome1?: string | null, tId2?: str
   return false;
 }
 
+export function resolverTecnicoDoTeste(t: any): { id?: string; nome: string } {
+  const prod = t.producao;
+  const inspNome = (t.inspetor?.nome || 'Rhyan').toLowerCase();
+  const isContaInvalida = (nome?: string | null) =>
+    !nome ||
+    nome.toLowerCase().includes('rhyan') ||
+    nome.toLowerCase().includes('qualidade') ||
+    nome.toLowerCase().includes('inspetor') ||
+    nome.toLowerCase().includes('administrador') ||
+    nome.toLowerCase().includes('admin') ||
+    nome.toLowerCase().includes('renetec') ||
+    nome.toLowerCase() === inspNome;
+
+  // 1. Técnico da produção do lote inspecionado (quem realmente reparou este lote)
+  const tecProdNome = prod?.tecnico?.nome;
+  const tecProdId = prod?.tecnicoId || prod?.tecnico?.id;
+  if (tecProdNome && !isContaInvalida(tecProdNome)) {
+    return { id: tecProdId, nome: tecProdNome };
+  }
+
+  // 2. Retrabalho com técnico responsável definido
+  const ret = t.retrabalhos?.[0] || prod?.itemOrdemServico?.retrabalhos?.[0];
+  const retNome = ret?.tecnicoResponsavel?.nome;
+  const retId = ret?.tecnicoResponsavelId || ret?.tecnicoResponsavel?.id;
+  if (retNome && !isContaInvalida(retNome)) {
+    return { id: retId, nome: retNome };
+  }
+
+  // 3. Técnico alocado no item da OS
+  const alocNome = prod?.itemOrdemServico?.tecnicoAlocado?.nome;
+  const alocId = prod?.itemOrdemServico?.tecnicoAlocadoId || prod?.itemOrdemServico?.tecnicoAlocado?.id;
+  if (alocNome && !isContaInvalida(alocNome)) {
+    return { id: alocId, nome: alocNome };
+  }
+
+  // 4. Técnico responsável da OS
+  const osTecNome = prod?.itemOrdemServico?.ordemServico?.tecnicoResponsavel?.nome;
+  const osTecId = prod?.itemOrdemServico?.ordemServico?.tecnicoResponsavel?.id;
+  if (osTecNome && !isContaInvalida(osTecNome)) {
+    return { id: osTecId, nome: osTecNome };
+  }
+
+  return { id: tecProdId, nome: tecProdNome || 'João' };
+}
+
 // ─── Agregação para a TV da Fábrica ──────────────────────────────────────────
 export async function getTvFabricaData(): Promise<TvFabricaData> {
   const agora = new Date();
@@ -483,21 +528,13 @@ export async function getTvFabricaData(): Promise<TvFabricaData> {
 
       // 2b. Pontos e aprovações: vêm dos testes aprovados no CQ (regra oficial)
       for (const t of testesHojeList) {
-        const prod = (t as any).producao;
-        const ret = prod?.itemOrdemServico?.retrabalhos?.[0];
-        const retTecId = ret?.tecnicoResponsavelId || ret?.tecnicoResponsavel?.id;
-        const retTecNome = ret?.tecnicoResponsavel?.nome;
-
-        const tId = retTecId || prod?.tecnicoId || prod?.tecnico?.id;
-        const tNome = retTecNome || prod?.tecnico?.nome || prod?.itemOrdemServico?.tecnicoAlocado?.nome;
-        const tecAlocId = prod?.itemOrdemServico?.tecnicoAlocadoId || prod?.itemOrdemServico?.tecnicoAlocado?.id;
+        const tecTeste = resolverTecnicoDoTeste(t);
 
         if (
-          isTecnicoMatch(tId, tNome, b.id, b.nome) ||
-          isTecnicoMatch(tId, tNome, b.tecId, b.nome) ||
-          isTecnicoMatch(tecAlocId, tNome, b.id, b.nome) ||
-          isTecnicoMatch(tecAlocId, tNome, b.tecId, b.nome)
+          isTecnicoMatch(tecTeste.id, tecTeste.nome, b.id, b.nome) ||
+          isTecnicoMatch(tecTeste.id, tecTeste.nome, b.tecId, b.nome)
         ) {
+          const prod = (t as any).producao;
           const eqNome = prod?.itemOrdemServico?.tipoEquipamento?.nome || '';
           const qtdAprov = t.quantidadeAprovada || 0;
           const ptsUnit = getPontosUnitarios(eqNome);
@@ -979,17 +1016,42 @@ export async function getGerencialData(
         },
         select: {
           inspetorId: true,
+          inspetor: { select: { id: true, nome: true } },
           quantidadeTestada: true,
           quantidadeAprovada: true,
           quantidadeReprovada: true,
           producao: {
             select: {
               tecnicoId: true,
+              tecnico: { select: { id: true, nome: true } },
+              quantidadeReparada: true,
+              quantidadeProduzida: true,
               itemOrdemServico: {
                 select: {
                   tecnicoAlocadoId: true,
+                  tecnicoAlocado: { select: { id: true, nome: true } },
+                  ordemServico: {
+                    select: {
+                      tecnicoResponsavelId: true,
+                      tecnicoResponsavel: { select: { id: true, nome: true } },
+                    },
+                  },
+                  retrabalhos: {
+                    orderBy: { dataFim: 'desc' },
+                    take: 1,
+                    include: {
+                      tecnicoResponsavel: { select: { id: true, nome: true } },
+                    },
+                  },
                 },
               },
+            },
+          },
+          retrabalhos: {
+            take: 1,
+            select: {
+              tecnicoResponsavelId: true,
+              tecnicoResponsavel: { select: { id: true, nome: true } },
             },
           },
         },
@@ -1081,8 +1143,8 @@ export async function getGerencialData(
 
           let aprovadosCqCount = 0;
           for (const t of testesPeriodo) {
-            const tecProdId = (t as any).producao?.tecnicoId || (t as any).producao?.itemOrdemServico?.tecnicoAlocadoId;
-            if (tecProdId === u.id) {
+            const tecTeste = resolverTecnicoDoTeste(t);
+            if (isTecnicoMatch(tecTeste.id, tecTeste.nome, u.id, u.nome)) {
               const repQtd = (t as any).producao?.quantidadeReparada !== undefined
                 ? (t as any).producao.quantidadeReparada
                 : (t.quantidadeAprovada || 0);

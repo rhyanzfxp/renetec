@@ -262,6 +262,103 @@ export async function ensureDatabaseSeeded(): Promise<void> {
       },
     });
 
+    // 6. AUTO-CORREÇÃO DE REGISTROS AFETADOS (OS #1951 e OS #1855)
+    try {
+      // A. Corrigir sucata duplicada na OS #1951 (de 10 para 5)
+      const os1951 = await prisma.ordemServico.findFirst({
+        where: { numeroOS: 1951 },
+        include: { itens: { include: { producoes: true } } },
+      });
+      if (os1951) {
+        for (const it of os1951.itens) {
+          for (const p of it.producoes) {
+            if (p.quantidadeSucata > 5) {
+              await prisma.producao.update({
+                where: { id: p.id },
+                data: {
+                  quantidadeSucata: 5,
+                  quantidadeProduzida: Math.max(0, p.quantidadeReparada + p.quantidadeSemDefeito + 5),
+                },
+              });
+            }
+          }
+        }
+      }
+
+      const prodsComSucata10 = await prisma.producao.findMany({
+        where: {
+          quantidadeSucata: { gt: 5 },
+          observacao: { contains: '[Sucata: 5' },
+        },
+      });
+      for (const p of prodsComSucata10) {
+        await prisma.producao.update({
+          where: { id: p.id },
+          data: {
+            quantidadeSucata: 5,
+            quantidadeProduzida: Math.max(0, p.quantidadeReparada + p.quantidadeSemDefeito + 5),
+          },
+        });
+      }
+
+      // B. Atribuir pontuação de 33 aprovados ao técnico Joás na OS #1855
+      const joas = await prisma.usuario.findFirst({
+        where: { nome: { contains: 'Jo', mode: 'insensitive' }, email: { contains: 'joas' } },
+      }) || await prisma.usuario.findFirst({
+        where: { nome: { equals: 'Joás', mode: 'insensitive' } },
+      });
+
+      if (joas) {
+        const testes33 = await prisma.teste.findMany({
+          where: { quantidadeAprovada: 33 },
+          include: { producao: true },
+        });
+
+        for (const t of testes33) {
+          if (t.producaoId) {
+            await prisma.producao.update({
+              where: { id: t.producaoId },
+              data: { tecnicoId: joas.id },
+            });
+          }
+        }
+
+        const os1855 = await prisma.ordemServico.findFirst({
+          where: { numeroOS: 1855 },
+          include: {
+            itens: {
+              include: {
+                producoes: true,
+                testes: true,
+              },
+            },
+          },
+        });
+
+        if (os1855) {
+          for (const it of os1855.itens) {
+            const temTeste33 = it.testes?.some((t) => t.quantidadeAprovada === 33);
+            if (temTeste33) {
+              await prisma.itemOrdemServico.update({
+                where: { id: it.id },
+                data: { tecnicoAlocadoId: joas.id },
+              });
+              for (const p of it.producoes) {
+                if (p.quantidadeReparada === 33 || p.quantidadeProduzida === 33 || p.observacao?.includes('mac diferente')) {
+                  await prisma.producao.update({
+                    where: { id: p.id },
+                    data: { tecnicoId: joas.id },
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (errCorrecao) {
+      console.warn('⚠️ Aviso na auto-correção de registros históricos:', errCorrecao);
+    }
+
     isSeeded = true;
     console.log('✅ Base de dados Supabase auto-inicializada com sucesso (Usuários, Clientes, Equipamentos, Motivos e Metas).');
   } catch (err) {

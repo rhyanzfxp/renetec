@@ -405,11 +405,19 @@ export async function realizarTeste(
           if (prodMaisRecente) {
             producaoDbId = prodMaisRecente.id;
             const updateData: any = {};
-            if (qtdSucata > 0) updateData.quantidadeSucata = { increment: qtdSucata };
-            if (qtdSemDefeito > 0) {
-              updateData.quantidadeSemDefeito = { increment: qtdSemDefeito };
-              if (prodMaisRecente.quantidadeReparada >= qtdSemDefeito) {
-                updateData.quantidadeReparada = { decrement: qtdSemDefeito };
+            if (tecnicoRespDbId && prodMaisRecente.tecnicoId !== tecnicoRespDbId) {
+              updateData.tecnicoId = tecnicoRespDbId;
+            }
+            const sucataAtual = prodMaisRecente.quantidadeSucata || 0;
+            if (qtdSucata > 0 && qtdSucata !== sucataAtual) {
+              updateData.quantidadeSucata = Math.max(sucataAtual, qtdSucata);
+            }
+            const semDefAtual = prodMaisRecente.quantidadeSemDefeito || 0;
+            if (qtdSemDefeito > 0 && qtdSemDefeito > semDefAtual) {
+              const diff = qtdSemDefeito - semDefAtual;
+              updateData.quantidadeSemDefeito = qtdSemDefeito;
+              if (prodMaisRecente.quantidadeReparada >= diff) {
+                updateData.quantidadeReparada = { decrement: diff };
               }
             }
             if (Object.keys(updateData).length > 0) {
@@ -418,15 +426,21 @@ export async function realizarTeste(
                 data: updateData,
               }).catch(() => {});
             }
+            if (tecnicoRespDbId && itemExistente.tecnicoAlocadoId !== tecnicoRespDbId) {
+              await tx.itemOrdemServico.update({
+                where: { id: itemExistente.id },
+                data: { tecnicoAlocadoId: tecnicoRespDbId },
+              }).catch(() => {});
+            }
           } else {
             const novaProd = await tx.producao.create({
               data: {
                 itemOrdemServicoId,
-                tecnicoId: itemExistente.tecnicoAlocadoId || inspetorDbId,
+                tecnicoId: tecnicoRespDbId || itemExistente.tecnicoAlocadoId || inspetorDbId,
                 dataInicio: agora,
                 dataFim: agora,
                 dataProducao: agora,
-                quantidadeProduzida: dados.quantidadeAprovada + qtdSemDefeito,
+                quantidadeProduzida: dados.quantidadeAprovada + qtdSemDefeito + qtdSucata,
                 quantidadeReparada: dados.quantidadeAprovada,
                 quantidadeSemDefeito: qtdSemDefeito,
                 quantidadeSucata: qtdSucata,
@@ -439,17 +453,31 @@ export async function realizarTeste(
           }
         } else {
           const updateData: any = {};
-          if (qtdSucata > 0) updateData.quantidadeSucata = { increment: qtdSucata };
-          if (qtdSemDefeito > 0) {
-            updateData.quantidadeSemDefeito = { increment: qtdSemDefeito };
-            if (producaoExiste.quantidadeReparada >= qtdSemDefeito) {
-              updateData.quantidadeReparada = { decrement: qtdSemDefeito };
+          if (tecnicoRespDbId && producaoExiste.tecnicoId !== tecnicoRespDbId) {
+            updateData.tecnicoId = tecnicoRespDbId;
+          }
+          const sucataAtual = producaoExiste.quantidadeSucata || 0;
+          if (qtdSucata > 0 && qtdSucata !== sucataAtual) {
+            updateData.quantidadeSucata = Math.max(sucataAtual, qtdSucata);
+          }
+          const semDefAtual = producaoExiste.quantidadeSemDefeito || 0;
+          if (qtdSemDefeito > 0 && qtdSemDefeito > semDefAtual) {
+            const diff = qtdSemDefeito - semDefAtual;
+            updateData.quantidadeSemDefeito = qtdSemDefeito;
+            if (producaoExiste.quantidadeReparada >= diff) {
+              updateData.quantidadeReparada = { decrement: diff };
             }
           }
           if (Object.keys(updateData).length > 0) {
             await tx.producao.update({
               where: { id: producaoExiste.id },
               data: updateData,
+            }).catch(() => {});
+          }
+          if (tecnicoRespDbId && itemExistente.tecnicoAlocadoId !== tecnicoRespDbId) {
+            await tx.itemOrdemServico.update({
+              where: { id: itemExistente.id },
+              data: { tecnicoAlocadoId: tecnicoRespDbId },
             }).catch(() => {});
           }
         }
@@ -718,21 +746,25 @@ export async function getHistoricoTestes(page = 1, limit = 20) {
     ]);
 
     const mappedData = data.map((t: any) => {
-      let sucata = t.producao?.quantidadeSucata || 0;
-      if (!sucata && t.observacao) {
-        const match = t.observacao.match(/\[Sucata:\s*(\d+)\s*un\]/i);
+      let sucata = 0;
+      if (t.observacao) {
+        const match = t.observacao.match(/\[Sucata:\s*(\d+)\s*(?:un)?\]/i);
         if (match) sucata = parseInt(match[1], 10);
+      }
+      if (!sucata) {
+        sucata = t.producao?.quantidadeSucata || 0;
       }
 
       // REGRA: Técnico Reparo deve ser quem efetivamente reparou o equipamento.
-      // Prioridade: (1) tecnicoResponsavel do retrabalho, (2) tecnicoAlocado no item,
-      // (3) tecnico da produção (desde que não seja inspetor, admin ou conta genérica).
+      // Prioridade: (1) tecnico da produção (desde que não seja inspetor, admin ou conta genérica),
+      // (2) tecnicoResponsavel do retrabalho, (3) tecnicoAlocado no item.
       const tecProd = t.producao?.tecnico;
       const inspNome = (t.inspetor?.nome || 'Rhyan').toLowerCase();
       const tecNomeLower = (tecProd?.nome || '').toLowerCase();
 
       // Detecta contas que NÃO são técnicos de bancada
       const isContaGenerica = (
+        !tecNomeLower ||
         tecNomeLower.includes('rhyan') ||
         tecNomeLower.includes('qualidade') ||
         tecNomeLower.includes('administrador') ||
@@ -740,31 +772,33 @@ export async function getHistoricoTestes(page = 1, limit = 20) {
         tecNomeLower === inspNome
       );
 
-      // 1. Retrabalho com técnico responsável definido tem prioridade máxima
-      const retTecnico = t.retrabalhos?.[0]?.tecnicoResponsavel;
-      const isRetAdm = (retTecnico?.nome || '').toLowerCase().includes('administrador') ||
-                       (retTecnico?.nome || '').toLowerCase().includes('admin');
-      const tecnicoRetrabalho = retTecnico && !isRetAdm ? retTecnico : null;
-
-      // 2. tecnicoAlocado no item (exceto admin)
-      const tecAlocado = t.producao?.itemOrdemServico?.tecnicoAlocado;
-      const isAlocAdm = (tecAlocado?.nome || '').toLowerCase().includes('administrador') ||
-                        (tecAlocado?.nome || '').toLowerCase().includes('admin');
-      const tecnicoAlocadoValido = tecAlocado && !isAlocAdm ? tecAlocado : null;
-
-      // 3. Resolução final
       let tecReal: any;
-      if (tecnicoRetrabalho) {
-        tecReal = tecnicoRetrabalho;
-      } else if (isContaGenerica) {
+      if (tecProd && !isContaGenerica) {
+        tecReal = tecProd;
+      } else {
+        const retTecnico = t.retrabalhos?.[0]?.tecnicoResponsavel;
+        const isRetAdm = (retTecnico?.nome || '').toLowerCase().includes('administrador') ||
+                         (retTecnico?.nome || '').toLowerCase().includes('admin');
+        const tecnicoRetrabalho = retTecnico && !isRetAdm ? retTecnico : null;
+
+        const tecAlocado = t.producao?.itemOrdemServico?.tecnicoAlocado;
+        const isAlocAdm = (tecAlocado?.nome || '').toLowerCase().includes('administrador') ||
+                          (tecAlocado?.nome || '').toLowerCase().includes('admin');
+        const tecnicoAlocadoValido = tecAlocado && !isAlocAdm ? tecAlocado : null;
+
         const osTec = t.producao?.itemOrdemServico?.ordemServico?.tecnicoResponsavel;
         const isOsTecAdm = (osTec?.nome || '').toLowerCase().includes('administrador') ||
                            (osTec?.nome || '').toLowerCase().includes('admin');
-        tecReal = tecnicoAlocadoValido ||
-                  (osTec && !isOsTecAdm ? osTec : null) ||
-                  { id: '18a20cb3-c16d-4901-95fa-5dfcc0ffbab6', nome: 'João' };
-      } else {
-        tecReal = tecProd;
+
+        if (tecnicoRetrabalho) {
+          tecReal = tecnicoRetrabalho;
+        } else if (tecnicoAlocadoValido) {
+          tecReal = tecnicoAlocadoValido;
+        } else if (osTec && !isOsTecAdm) {
+          tecReal = osTec;
+        } else {
+          tecReal = { id: '18a20cb3-c16d-4901-95fa-5dfcc0ffbab6', nome: 'João' };
+        }
       }
 
       return {
